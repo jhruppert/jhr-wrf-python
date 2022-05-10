@@ -146,7 +146,7 @@ elif ivar_select == 'vmf':
 elif ivar_select == 'lwacre':
     # LW-ACRE
     ivar = lwacre
-    fmin=-100; fmax=200 # W/m2
+    fmin=-50; fmax=200 # W/m2
     step=5
     bins=np.arange(fmin,fmax+step,step)
     xlabel='LW-ACRE [W/m**2]'
@@ -242,10 +242,13 @@ clevs = np.concatenate((-1*np.flip(clevs),clevs))
 cpltvar=binvar_c_mn
 # cpltvar=np.gradient(binvar_c_mn,10000,axis=1,edge_order=2)*-1e5
 im = ax.contour(bins[0:nbins-1], pres, np.transpose(cpltvar), clevs, colors='black', zorder=2)
+
 ax.clabel(im, im.levels, inline=True, fontsize=13)
+plt.xlim(np.min(bins), np.max(bins))
 
 # plt.show()
-plt.savefig(figdir+'lwcrf_compcross_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white')
+plt.savefig(figdir+'lwcrf_compcross_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+            bbox_inches='tight', pad_inches=0.2)
 
 
 
@@ -293,12 +296,15 @@ plt.plot(bins[0:nbins-1], binvar_s_mn[:,2]/total \
          , "-b", label="Strat")
 plt.plot(bins[0:nbins-1], binvar_s_mn[:,3]/total \
          , "--b", label="Other")
+
+plt.xlim(np.min(bins), np.max(bins))
 plt.ylim(0, 0.2)
 
 plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'convstrat_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white')
+plt.savefig(figdir+'convstrat_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+            bbox_inches='tight', pad_inches=0.2)
 
 
 
@@ -318,11 +324,13 @@ pltvar=binvar_acre_mn
 ax.set_ylabel('ACRE [W/m**2]')
 plt.plot(bins[0:nbins-1], pltvar)
 # plt.ylim(0, 0.2)
+plt.xlim(np.min(bins), np.max(bins))
 
 # plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'lwacre_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white')
+plt.savefig(figdir+'lwacre_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+            bbox_inches='tight', pad_inches=0.2)
 
 
 
@@ -348,10 +356,13 @@ plt.plot(bins[0:nbins-1], binvar_acre_mn*binvar_s_mn[:,2]/total \
          , "-b", label="Strat")
 plt.plot(bins[0:nbins-1], binvar_acre_mn*binvar_s_mn[:,3]/total \
          , "--b", label="Other")
+
 plt.ylim(0, 10)
+plt.xlim(np.min(bins), np.max(bins))
 
 plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'lwacrescaled_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white')
+plt.savefig(figdir+'lwacrescaled_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+            bbox_inches='tight', pad_inches=0.2)
 
