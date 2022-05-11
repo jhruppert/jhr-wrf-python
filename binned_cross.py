@@ -20,7 +20,7 @@ import sys
 # #### Bin variable selection
 
 # Indexing variable
-ivar_select = 'lwacre'
+ivar_select = 'rain'
 # pw, vmf, rain, lwacre
 
 
@@ -31,16 +31,21 @@ t0 = 48
 t1 = t0+nt
 
 storm = 'haiyan'
+#storm = 'maria'
+
+itest = 'ctl'
 
 
 # #### Directories
 
 # figdir = "/Users/jruppert/code/tc_figs/"
-figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
+# figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
+figdir = "/home1/06040/tg853394/figures/tc/ens/"+storm+'/'
 
 # main = "/Users/jamesruppert/code/tc_output/"
 # main = "/Users/jruppert/code/tc_output/"
-main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+# main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+main = "/scratch/06040/tg853394/wrfenkf/ensemble/"
 #storm = get_ipython().getoutput('ls $main')
 # print(storm)
 
@@ -53,7 +58,7 @@ imemb=memb_all[0]
 #imemb=memb[0]
 # print(main+istorm+'/'+imemb)
 
-datdir = main+storm+'/'+imemb+'/ctl/'
+datdir = main+storm+'/'+imemb+'/'+itest+'/'
 datdir = datdir+'post/d02/'
 print(datdir)
 
@@ -247,7 +252,7 @@ ax.clabel(im, im.levels, inline=True, fontsize=13)
 plt.xlim(np.min(bins), np.max(bins))
 
 # plt.show()
-plt.savefig(figdir+'lwcrf_compcross_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'lwcrf_compcross_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
 
@@ -303,7 +308,7 @@ plt.ylim(0, 0.2)
 plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'convstrat_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'convstrat_comp_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
 
@@ -329,7 +334,7 @@ plt.xlim(np.min(bins), np.max(bins))
 # plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'lwacre_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'lwacre_comp_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
 
@@ -363,6 +368,6 @@ plt.xlim(np.min(bins), np.max(bins))
 plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'lwacrescaled_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'lwacrescaled_comp_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
