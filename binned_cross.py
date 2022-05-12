@@ -20,8 +20,8 @@ import sys
 # #### Bin variable selection
 
 # Indexing variable
-ivar_select = 'lwacre'
-# pw, vmf, rain, lwacre
+ivar_select = 'olr'
+# 5 options: pw, vmf, rain, lwacre, olr
 
 
 # #### Time selection
@@ -31,6 +31,12 @@ t0 = 48
 t1 = t0+nt
 
 storm = 'haiyan'
+#storm = 'maria'
+
+itest = 'ctl'
+#itest = 'rrtm' #'ctl'
+
+memb=1 # 1-20
 
 
 # #### Directories
@@ -48,12 +54,12 @@ main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 nums=np.arange(1,21,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
 memb_all=np.char.add('memb_',nustr)
-imemb=memb_all[0]
+imemb=memb_all[memb-1]
 #memb = get_ipython().getoutput('ls $main/$istorm')
 #imemb=memb[0]
 # print(main+istorm+'/'+imemb)
 
-datdir = main+storm+'/'+imemb+'/ctl/'
+datdir = main+storm+'/'+imemb+'/'+itest+'/'
 datdir = datdir+'post/d02/'
 print(datdir)
 
@@ -80,8 +86,8 @@ units_var1 = 'K/d'
 cmax=4; cmin=-1.*cmax
 
 # Conv/strat separation: varout = 1 if convective, = 2 if stratiform, = 3 other, = 0 if no rain
-varfil_strat = Dataset(datdir+'strat.nc') # this opens the netcdf file
-strat_in = varfil_strat.variables['strat'][t0:t1,:,:,:]
+#varfil_strat = Dataset(datdir+'strat.nc') # this opens the netcdf file
+#strat_in = varfil_strat.variables['strat'][t0:t1,:,:,:]
 
 # LW-ACRE
 binfil = Dataset(datdir+'LWacre.nc') # this opens the netcdf file
@@ -126,7 +132,6 @@ elif ivar_select == 'rain':
     # Rainfall rate
     binfil = Dataset(datdir+'rainrate.nc') # this opens the netcdf file
     ivar = binfil.variables['rainrate'][t0:t1,:,:,:]
-    fmin=0; fmax=140 # mm / hr
     bins=10.**(np.arange(1,8,0.3)-4)
     xlabel='Rainfall rate [mm/hr]'
     log_x='log'
@@ -137,8 +142,7 @@ elif ivar_select == 'vmf':
     g=9.81 # gravity, m/s2
     wv_int = np.sum(binvar_c_in*1e-2,1) * dp/g
     ivar = np.reshape(wv_int,(nt,1,nx1,nx2))
-    fmin=0; fmax=140 # mm / hr
-    bins=10.**(np.arange(1,8,0.3)-3)
+    bins=10.**(np.arange(1,8.5,0.3)-3)
     # bins=np.flip(-1.*bins)
     xlabel='Vertical mass flux [kg/m/s]'
     log_x='log'
@@ -152,11 +156,23 @@ elif ivar_select == 'lwacre':
     xlabel='LW-ACRE [W/m**2]'
     log_x='linear'
 
-    
+elif ivar_select == 'olr':
+    # OLR
+    binfil = Dataset(datdir+'LWUPT.nc') # this opens the netcdf file
+    ivar = binfil.variables['LWUPT'][t0:t1,:,:,:]
+    ivar = lwacre
+    fmin=-50; fmax=200 # W/m2
+    step=5
+    bins=np.arange(fmin,fmax+step,step)
+    xlabel='OLR [W/m**2]'
+    log_x='linear'
+
+
 print("Binvar shape: ",np.shape(ivar))
 print(bins)
 nbins = np.size(bins)
 print(nbins)
+strat_in=ivar
 
 
 # #### Bin the target variable
@@ -205,6 +221,8 @@ matplotlib.rc('font', **font)
 
 ### CONTOUR PLOT
 
+### COMPOSITE CROSS SECTION
+
 
 # create figure
 fig = plt.figure(figsize=(14,8))
@@ -247,8 +265,12 @@ ax.clabel(im, im.levels, inline=True, fontsize=13)
 plt.xlim(np.min(bins), np.max(bins))
 
 # plt.show()
-plt.savefig(figdir+'lwcrf_compcross_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'lwcrf_compcross_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
+
+# No strat variable for Maria
+if storm == 'maria':
+  sys.exit()
 
 
 
@@ -303,7 +325,7 @@ plt.ylim(0, 0.2)
 plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'convstrat_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'convstrat_comp_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
 
@@ -329,7 +351,7 @@ plt.xlim(np.min(bins), np.max(bins))
 # plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'lwacre_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'lwacre_comp_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
 
@@ -363,6 +385,6 @@ plt.xlim(np.min(bins), np.max(bins))
 plt.legend(loc="upper left")
 
 # plt.show()
-plt.savefig(figdir+'lwacrescaled_comp_'+imemb+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'lwacrescaled_comp_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
