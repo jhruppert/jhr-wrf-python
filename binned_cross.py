@@ -29,20 +29,26 @@ fillvar_select = 'thprm'
 # options: lwcrf, thprm, dbz
 
 
-# #### Time selection
+# #### Test/storm selection
 
-nt=24
-t0 = 48
-t1 = t0+nt
+itest = 'ctl' #'ncrf'
+#itest = 'rrtm' #'ctl'
 
 storm = 'haiyan'
 #storm = 'maria'
 
-itest = 'ctl'
-#itest = 'rrtm' #'ctl'
-
 memb=1 # 1-20
 #memb=3
+
+
+# #### Time selection
+
+nt=24
+t0 = 48+12
+if itest == 'ncrf':
+  t0 -= int(1.5*24)
+
+t1 = t0+nt
 
 
 # #### Directories
