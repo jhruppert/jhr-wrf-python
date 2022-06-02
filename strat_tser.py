@@ -1,48 +1,24 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Notebook to genereate binned cross sections from TC output
+# ### Time series of rainfall categorization.
 # 
 # Assumes output is in a single netcdf file on pressure levels.
 # 
 # James Ruppert  
 # jruppert@ou.edu  
-# 4/23/22
+# 5/13/22
 
 
 from netCDF4 import Dataset
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from misc_functions import theta_dry, density_moist
 import sys
 
 
-# #### Bin variable selection
-
-# Indexing variable
-ivar_select = 'pw'
-# options: pw, vmf, rain, lwacre
-
-# Fill variable
-fillvar_select = 'thprm'
-# options: lwcrf, thprm, dbz
-
-
-# #### Time selection
-
-nt=24
-t0 = 48
-t1 = t0+nt
-
 storm = 'haiyan'
 #storm = 'maria'
-
-itest = 'ctl'
-#itest = 'rrtm' #'ctl'
-
-memb=1 # 1-20
-#memb=3
 
 
 # #### Directories
@@ -58,96 +34,61 @@ main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 #storm = get_ipython().getoutput('ls $main')
 # print(storm)
 
-#istorm=storm[0]
-nums=np.arange(1,21,1); nums=nums.astype(str)
-nustr = np.char.zfill(nums, 2)
-memb_all=np.char.add('memb_',nustr)
-imemb=memb_all[memb-1]
-#memb = get_ipython().getoutput('ls $main/$istorm')
-#imemb=memb[0]
-# print(main+istorm+'/'+imemb)
 
-datdir = main+storm+'/'+imemb+'/'+itest+'/'
+#memb = ['memb_01','memb_01','memb_02','memb_03','memb_04','memb_05','memb_05']
+test = ('memb_01/ctl','memb_01/ncrf','memb_02/ncrf','memb_03/ncrf','memb_04/ncrf','memb_05/ncrf','memb_05/crfon')
+
+datdir = main+storm+'/'+test+'/'
 datdir = datdir+'post/d02/'
 print(datdir)
-
+sys.exit()
 
 # #### Read variables
 
 # Fill contour variable
 
-# Vertical coordinate
-filtmp = Dataset(datdir+'RTHRATLW.nc')
-pres = filtmp.variables['pres'][:] # hPa
-print("Vertical shape: ",np.shape(pres))
-filtmp.close()
-
 # Radar Reflectivity
-if fillvar_select == 'dbz':
-    varfil_main = Dataset(datdir+'dbz.nc') # this opens the netcdf file
-    binvar_f_in = varfil_main.variables['dbz'][t0:t1,:,:,:]
-    title = 'Ref'
-    units_var1 = 'dBZ'
-    cmin = -20; cmax=20
+# varfil_main = Dataset(datdir+'dbz.nc') # this opens the netcdf file
+# binvar_f_in = varfil_main.variables['dbz'][t0:t1,:,:,:]
+# title = 'Ref'
+# units_var1 = 'dBZ'
+# cmin = -20; cmax=20
 
 # Radiation
-elif fillvar_select == 'lwcrf':
-    varfil_main = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
-    binvar_f_in = varfil_main.variables['RTHRATLW'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
-    varcs = Dataset(datdir+'RTHRATLWC.nc') # this opens the netcdf file
-    cs = varcs.variables['RTHRATLWC'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
-    binvar_f_in -= cs
-    title = 'Binned LW-CRF'
-    figtag = 'lwcrf'
-    units_var1 = 'K/d'
-    cmax=4; cmin=-1.*cmax
-
-# Horizontal temperature anomaly
-elif fillvar_select == 'thprm':
-    varfil_main = Dataset(datdir+'T.nc')
-    tmp = varfil_main.variables['T'][t0:t1,:,:,:] # K
-    binvar_f_in = theta_dry(tmp,pres*1e2) # K
-    title = "Binned Th'"
-    figtag = 'thprm'
-    units_var1 = 'K'
-    cmax=1; cmin=-1.*cmax
-    # Subtract time-dependent domain average
-    t_mean = np.mean(np.mean(binvar_f_in,axis=3),axis=2)
-    binvar_f_in -= t_mean[:,:,np.newaxis,np.newaxis]
-
-varfil_main.close()
-
-# Save tmpk
-tmpfil = Dataset(datdir+'T.nc')
-tmpk = tmpfil.variables['T'][t0:t1,:,:,:] # K
-tmpfil.close()
-
-
-
-# Two-dimensional variables
+varfil_main = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
+binvar_f_in = varfil_main.variables['RTHRATLW'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
+varcs = Dataset(datdir+'RTHRATLWC.nc') # this opens the netcdf file
+cs = varcs.variables['RTHRATLWC'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
+binvar_f_in -= cs
+title = 'LW-CRF'
+units_var1 = 'K/d'
+cmax=4; cmin=-1.*cmax
 
 # Conv/strat separation: varout = 1 if convective, = 2 if stratiform, = 3 other, = 0 if no rain
 varfil_strat = Dataset(datdir+'strat.nc') # this opens the netcdf file
 strat_in = varfil_strat.variables['strat'][t0:t1,:,:,:]
-varfil_strat.close()
 
 # LW-ACRE
 binfil = Dataset(datdir+'LWacre.nc') # this opens the netcdf file
 lwacre = binfil.variables['LWUPB'][t0:t1,:,:,:] # W/m2
-binfil.close()
 
-# Rainfall
+# Rainfall rate
 binfil = Dataset(datdir+'rainrate.nc') # this opens the netcdf file
-rain = binfil.variables['rainrate'][t0:t1,:,:,:] # mm/hr
-binfil.close()
+rain = binfil.variables['rainrate'][t0:t1,:,:,:]/24. # mm/d --> mm/hr
 
-# For density
-# fil = Dataset(datdir+'T.nc')
-# tmpk = fil.variables['T'][t0:t1,:,:,:] # K
-# fil.close()
-fil = Dataset(datdir+'QVAPOR.nc')
-qv = fil.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
-fil.close()
+## WTG MOISTURE ADVECTION
+#binfil = Dataset(datdir+'T.nc') # this opens the netcdf file
+#tmpk = binfil.variables['T'][t0:t1,:,:,:] # K
+#binfil = Dataset(datdir+'Ztotal.nc') # this opens the netcdf file
+#zz = binfil.variables['Z'][t0:t1,:,:,:] # m
+#dse = 1004.*tmpk + zz*9.81 # J/kg
+#binfil = Dataset(datdir+'QVAPOR.nc') # this opens the netcdf file
+#qv = binfil.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
+##dsdz = np.gradient(dse,axis=2)
+##dqdz = np.gradient(qv,axis=2)
+##lwcre_madv = (binvar_f_in * 1004. / (3600.*24)) * dqdz / dsdz # kg/kg / s
+
+#strat_in=lwacre
 
 bv_shape = np.shape(binvar_f_in)
 print("Binvar shape: ",bv_shape)
@@ -157,13 +98,17 @@ nx1 = bv_shape[2]
 nx2 = bv_shape[3]
 
 
+# Vertical coordinate
+pres = varfil_main.variables['pres'][:] # Pa
+print("Vertical shape: ",np.shape(pres))
+
+
 
 # Line contour variable
 
 # Vertical motion
 varfil_cvar = Dataset(datdir+'W.nc') # this opens the netcdf file
 binvar_c_in = varfil_cvar.variables['W'][t0:t1,:,:,:]*1e2 # m/s --> cm/s
-varfil_cvar.close()
 units_var2='cm/s'
 lcmin = -20; lcmax=20; lcint=2
 
@@ -174,7 +119,6 @@ if ivar_select == 'pw':
     # PW
     binfil = Dataset(datdir+'PW.nc') # this opens the netcdf file
     ivar = binfil.variables['PW'][t0:t1,:,:,:]
-    binfil.close()
     fmin=35;fmax=80 # mm
     step=1
     bins=np.arange(fmin,fmax+step,step)
@@ -212,7 +156,6 @@ elif ivar_select == 'olr':
     # OLR
     binfil = Dataset(datdir+'LWUPT.nc') # this opens the netcdf file
     ivar = binfil.variables['LWUPT'][t0:t1,:,:,:]
-    binfil.close()
     fmin=70; fmax=320 # W/m2
     step=5
     bins=np.arange(fmin,fmax+step,step)
@@ -285,25 +228,20 @@ matplotlib.rc('font', **font)
 
 ### CONTOUR PLOT
 
-### COMPOSITE CROSS SECTION - MAIN VARIABLE
+### COMPOSITE CROSS SECTION - LW-ACRE
 
 
 # create figure
 fig = plt.figure(figsize=(14,8))
 ax = fig.add_subplot(111)
 
-ax.set_title(title)
+ax.set_title('Binned LW-CRF')
 ax.set_ylabel('Pressure [hPa]')
 
 # bins=np.flip(-1.*bins)
 
-#total=np.sum(binvar_s_mn[:,(1,2,3)])
-#scaling = binvar_s_mn[:,2]/total
-#for iz in range(0,nz):
-#    binvar_f_mn[:,iz] *= scaling*10*2
-
 # fill contour
-nlevs=20
+nlevs=21
 inc=(cmax-cmin)/nlevs
 clevs = np.arange(cmin, cmax+inc, inc)
 pltvar=binvar_f_mn
@@ -336,7 +274,7 @@ if ivar_select == 'olr':
     ax.invert_xaxis()
 
 # plt.show()
-plt.savefig(figdir+figtag+'_compcross_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'lwcrf_compcross_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
 # No strat variable for Maria
@@ -345,7 +283,7 @@ if storm == 'maria':
 
 
 
-#### COMPOSITE CROSS SECTION - WTG MOISTURE ADVECTION
+#### COMPOSITE CROSS SECTION - LW-ACRE-MADV
 #
 #
 ## create figure
