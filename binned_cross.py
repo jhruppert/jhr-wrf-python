@@ -21,7 +21,11 @@ import sys
 
 # Indexing variable
 ivar_select = 'pw'
-# 5 options: pw, vmf, rain, lwacre, olr
+# options: pw, vmf, rain, lwacre
+
+# Fill variable
+fillvar_select = 'tprm'
+# options: lwcrf, tprm, dbz
 
 
 # #### Time selection
@@ -71,16 +75,14 @@ print(datdir)
 
 # Fill contour variable
 
-fillvar_tag = 'tprm' # options: lwcrf, tprm, dbz
-
 # Vertical coordinate
 filtmp = Dataset(datdir+'RTHRATLW.nc')
 pres = filtmp.variables['pres'][:] # hPa
 print("Vertical shape: ",np.shape(pres))
-varfil_main.close()
+filtmp.close()
 
 # Radar Reflectivity
-if fillvar_tag == 'dbz':
+if fillvar_select == 'dbz':
     varfil_main = Dataset(datdir+'dbz.nc') # this opens the netcdf file
     binvar_f_in = varfil_main.variables['dbz'][t0:t1,:,:,:]
     title = 'Ref'
@@ -88,7 +90,7 @@ if fillvar_tag == 'dbz':
     cmin = -20; cmax=20
 
 # Radiation
-elif fillvar_tag == 'lwcrf':
+elif fillvar_select == 'lwcrf':
     varfil_main = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
     binvar_f_in = varfil_main.variables['RTHRATLW'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
     varcs = Dataset(datdir+'RTHRATLWC.nc') # this opens the netcdf file
@@ -100,17 +102,24 @@ elif fillvar_tag == 'lwcrf':
     cmax=4; cmin=-1.*cmax
 
 # Horizontal temperature anomaly
-elif fillvar_tag == 'tprm':
+elif fillvar_select == 'tprm':
     varfil_main = Dataset(datdir+'T.nc')
     tmp = varfil_main.variables['T'][t0:t1,:,:,:] # K
     binvar_f_in = theta_dry(tmp,pres*1e2) # K
-    title = "Binned Theta'"
+    title = "Binned Th'"
     figtag = 'thprm'
     units_var1 = 'K'
     cmax=1; cmin=-1.*cmax
     # Subtract time-dependent domain average
     t_mean = np.mean(np.mean(binvar_f_in,axis=3),axis=2)
     binvar_f_in -= t_mean[:,:,np.newaxis,np.newaxis]
+
+varfil_main.close()
+
+# Save tmpk
+tmpfil = Dataset(datdir+'T.nc')
+tmpk = tmpfil.variables['T'][t0:t1,:,:,:] # K
+tmpfil.close()
 
 
 
