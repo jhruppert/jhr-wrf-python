@@ -81,47 +81,41 @@ print(datdir)
 # Radiation
 varfil_main = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
 binvar_f_in = varfil_main.variables['RTHRATLW'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
+# Vertical coordinate
+pres = varfil_main.variables['pres'][:] # Pa
+print("Vertical shape: ",np.shape(pres))
+varfil_main.close()
+
 varcs = Dataset(datdir+'RTHRATLWC.nc') # this opens the netcdf file
 cs = varcs.variables['RTHRATLWC'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
+varcs.close()
 binvar_f_in -= cs
-var_fill='lwcrf'
 title = 'LW-CRF'
 units_var1 = 'K/d'
 cmax=4; cmin=-1.*cmax
 
-# RH
-#varfil_main = Dataset(datdir+'RH.nc') # this opens the netcdf file
-#binvar_f_in = varfil_main.variables['RH'][t0:t1,:,:,:] # %
-#title = 'RH'
-#var_fill='rh'
-#units_var1 = '%'
-#cmax=100; cmin=30
-
 # Conv/strat separation: varout = 1 if convective, = 2 if stratiform, = 3 other, = 0 if no rain
 varfil_strat = Dataset(datdir+'strat.nc') # this opens the netcdf file
 strat_in = varfil_strat.variables['strat'][t0:t1,:,:,:]
+varfil_strat.close()
 
 # LW-ACRE
 binfil = Dataset(datdir+'LWacre.nc') # this opens the netcdf file
 lwacre = binfil.variables['LWUPB'][t0:t1,:,:,:] # W/m2
+binfil.close()
 
 # Rainfall rate
 binfil = Dataset(datdir+'rainrate.nc') # this opens the netcdf file
-rain = binfil.variables['rainrate'][t0:t1,:,:,:]/24. # mm/d --> mm/hr
+rain = binfil.variables['rainrate'][t0:t1,:,:,:]
+binfil.close()
 
-## WTG MOISTURE ADVECTION
-#binfil = Dataset(datdir+'T.nc') # this opens the netcdf file
-#tmpk = binfil.variables['T'][t0:t1,:,:,:] # K
-#binfil = Dataset(datdir+'Ztotal.nc') # this opens the netcdf file
-#zz = binfil.variables['Z'][t0:t1,:,:,:] # m
-#dse = 1004.*tmpk + zz*9.81 # J/kg
-#binfil = Dataset(datdir+'QVAPOR.nc') # this opens the netcdf file
-#qv = binfil.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
-##dsdz = np.gradient(dse,axis=2)
-##dqdz = np.gradient(qv,axis=2)
-##lwcre_madv = (binvar_f_in * 1004. / (3600.*24)) * dqdz / dsdz # kg/kg / s
-
-#strat_in=lwacre
+# For density
+fil = Dataset(datdir+'T.nc')
+tmpk = fil.variables['T'][t0:t1,:,:,:] # K
+fil.close()
+fil = Dataset(datdir+'QVAPOR.nc')
+qv = fil.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
+fil.close()
 
 bv_shape = np.shape(binvar_f_in)
 print("Binvar shape: ",bv_shape)
@@ -131,17 +125,13 @@ nx1 = bv_shape[2]
 nx2 = bv_shape[3]
 
 
-# Vertical coordinate
-pres = varfil_main.variables['pres'][:] # Pa
-print("Vertical shape: ",np.shape(pres))
-
-
 
 # Line contour variable
 
 # Vertical motion
 varfil_cvar = Dataset(datdir+'W.nc') # this opens the netcdf file
 binvar_c_in = varfil_cvar.variables['W'][t0:t1,:,:,:]*1e2 # m/s --> cm/s
+varfil_cvar.close()
 units_var2='cm/s'
 lcmin = -20; lcmax=20; lcint=2
 
@@ -152,6 +142,7 @@ if ivar_select == 'pw':
     # PW
     binfil = Dataset(datdir+'PW.nc') # this opens the netcdf file
     ivar = binfil.variables['PW'][t0:t1,:,:,:]
+    binfil.close()
     fmin=35;fmax=80 # mm
     step=1
     bins=np.arange(fmin,fmax+step,step)
@@ -189,6 +180,7 @@ elif ivar_select == 'olr':
     # OLR
     binfil = Dataset(datdir+'LWUPT.nc') # this opens the netcdf file
     ivar = binfil.variables['LWUPT'][t0:t1,:,:,:]
+    binfil.close()
     fmin=70; fmax=320 # W/m2
     step=5
     bins=np.arange(fmin,fmax+step,step)
