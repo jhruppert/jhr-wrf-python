@@ -9,6 +9,18 @@
 
 import numpy as np
 
+## Potential temp ######################################################
+
+# Calculate potential temperature
+#   tmpk   - temp in [K]
+#   pres1d - pressure as 1D array in [Pa]
+def theta_dry(tmpk, pres1d):
+    p0=1.e5 # Pa
+    rd=287.04 # J/K/kg
+    cp=1004. # J/K/kg
+    rocp = rd/cp
+    return tmpk * ( p0 / pres1d[np.newaxis,:,np.newaxis,np.newaxis] ) ** rocp
+
 ## Density moist ######################################################
 
 # Calculate density for an array in pressure coordinates
