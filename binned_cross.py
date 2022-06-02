@@ -71,39 +71,49 @@ print(datdir)
 
 # Fill contour variable
 
+fillvar_tag = 'tprm' # options: lwcrf, tprm, dbz
+
 # Radar Reflectivity
-# varfil_main = Dataset(datdir+'dbz.nc') # this opens the netcdf file
-# binvar_f_in = varfil_main.variables['dbz'][t0:t1,:,:,:]
-# title = 'Ref'
-# units_var1 = 'dBZ'
-# cmin = -20; cmax=20
+if fillvar_tag == 'dbz':
+    varfil_main = Dataset(datdir+'dbz.nc') # this opens the netcdf file
+    binvar_f_in = varfil_main.variables['dbz'][t0:t1,:,:,:]
+    title = 'Ref'
+    units_var1 = 'dBZ'
+    cmin = -20; cmax=20
 
 # Radiation
-# varfil_main = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
-# binvar_f_in = varfil_main.variables['RTHRATLW'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
-# varcs = Dataset(datdir+'RTHRATLWC.nc') # this opens the netcdf file
-# cs = varcs.variables['RTHRATLWC'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
-# binvar_f_in -= cs
-# title = 'Binned LW-CRF'
-# figtag = 'lwcrf'
-# units_var1 = 'K/d'
-# cmax=4; cmin=-1.*cmax
+elif fillvar_tag == 'lwcrf':
+    varfil_main = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
+    binvar_f_in = varfil_main.variables['RTHRATLW'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
+    varcs = Dataset(datdir+'RTHRATLWC.nc') # this opens the netcdf file
+    cs = varcs.variables['RTHRATLWC'][t0:t1,:,:,:] * 3600.*24 # K/s --> K/d
+    binvar_f_in -= cs
+    title = 'Binned LW-CRF'
+    figtag = 'lwcrf'
+    units_var1 = 'K/d'
+    cmax=4; cmin=-1.*cmax
 
 # Horizontal temperature anomaly
-varfil_main = Dataset(datdir+'T.nc')
-binvar_f_in = varfil_main.variables['T'][t0:t1,:,:,:] # K
-title = "Binned T'"
-figtag = 'tprm'
-units_var1 = 'K'
-cmax=1; cmin=-1.*cmax
-# Subtract time-dependent domain average
-t_mean = np.mean(np.mean(binvar_f_in,axis=3),axis=2)
-binvar_f_in -= t_mean[:,:,np.newaxis,np.newaxis]
+elif fillvar_tag == 'tprm':
+    varfil_main = Dataset(datdir+'T.nc')
+    binvar_f_in = varfil_main.variables['T'][t0:t1,:,:,:] # K
+    title = "Binned T'"
+    figtag = 'tprm'
+    units_var1 = 'K'
+    cmax=1; cmin=-1.*cmax
+    # Subtract time-dependent domain average
+    t_mean = np.mean(np.mean(binvar_f_in,axis=3),axis=2)
+    binvar_f_in -= t_mean[:,:,np.newaxis,np.newaxis]
 
 # Vertical coordinate
 pres = varfil_main.variables['pres'][:] # Pa
 print("Vertical shape: ",np.shape(pres))
+
 varfil_main.close()
+
+
+
+# Two-dimensional variables
 
 # Conv/strat separation: varout = 1 if convective, = 2 if stratiform, = 3 other, = 0 if no rain
 varfil_strat = Dataset(datdir+'strat.nc') # this opens the netcdf file
@@ -115,15 +125,10 @@ binfil = Dataset(datdir+'LWacre.nc') # this opens the netcdf file
 lwacre = binfil.variables['LWUPB'][t0:t1,:,:,:] # W/m2
 binfil.close()
 
-# Rainfall rate
-binfil = Dataset(datdir+'rainrate.nc') # this opens the netcdf file
-rain = binfil.variables['rainrate'][t0:t1,:,:,:]
-binfil.close()
-
 # For density
-fil = Dataset(datdir+'T.nc')
-tmpk = fil.variables['T'][t0:t1,:,:,:] # K
-fil.close()
+# fil = Dataset(datdir+'T.nc')
+# tmpk = fil.variables['T'][t0:t1,:,:,:] # K
+# fil.close()
 fil = Dataset(datdir+'QVAPOR.nc')
 qv = fil.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
 fil.close()
