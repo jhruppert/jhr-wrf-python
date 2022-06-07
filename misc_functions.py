@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Miscellaneous functions (mostly thermodynamic)
+# Miscellaneous functions (mostly thermodynamic)
+# 
+# Most of the moisture calculations lean on IDL code written by
+#   Dominik Brunner (brunner@atmos.umnw.ethz.ch), August 2001
 # 
 # James Ruppert  
 # jruppert@ou.edu  
-# 5/27/22
+# May 2022
+
 
 import numpy as np
+
 
 ############################################################################
 ## BASIC VARIABLES #########################################################
@@ -16,41 +21,39 @@ import numpy as np
 ## Potential temp ######################################################
 
 # Calculate potential temperature
-#   tmpk   - temp in [K]
-#   pres1d - pressure as 1D array in [Pa]
-def theta_dry(tmpk, pres1d):
+#   tmpk - temp [K]
+#   pres - pressure [Pa]
+def theta_dry(tmpk, pres):
     p0=1.e5 # Pa
     rd=287.04 # J/K/kg
     cp=1004. # J/K/kg
     rocp = rd/cp
-    return tmpk * ( p0 / pres1d[np.newaxis,:,np.newaxis,np.newaxis] ) ** rocp
+    return tmpk * ( p0 / pres ) ** rocp
 
 
 ## Density moist ######################################################
 
 # Calculate density for an array in pressure coordinates
-#   Assumes pres is 1D and other vars are 4d, with vertical in the 2nd dimension
-#   tmpk   - temp in [K]
-#   qv     - water vapor mixing ratio [kg/kg]
-#   pres1d - pressure as 1D array in [Pa]
-def density_moist(tmpk, qv, pres1d):
+#   tmpk - temp [K]
+#   qv   - water vapor mixing ratio [kg/kg]
+#   pres - pressure [Pa]
+def density_moist(tmpk, qv, pres):
     rd=287.04
     rv=461.5
     eps_r=rv/rd
     # virt_corr = (1. + qv*eps_r)/(1.+qv)
     virt_corr = (1. + 0.61*qv)
-    return pres1d[np.newaxis,:,np.newaxis,np.newaxis] / ( rd * tmpk * virt_corr )
+    return pres / ( rd * tmpk * virt_corr )
 
 
 ## Density dry ######################################################
 
 # Calculate density for an array in pressure coordinates
-#   Assumes pres is 1D and other vars are 4d, with vertical in the 2nd dimension
-#   tmpk   - temp in [K]
-#   pres1d - pressure as 1D array in [Pa]
-def density_dry(tmpk, pres1d):
+#   tmpk - temp [K]
+#   pres - pressure [Pa]
+def density_dry(tmpk, pres):
     rd=287.04
-    return pres1d[np.newaxis,:,np.newaxis,np.newaxis] / ( rd * tmpk )
+    return pres / ( rd * tmpk )
 
 
 ############################################################################
@@ -61,12 +64,13 @@ def density_dry(tmpk, pres1d):
 ## Relative humidity (including for ice) ######################################################
 
 # ; PURPOSE:
-# ;       Convert mixing ratio (g H2O per kg of dry air) at given
+# ;       Convert mixing ratio (kg H2O per kg of dry air) at given
 # ;       temperature and pressure into relative humidity (%)
 # ; INPUTS:
-# ;       MIXR: Float or FltArr(n) H2O mixing ratios in g H2O per kg dry air
-# ;       p   : Float or FltArr(n) ambient pressure in hPa
+# ;       MIXR: Float or FltArr(n) H2O mixing ratios in kg H2O per kg dry air
+# ;       p   : Float or FltArr(n) ambient pressure in Pa
 # ;       T   : Float or FltArr(n) ambient Temperature in C or K
+#       ice   : set to 0 or 1 to use saturation over ice where T < 273.16 K
 # ; OUTPUTS:
 # ;       returns the relative humidity over liquid water or over ice
 # ;       (if keyword /ice is set)
@@ -74,6 +78,8 @@ def density_dry(tmpk, pres1d):
 # ;  Dominik Brunner (brunner@atmos.umnw.ethz.ch), August 2001
 
 # James Ruppert (jruppert@ou.edu), converted to python and placed here, June 2022
+#   Converted all input/output to SI units, June 2022
+#   Added switch and if-statement for ice, June 2022
 
 # ;  Derivation:
 # ;                                      Mw*e              e
@@ -82,11 +88,18 @@ def density_dry(tmpk, pres1d):
 # ;
 # ;  RH (rel. hum.)    = e/esat(T)*100.
 
-def relh_ice(MIXR,p,T):
-    # IF keyword_set(ice) THEN es=eice(T) ELSE es=esat(T)
+def relh(MIXR,p,T,ice):
+    if np.min(T) < 105.: # degC or K?
+        T0=273.16
+    else:
+        T0=0.
+    T+=T0
+    es=esat(T)
+    if ice == 1:
+        es[(T < 273.16)]=eice(T[(T < 273.16)])
     Mw=18.0160 # molecular weight of water
     Md=28.9660 # molecular weight of dry air
-    fact=MIXR/1000.*Md/Mw
+    fact=MIXR*Md/Mw
     return p/es*fact/(1+fact)*100.
 
 
@@ -97,12 +110,13 @@ def relh_ice(MIXR,p,T):
 # ; INPUTS:
 # ;       T       SCALAR OR VECTOR OF TEMPERATURES IN CELSIUS OR K
 # ; OUTPUTS:
-# ;       returns the saturation vapor pressure in hPa
+# ;       returns the saturation vapor pressure in Pa
 # ; MODIFICATION HISTORY:
 # ;  Dominik Brunner (brunner@atmos.umnw.ethz.ch), Feb 2000
 # ;       A good reference is Gibbins, C.J., Ann. Geophys., 8, 859-886, 1990
 
 # James Ruppert (jruppert@ou.edu), converted to python and placed here, June 2022
+#   Converted all input/output to SI units, June 2022
 
 # ; Formula with T = temperature in K
 # ;    esat = exp( -6763.6/(T+T0) - 4.9283*alog((T+T0)) + 54.2190 )
@@ -119,14 +133,15 @@ def relh_ice(MIXR,p,T):
 
 def esat(T):
     if np.min(T) < 105.: # degC or K?
-        THEN T0=273.16
+        T0=273.16
     else:
         T0=0.
-    e1=1013.250
+    T+=T0
+    e1=101325.0
     TK=273.16
-    esat=e1*10**(10.79586*(1-TK/(T+T0))-5.02808*np.log10((T+T0)/TK)+\
-                1.50474*1e-4*(1-10^(-8.29692*((T+T0)/TK-1)))+\
-                0.42873*1e-3*(10^(4.76955*(1-TK/(T+T0)))-1)-2.2195983)
+    esat=e1*10**(10.79586*(1-TK/T)-5.02808*np.log10(T/TK)+\
+                1.50474*1e-4*(1-10**(-8.29692*(T/TK-1)))+\
+                0.42873*1e-3*(10**(4.76955*(1-TK/T))-1)-2.2195983)
     return esat
 
 
@@ -139,12 +154,13 @@ def esat(T):
 # ; INPUTS:
 # ;       T       SCALAR OR VECTOR OF TEMPERATURES IN CELSIUS OR K
 # ; OUTPUTS:
-# ;       returns the saturation vapor pressure in hPa
+# ;       returns the saturation vapor pressure in Pa
 # ; MODIFICATION HISTORY:
 # ;  Dominik Brunner (brunner@atmos.umnw.ethz.ch), March 2000
 # ;       reference: Marti and Mauersberger, GRL 20, 363-366, 1993.
 
 # James Ruppert (jruppert@ou.edu), converted to python and placed here, June 2022
+#   Converted all input/output to SI units, June 2022
 
 # ; Formula with T = temperature in K
 # ;    esat = exp( -6763.6/(T+T0) - 4.9283*alog((T+T0)) + 54.2190 )
@@ -161,14 +177,16 @@ def esat(T):
 
 def eice(T):
     if np.min(T) < 105.: # degC or K?
-        THEN T0=273.16
+        T0=273.16
     else:
         T0=0.
+    T+=T0
     # ; Define constants
     A=-2663.5
     B=12.537
-    logp=A/(T+T0)+B
-    return (10**logp)/100. # conversion to hPa
+    logp=A/T+B
+    # return (10**logp)/100. # conversion to hPa
+    return 10**logp
 
 
 
