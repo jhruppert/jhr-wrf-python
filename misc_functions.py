@@ -70,7 +70,7 @@ def density_dry(tmpk, pres):
 # ;       MIXR: Float or FltArr(n) H2O mixing ratios in kg H2O per kg dry air
 # ;       p   : Float or FltArr(n) ambient pressure in Pa
 # ;       T   : Float or FltArr(n) ambient Temperature in C or K
-#       ice   : set to 0 or 1 to use saturation over ice where T < 273.16 K
+# ;     ice   : switch (set = 1 to turn on) to calculate saturation over ice where T < 273.16 K
 # ; OUTPUTS:
 # ;       returns the relative humidity over liquid water or over ice
 # ;       (if keyword /ice is set)
@@ -94,9 +94,11 @@ def relh(MIXR,p,T,ice):
     else:
         T0=0.
     T+=T0
+    
     es=esat(T)
     if ice == 1:
         es[(T < 273.16)]=eice(T[(T < 273.16)])
+    
     Mw=18.0160 # molecular weight of water
     Md=28.9660 # molecular weight of dry air
     fact=MIXR*Md/Mw
@@ -137,6 +139,7 @@ def esat(T):
     else:
         T0=0.
     T+=T0
+    
     e1=101325.0
     TK=273.16
     esat=e1*10**(10.79586*(1-TK/T)-5.02808*np.log10(T/TK)+\
@@ -181,6 +184,7 @@ def eice(T):
     else:
         T0=0.
     T+=T0
+    
     # ; Define constants
     A=-2663.5
     B=12.537
