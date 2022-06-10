@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Miscellaneous functions (mostly thermodynamic)
+# Miscellaneous thermodynamic functions.
 # 
 # Most of the moisture calculations lean on IDL code written by
-#   Dominik Brunner (brunner@atmos.umnw.ethz.ch), August 2001
+#   Dominik Brunner (brunner@atmos.umnw.ethz.ch), August 2001,
+#   converted to python here.
 # 
 # James Ruppert  
 # jruppert@ou.edu  
@@ -29,6 +30,21 @@ def theta_dry(tmpk, pres):
     cp=1004. # J/K/kg
     rocp = rd/cp
     return tmpk * ( p0 / pres ) ** rocp
+
+
+## Virtual potential temp ######################################################
+
+# Calculate virtual potential temperature
+#   tmpk - temp [K]
+#   qv   - vapor mixing ratio [kg/kg]
+#   pres - pressure [Pa]
+def theta_virtual(tmpk, qv, pres):
+    p0=1.e5 # Pa
+    rd=287.04 # J/K/kg
+    cp=1004. # J/K/kg
+    rocp = rd/cp
+    virt_corr = (1. + 0.61*qv)
+    return tmpk * virt_corr * ( p0 / pres ) ** rocp
 
 
 ## Density moist ######################################################
@@ -59,6 +75,53 @@ def density_dry(tmpk, pres):
 ############################################################################
 ## MOISTURE VARIABLES ######################################################
 ############################################################################
+
+
+## Equivalent potential temperature ##############################################
+
+# ; BASED ON (34) OF BRYAN & FRITSCH 2002, OR (2.31) OF MARKOWSKI AND RICHARDSON,
+# ; which is the "wet equivalent potential temperature" (BF02).
+# ;
+# ; INPUTS:
+#     tmpk - temp [K]
+#     rv   - water vapor mixing ratio [kg/kg]
+#     pres - pressure [Pa]
+# ; XX  RTOT: TOTAL WATER (VAPOR+HYDROMETEOR) MIXING RATIO (KG/KG)
+# ; 
+# ; RETURNS:
+# ; 
+# ;   EQUIVALENT OTENTIAL TEMPERATURE (K)
+# ; 
+# ; OPTIONS:
+# ; 
+# ;   /REVERSE: if this is set, tmpc is assumed to be theta (in K), and temperature is instead returned (in C).
+# ; 
+# ; James Ruppert, jruppert@ou.edu
+# ; 8/4/14
+# ; Converted to python, June 2022
+def theta_equiv(tmpk, rv, pres):
+
+    rtot=0 # don't presently have this available
+    
+  # ;CONSTANTS
+    R=287.    # J/K/kg
+    lv0=2.5e6 # J/kg
+    cp=1004.  # J/K/kg
+    cpl=4186. # J/k/kg
+    cpv=1885. # J/K/kg
+    eps=18.0160/28.9660 # Mw / Md (source: Brunner scripts)
+
+  # ;LATENT HEAT OF VAPORIZATION
+    lv = lv0 - (cpl-cpv)*(tmpk-273.15)
+
+  # ;DRY AIR PRESSURE
+    e = pres / ((eps/rv) + 1.)
+    p_d = pres-e
+
+  # ;CALCULATE THETA-E
+    th_e = tmpk * (1e5/p_d)**(R/(cp+cpl*rtot)) * np.exp( lv*rv / ((cp+cpl*rtot)*tmpk) )
+
+    return th_e
 
 
 ## Relative humidity (including for ice) ######################################################

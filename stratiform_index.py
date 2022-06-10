@@ -22,6 +22,7 @@ def stratiform_index(rain,vmf_lower,vmf_upper,verbose):
     
     shape = np.shape(rain)
     strat = np.zeros(shape)
+    ncell=shape[0]
     
     #### Rainfall rate threshold
     # 1. Array initialized as non-raining (0)
@@ -31,35 +32,34 @@ def stratiform_index(rain,vmf_lower,vmf_upper,verbose):
     thresh_raining = 1e-1 # mm/hr
     thresh_conv    = 1    # mm/hr
     
-    # strat[ ( (rain > thresh_raining) & (rain < thresh_conv) ) ] = 2
-    strat[ ( (rain > thresh_raining) ) ] = 1
-    # strat[ (rain >= thresh_conv) ] = 1
+#     strat[ ( (rain > thresh_raining) & (rain < thresh_conv) ) ] = 2
+#     strat[ ( (rain > thresh_raining) ) ] = 1
+#     strat[ (rain >= thresh_conv) ] = 1
     
-    ncell=shape[0]
-    for idim in range(1,rain.ndim):
-        ncell*=shape[idim]
+#     for idim in range(1,rain.ndim):
+#         ncell*=shape[idim]
     
-    if verbose == 1:
+#     if verbose == 1:
         
-        print("After rainfall threshold:")
+#         print("After rainfall threshold:")
 
-        indices = (strat == 0).nonzero()
-        count = np.shape(indices[1])[0]
-        print("N non-raining = ",count)
-        print("% non-raining = ",count/ncell*100)
-        print()
+#         indices = (strat == 0).nonzero()
+#         count = np.shape(indices[1])[0]
+#         print("N non-raining = ",count)
+#         print("% non-raining = ",count/ncell*100)
+#         print()
 
-        indices = (strat == 1).nonzero()
-        count = np.shape(indices[1])[0]
-        print("N conv = ",count)
-        print("% conv = ",count/ncell*100)
-        print()
+#         indices = (strat == 1).nonzero()
+#         count = np.shape(indices[1])[0]
+#         print("N conv = ",count)
+#         print("% conv = ",count/ncell*100)
+#         print()
 
-        indices = (strat == 2).nonzero()
-        count = np.shape(indices[1])[0]
-        print("N strat = ",count)
-        print("% strat = ",count/ncell*100)
-        print()
+#         indices = (strat == 2).nonzero()
+#         count = np.shape(indices[1])[0]
+#         print("N strat = ",count)
+#         print("% strat = ",count/ncell*100)
+#         print()
     
     
     #### VMF threshold
@@ -70,12 +70,12 @@ def stratiform_index(rain,vmf_lower,vmf_upper,verbose):
     
     thresh_conv   = 1e3  # kg/m/s
     thresh_nonrain = 10   # kg/m/s
-
+    
     # strat[ ( (strat == 1) & (vmf < thresh_strat) ) ] = 2
     # strat[ ( (strat == 2) & (vmf < thresh_nonrain) ) ] = 0
-    # strat[ (vmf >= thresh_nonrain) ] = 2
-    # strat[ ((vmf >= thresh_conv) ) ] = 1
-
+    strat[ (vmf >= thresh_nonrain) ] = 2
+    strat[ ((vmf >= thresh_conv) ) ] = 1
+    
     if verbose == 1:
         
         print("After VMF threshold:")
