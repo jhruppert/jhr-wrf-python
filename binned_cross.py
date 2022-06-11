@@ -14,7 +14,7 @@ from netCDF4 import Dataset
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from misc_functions import theta_dry, density_moist
+from thermo_functions import theta_dry, density_moist
 import sys
 
 
@@ -112,7 +112,7 @@ elif fillvar_select == 'lwcrf':
 elif fillvar_select == 'thprm':
     varfil_main = Dataset(datdir+'T.nc')
     tmp = varfil_main.variables['T'][t0:t1,:,:,:] # K
-    binvar_f_in = theta_dry(tmp,pres*1e2) # K
+    binvar_f_in = theta_dry(tmp,pres[np.newaxis,:,np.newaxis,np.newaxis]*1e2) # K
     title = "Binned Th'"
     figtag = 'thprm'
     units_var1 = 'K'
