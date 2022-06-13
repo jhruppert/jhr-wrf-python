@@ -190,6 +190,7 @@ for knt in range(3,4):
         scale_mn=1e3
         units_mn='$10^{-3}$ '+units_var
         xrange_mn=(-1,8)
+        xrange_mn2=(-1,1)
   
   # Th_v' weighted by qv'
   #thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
@@ -250,11 +251,11 @@ for knt in range(3,4):
     elif ktest == 1:
       itest='ncrf'
 
-    pltvar = np.transpose(var_freq[ktest,:,:])
+    pltvar = np.transpose(np.ma.masked_equal(var_freq[ktest,:,:],0))
     var_mn_plt = var_mn[ktest,:]*scale_mn
 
     fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
-                            constrained_layout=False, figsize=(12, 8))
+                            constrained_layout=True, figsize=(12, 8))
 
     ifig_title=fig_title+' ('+itest.upper()+')'
     fig.suptitle(ifig_title)
@@ -276,8 +277,6 @@ for knt in range(3,4):
 
         if col == 0:
     
-#    ax = plt.subplot(121)
-    
             ax.set_title('CFAD')
             ax.set_ylabel('Pressure [hPa]')
             ax.set_xscale('symlog')
@@ -292,7 +291,7 @@ for knt in range(3,4):
             ax.xaxis.set_major_locator(locmin)
             # ax.xaxis.set_minor_formatter(ticker.NullFormatter())
             
-            cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticker.LogLocator(base=10.0), 
+            cbar = plt.colorbar(im, ax=ax, shrink=0.75, #ticks=ticker.LogLocator(base=10.0), 
                                 format=ticker.LogFormatterMathtext())
             cbar.ax.set_ylabel('%')
 
@@ -300,8 +299,6 @@ for knt in range(3,4):
     ####### Mean profile ##############
 
         elif col == 1:
-    
-#    ax = plt.subplot(122)
     
             ax.set_title('Mean')
             ax.yaxis.set_major_formatter(ticker.NullFormatter())
@@ -314,93 +311,68 @@ for knt in range(3,4):
     plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                 bbox_inches='tight', pad_inches=0.2)
 
-#    pltvar = np.transpose(var_freq[ktest,:,:])
-#    ifig_title=fig_title+' ('+itest.upper()+')'
-#  
-#    fig = plt.figure(figsize=(14,8))
-#    ax = fig.add_subplot(111)
-#    
-#    ax.set_title(ifig_title)
-#    ax.set_ylabel('Pressure [hPa]')
-#    
-#    ax.invert_yaxis()
-#    ax.set_yscale('log')
-#    ax.set_xscale('symlog')
-#    
-#    # fill contour
-#    #clevs=[0.005,0.01,0.05,0.1,0.5,1,5,10,50]
-#    clevs=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)))
-#    
-#    im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.LogNorm(), \
-#                     cmap=cmocean.cm.ice_r, alpha=1, extend='max', zorder=2)
-##                     cmap='GnBu', alpha=1, extend='max', zorder=2)
-#    
-#    plt.yticks(ticks=pres)
-#    ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-#    plt.ylim(np.max(pres), np.min(pres))
-#    
-#    locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
-#    ax.xaxis.set_major_locator(locmin)
-#    # ax.xaxis.set_minor_formatter(ticker.NullFormatter())
-#
-#    plt.xlim(np.min(bin_axis), np.max(bin_axis))
-#    
-#    #plt.axvline(x=0,color='k',linewidth=0.5)
-#    ax.set_xlabel(units_var)
-#    
-#    ax.tick_params(axis='both',length=7)
-#
-#    cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticker.LogLocator(base=10.0), format=ticker.LogFormatterMathtext())
-#    cbar.ax.set_ylabel('%')
-#    
-#    plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
-#                bbox_inches='tight', pad_inches=0.2)
-  
-  
   
   # ### Plot difference CFAD ########################
   
   # var_diff = NCRF - CTL
   pltvar = np.transpose( var_freq[0,:,:] - var_freq[1,:,:] )
+  var_mn_plt = (var_mn[0,:] - var_mn[1,:])*scale_mn
+  
+  fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
+                          constrained_layout=True, figsize=(12, 8))
+  
   ifig_title=fig_title+' (CTL - NCRF)'
+  fig.suptitle(ifig_title)
   
-  fig = plt.figure(figsize=(14,8))
-  ax = fig.add_subplot(111)
+  for col in range(2):
   
-  ax.set_title(ifig_title)
-  ax.set_ylabel('Pressure [hPa]')
+      ax = plt.subplot(1,2,1+col)
+      ax.set_yscale('log')
+      ax.invert_yaxis()
+      ax.set_yscale('log')
+      ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
+      ax.set_xlabel(units_var)
+      ax.tick_params(axis='both',length=7)
+      plt.yticks(ticks=pres)
+      plt.ylim(np.max(pres), np.min(pres))
   
-  ax.invert_yaxis()
-  ax.set_yscale('log')
-  ax.set_xscale('symlog')
   
-  # fill contour
-  clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
-  clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
+  ####### Fill contour ##############
   
-  im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]), \
-                   cmap='RdBu_r', alpha=1, extend='max', zorder=2)
+      if col == 0:
   
-  plt.yticks(ticks=pres)
-  ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-  plt.ylim(np.max(pres), np.min(pres))
-
-  locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
-  ax.xaxis.set_major_locator(locmin)
-  # ax.xaxis.set_minor_formatter(ticker.NullFormatter())
+          ax.set_title('CFAD')
+          ax.set_ylabel('Pressure [hPa]')
+          ax.set_xscale('symlog')
   
-  plt.xlim(np.min(bin_axis), np.max(bin_axis))
+          clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
+          clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
+        
+          im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]), \
+               cmap='RdBu_r', alpha=1, extend='max', zorder=2)
   
-  #plt.axvline(x=0,color='k',linewidth=0.5)
-  ax.set_xlabel(units_var)
-
-  ax.tick_params(axis='both',length=7)
+          plt.xlim(np.min(bin_axis), np.max(bin_axis))
+          locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
+          ax.xaxis.set_major_locator(locmin)
+          # ax.xaxis.set_minor_formatter(ticker.NullFormatter())
   
-  cbar = plt.colorbar(im, ax=ax, shrink=0.75, \
-      ticks=ticker.SymmetricalLogLocator(base=10.0, linthresh=.5), format=ticker.LogFormatterMathtext())
-  cbar.ax.set_ylabel('%')
+          cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticker.SymmetricalLogLocator(base=10.0, linthresh=.5),
+                              format=ticker.LogFormatterMathtext())
+          cbar.ax.set_ylabel('%')
+  
+  
+  ####### Mean profile ##############
+  
+      elif col == 1:
+  
+          ax.set_title('Mean')
+          ax.yaxis.set_major_formatter(ticker.NullFormatter())
+  
+          ax.plot(var_mn_plt, pres, "-k", linewidth=2)
+          plt.xlim(xrange_mn2)
+          plt.axvline(x=0,color='k',linewidth=0.5)
+          ax.set_xlabel(units_mn)
   
   plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_diff_'+hr_tag+'.png',dpi=200, facecolor='white', \
               bbox_inches='tight', pad_inches=0.2)
-
-
+  
