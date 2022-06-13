@@ -30,7 +30,7 @@ iplot = 'vmf'
 
 # Settings
 # Calculate anomaly as deviation from xy-mean
-do_prm_xy = 0
+do_prm_xy = 1
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
@@ -114,6 +114,7 @@ for knt in range(i_nt):
   var_mn=np.zeros((ntest,nz))
   
   for ktest in range(ntest):
+#  for ktest in range(1):
   
     if ktest == 0:
       itest='ctl'
@@ -158,16 +159,22 @@ for knt in range(i_nt):
         var = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
   
         # Figure settings
-        fig_title="i$\theta_v$"
+        fig_title=r"$\theta_v$"
         fig_tag='thv'
         units_var='K'
   
+        # For mean var
+        scale_mn=1.#e3
+        units_mn=units_var
+        xrange_mn=(-0.5,0.5)
+        xrange_mn2=(-0.1,0.1)
+
   # Equiv potential temp
       elif iplot == 'the': 
         var = theta_equiv(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
   
         # Figure settings
-        fig_title="i$\theta_e$"
+        fig_title=r"$\theta_e$"
         fig_tag='the'
         units_var='K'
   
@@ -264,7 +271,6 @@ for knt in range(i_nt):
         ax = plt.subplot(1,2,1+col)
         ax.set_yscale('log')
         ax.invert_yaxis()
-        ax.set_yscale('log')
         ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
         ax.set_xlabel(units_var)
         ax.tick_params(axis='both',length=7)
@@ -275,13 +281,23 @@ for knt in range(i_nt):
     ####### Fill contour ##############
 
         if col == 0:
-    
+
             ax.set_title('CFAD')
             ax.set_ylabel('Pressure [hPa]')
-            ax.set_xscale('symlog')
-            
-            clevs=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)))
-            
+
+            if iplot == 'vmf':
+                ax.set_xscale('symlog')
+                clevs=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)))
+                
+                locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
+                ax.xaxis.set_major_locator(locmin)
+                ticks=[1e-2,1e-1,1,1e1]
+            elif iplot == 'thv':
+                clevs=[0.01,0.05,0.1,0.5,1,5,10,50]
+                ticks=None
+    
+            var_plt=np.transpose(np.ma.masked_equal(var_freq,0))
+
             im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.LogNorm(),
                              cmap=cmocean.cm.ice_r, alpha=1.0, extend='max', zorder=2)
             
@@ -290,8 +306,7 @@ for knt in range(i_nt):
             ax.xaxis.set_major_locator(locmin)
             # ax.xaxis.set_minor_formatter(ticker.NullFormatter())
             
-            cbar = plt.colorbar(im, ax=ax, shrink=0.75, #ticks=ticker.LogLocator(base=10.0), 
-                                format=ticker.LogFormatterMathtext())
+            cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticks, format=ticker.LogFormatterMathtext())
             cbar.ax.set_ylabel('%')
 
 
@@ -328,7 +343,6 @@ for knt in range(i_nt):
       ax = plt.subplot(1,2,1+col)
       ax.set_yscale('log')
       ax.invert_yaxis()
-      ax.set_yscale('log')
       ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
       ax.set_xlabel(units_var)
       ax.tick_params(axis='both',length=7)
