@@ -45,7 +45,7 @@ storm = 'haiyan'
 #storm = 'maria'
 
 nmem = 5 # number of ensemble members (1-5 have NCRF)
-#nmem = 1
+nmem = 1
 
 xmin=780
 
@@ -55,8 +55,8 @@ xmin=780
 ntall=[1,3,6,12,24,36]
 i_nt=np.shape(ntall)[0]
 
-for knt in range(i_nt):
-#for knt in range(2,3):
+#for knt in range(i_nt):
+for knt in range(2,3):
   
   nt = ntall[knt]
   hr_tag = str(np.char.zfill(str(nt), 2))
@@ -250,7 +250,7 @@ for knt in range(i_nt):
     
     # fill contour
     #clevs=[0.005,0.01,0.05,0.1,0.5,1,5,10,50]
-    clevs=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)))
+    clevs=np.concatenate((np.arange(2,10,2)*1e-2,np.arange(2,10,2)*1e-1,np.arange(2,10,2)))
     
     im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.LogNorm(), \
                      cmap=cmocean.cm.ice_r, alpha=1, extend='max', zorder=2)
@@ -295,7 +295,8 @@ for knt in range(i_nt):
   ax.set_xscale('symlog')
   
   # fill contour
-  clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
+  #clevsi=[0.005,0.01,0.05,0.1,0.5,1,5,10,50]
+  clevsi=np.concatenate((np.arange(2,10,2)*1e-2,np.arange(2,10,2)*1e-1,np.arange(2,10,2)*1e-0))
   clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
   
   im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]), \
