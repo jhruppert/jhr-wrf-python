@@ -56,7 +56,7 @@ ntall=[1,3,6,12,24,36]
 i_nt=np.shape(ntall)[0]
 
 for knt in range(i_nt):
-#for knt in range(2,3):
+#for knt in range(3,4):
   
   nt = ntall[knt]
   hr_tag = str(np.char.zfill(str(nt), 2))
@@ -127,7 +127,10 @@ for knt in range(i_nt):
     print('Running itest: ',itest)
   
     # Create arrays to save ens members
-    var_all = np.zeros((nmem,nt,nz,nx1,nx2))
+    if do_prm_inc == 1:
+      var_all = np.zeros((nmem,nt-1,nz,nx1,nx2))
+    else:
+      var_all = np.zeros((nmem,nt,nz,nx1,nx2))
   
     for imemb in range(nmem):
   
@@ -178,7 +181,7 @@ for knt in range(i_nt):
         var *= rho
   
         # Figure settings
-        fig_title="VMF'"
+        fig_title='VMF'
         fig_tag='vmf'
         units_var='kg m$^{-2}$ s$^{-1}$'
   
@@ -195,6 +198,7 @@ for knt in range(i_nt):
         v_mean = np.mean(var,axis=(2,3))
         var -= v_mean[:,:,np.newaxis,np.newaxis]
         fig_tag+='_xyp'
+        fig_title+=' (xp)'
   
   # Calculate var' as time-increment: var[t] - var[t-1]
       if do_prm_inc == 1:
@@ -202,6 +206,7 @@ for knt in range(i_nt):
         del var
         var = tmpvar
         fig_tag+='_tp'
+        fig_title+=' (tp)'
   
   # Save ens member
       var_all[imemb,:,:,:,:] = var
@@ -235,13 +240,14 @@ for knt in range(i_nt):
       itest='ctl'
     elif ktest == 1:
       itest='ncrf'
-  
+
     pltvar = np.transpose(var_freq[ktest,:,:])
+    ifig_title=fig_title+' ('+itest.upper()+')'
   
     fig = plt.figure(figsize=(14,8))
     ax = fig.add_subplot(111)
     
-    ax.set_title(fig_title)
+    ax.set_title(ifig_title)
     ax.set_ylabel('Pressure [hPa]')
     
     ax.invert_yaxis()
@@ -282,12 +288,13 @@ for knt in range(i_nt):
   # ### Plot difference CFAD ########################
   
   # var_diff = NCRF - CTL
-  pltvar = np.transpose( var_freq[1,:,:] - var_freq[0,:,:] )
+  pltvar = np.transpose( var_freq[0,:,:] - var_freq[1,:,:] )
+  ifig_title=fig_title+' (CTL - NCRF)'
   
   fig = plt.figure(figsize=(14,8))
   ax = fig.add_subplot(111)
   
-  ax.set_title(fig_title)
+  ax.set_title(ifig_title)
   ax.set_ylabel('Pressure [hPa]')
   
   ax.invert_yaxis()
