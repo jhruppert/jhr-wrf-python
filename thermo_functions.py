@@ -24,12 +24,22 @@ import numpy as np
 # Calculate potential temperature
 #   tmpk - temp [K]
 #   pres - pressure [Pa]
-def theta_dry(tmpk, pres):
+def theta_dry(T, pres):
+    
+    if np.max(pres) < 1e4:
+        pres*=1e2 # Convert to Pa
+    
+    if np.min(T) < 105.: # degC or K?
+        T0=273.16
+    else:
+        T0=0.
+    T+=T0
+    
     p0=1.e5 # Pa
     rd=287.04 # J/K/kg
     cp=1004. # J/K/kg
     rocp = rd/cp
-    return tmpk * ( p0 / pres ) ** rocp
+    return T * ( p0 / pres ) ** rocp
 
 
 ## Virtual potential temp ######################################################
@@ -38,13 +48,23 @@ def theta_dry(tmpk, pres):
 #   tmpk - temp [K]
 #   qv   - vapor mixing ratio [kg/kg]
 #   pres - pressure [Pa]
-def theta_virtual(tmpk, qv, pres):
+def theta_virtual(T, qv, pres):
+    
+    if np.max(pres) < 1e4:
+        pres*=1e2 # Convert to Pa
+    
+    if np.min(T) < 105.: # degC or K?
+        T0=273.16
+    else:
+        T0=0.
+    T+=T0
+    
     p0=1.e5 # Pa
     rd=287.04 # J/K/kg
     cp=1004. # J/K/kg
     rocp = rd/cp
     virt_corr = (1. + 0.61*qv)
-    return tmpk * virt_corr * ( p0 / pres ) ** rocp
+    return T * virt_corr * ( p0 / pres ) ** rocp
 
 
 ## Density moist ######################################################
@@ -53,13 +73,23 @@ def theta_virtual(tmpk, qv, pres):
 #   tmpk - temp [K]
 #   qv   - water vapor mixing ratio [kg/kg]
 #   pres - pressure [Pa]
-def density_moist(tmpk, qv, pres):
+def density_moist(T, qv, pres):
+    
+    if np.max(pres) < 1e4:
+        pres*=1e2 # Convert to Pa
+    
+    if np.min(T) < 105.: # degC or K?
+        T0=273.16
+    else:
+        T0=0.
+    T+=T0
+    
     rd=287.04
     rv=461.5
     eps_r=rv/rd
     # virt_corr = (1. + qv*eps_r)/(1.+qv)
     virt_corr = (1. + 0.61*qv)
-    return pres / ( rd * tmpk * virt_corr )
+    return pres / ( rd * T * virt_corr )
 
 
 ## Density dry ######################################################
@@ -67,9 +97,19 @@ def density_moist(tmpk, qv, pres):
 # Calculate density for an array in pressure coordinates
 #   tmpk - temp [K]
 #   pres - pressure [Pa]
-def density_dry(tmpk, pres):
+def density_dry(T, pres):
+    
+    if np.max(pres) < 1e4:
+        pres*=1e2 # Convert to Pa
+    
+    if np.min(T) < 105.: # degC or K?
+        T0=273.16
+    else:
+        T0=0.
+    T+=T0
+    
     rd=287.04
-    return pres / ( rd * tmpk )
+    return pres / ( rd * T )
 
 
 ############################################################################
@@ -83,7 +123,7 @@ def density_dry(tmpk, pres):
 # ; which is the "wet equivalent potential temperature" (BF02).
 # ;
 # ; INPUTS:
-#     tmpk - temp [K]
+#     T - temp [K]
 #     rv   - water vapor mixing ratio [kg/kg]
 #     pres - pressure [Pa]
 # ; XX  RTOT: TOTAL WATER (VAPOR+HYDROMETEOR) MIXING RATIO (KG/KG)
@@ -99,8 +139,17 @@ def density_dry(tmpk, pres):
 # ; James Ruppert, jruppert@ou.edu
 # ; 8/4/14
 # ; Converted to python, June 2022
-def theta_equiv(tmpk, rv, pres):
-
+def theta_equiv(T, rv, pres):
+    
+    if np.max(pres) < 1e4:
+        pres*=1e2 # Convert to Pa
+    
+    if np.min(T) < 105.: # degC or K?
+        T0=273.16
+    else:
+        T0=0.
+    T+=T0
+    
     rtot=0 # don't presently have this available
     
   # ;CONSTANTS
@@ -112,14 +161,14 @@ def theta_equiv(tmpk, rv, pres):
     eps=18.0160/28.9660 # Mw / Md (source: Brunner scripts)
 
   # ;LATENT HEAT OF VAPORIZATION
-    lv = lv0 - (cpl-cpv)*(tmpk-273.15)
+    lv = lv0 - (cpl-cpv)*(T-273.15)
 
   # ;DRY AIR PRESSURE
     e = pres / ((eps/rv) + 1.)
     p_d = pres-e
 
   # ;CALCULATE THETA-E
-    th_e = tmpk * (1e5/p_d)**(R/(cp+cpl*rtot)) * np.exp( lv*rv / ((cp+cpl*rtot)*tmpk) )
+    th_e = T * (1e5/p_d)**(R/(cp+cpl*rtot)) * np.exp( lv*rv / ((cp+cpl*rtot)*T) )
 
     return th_e
 
@@ -152,6 +201,10 @@ def theta_equiv(tmpk, rv, pres):
 # ;  RH (rel. hum.)    = e/esat(T)*100.
 
 def relh(MIXR,p,T,ice):
+    
+    if np.max(pres) < 1e4:
+        pres*=1e2 # Convert to Pa
+    
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:
@@ -197,6 +250,10 @@ def relh(MIXR,p,T,ice):
 # ; modified by Goff in 1965:
 
 def esat(T):
+    
+    if np.max(pres) < 1e4:
+        pres*=1e2 # Convert to Pa
+    
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:
@@ -242,6 +299,10 @@ def esat(T):
 # ; modified by Goff in 1965:
 
 def eice(T):
+    
+    if np.max(pres) < 1e4:
+        pres*=1e2 # Convert to Pa
+    
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:
