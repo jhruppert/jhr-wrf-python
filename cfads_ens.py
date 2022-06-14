@@ -25,14 +25,14 @@ from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtua
 # #### Variable selection
 
 # Fill variable
-iplot = 'vmf'
+iplot = 'thv'#'thv'#'vmf'
 # options: vmf, thv, the
 
 # Settings
 # Calculate anomaly as deviation from xy-mean
 do_prm_xy = 1
 # Calculate anomaly as time-increment
-do_prm_inc = 0
+do_prm_inc = 1
 
 # Should be off for VMF
 if iplot == 'vmf':
@@ -56,12 +56,15 @@ ntall=[1,3,6,12,24,36]
 i_nt=np.shape(ntall)[0]
 
 for knt in range(i_nt):
-#for knt in range(3,4):
+#for knt in range(2,3):
   
   nt = ntall[knt]
   hr_tag = str(np.char.zfill(str(nt), 2))
   
-  
+  # Skip null time step
+  if nt == 1 and do_prm_inc == 1: continue
+
+
   # #### Directories
   
   figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
@@ -87,24 +90,78 @@ for knt in range(i_nt):
   nx2 = bv_shape[3]
   
   
-  # Bin settings
+  # Variable settings
   if iplot == 'thv':
-    nbin=60
-    fmin=-5; fmax=5
-    step=(fmax-fmin)/nbin
-    bins=np.arange(fmin,fmax,step)
+
+      # Bin settings
+      nbin=60
+      fmax=3 #5 #; fmin=-5
+      #step=(fmax-fmin)/nbin
+      step=fmax*2/nbin
+      bins=np.arange(0,fmax,step)+step
+      bins=np.concatenate((-1.*np.flip(bins),bins))
+      nbin=np.shape(bins)[0]
+  
+      # Figure settings
+      fig_title=r"$\theta_v$"
+      fig_tag='thv'
+      units_var='K'
+  
+      # For mean var
+      scale_mn=1.#e3
+      units_mn=units_var
+      xrange_mn=(-0.5,0.5)
+      xrange_mn2=(-0.1,0.1)
+
   elif iplot == 'the':
-    nbin=60
-    fmin=-10; fmax=10
-    step=(fmax-fmin)/nbin
-    bins=np.arange(fmin,fmax,step)
+
+      # Bin settings
+      nbin=60
+      fmax=5 #; fmin=-10
+      #step=(fmax-fmin)/nbin
+      step=fmax*2/nbin
+      bins=np.arange(0,fmax,step)+step
+      bins=np.concatenate((-1.*np.flip(bins),bins))
+      nbin=np.shape(bins)[0]
+  
+      # Figure settings
+      fig_title=r"$\theta_e$"
+      fig_tag='the'
+      units_var='K'
+  
+      # For mean var
+      scale_mn=1.#e3
+      units_mn=units_var
+      xrange_mn=(-0.5,0.5)
+      xrange_mn2=(-0.1,0.1)
+
   elif iplot == 'vmf':
-    bins=np.logspace(-3,1.1,num=20)
-    bins=np.concatenate((-1.*np.flip(bins),bins))
-    nbin=np.shape(bins)[0]
+
+      # Bin settings
+      bins=np.logspace(-3,1.1,num=20)
+      bins=np.concatenate((-1.*np.flip(bins),bins))
+      nbin=np.shape(bins)[0]
+
+      # Figure settings
+      fig_title='VMF'
+      fig_tag='vmf'
+      units_var='kg m$^{-2}$ s$^{-1}$'
+
+      # For mean var
+      scale_mn=1e3
+      units_mn='$10^{-3}$ '+units_var
+      xrange_mn=(-1,8)
+      xrange_mn2=(-1,1)
 
   # Create axis of bin center-points
   bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
+
+  if do_prm_xy == 1:
+      fig_tag+='_xyp'
+      fig_title+=' (xp)'
+  if do_prm_inc == 1:
+      fig_tag+='_tp'
+      fig_title+=' (tp)'
 
 
   # #### Read variables ##############################################
@@ -128,10 +185,10 @@ for knt in range(i_nt):
     print('Running itest: ',itest)
   
     # Create arrays to save ens members
-    if do_prm_inc == 1:
-      var_all = np.zeros((nmem,nt-1,nz,nx1,nx2))
-    else:
-      var_all = np.zeros((nmem,nt,nz,nx1,nx2))
+#    if do_prm_inc == 1:
+#      var_all = np.zeros((nmem,nt-1,nz,nx1,nx2))
+#    else:
+    var_all = np.zeros((nmem,nt,nz,nx1,nx2))
   
     for imemb in range(nmem):
   
@@ -154,31 +211,13 @@ for knt in range(i_nt):
   
   ### Variable selection ##############################################
   
-  # Virtual potential temp
+      # Virtual potential temp
       if iplot == 'thv':
         var = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-  
-        # Figure settings
-        fig_title=r"$\theta_v$"
-        fig_tag='thv'
-        units_var='K'
-  
-        # For mean var
-        scale_mn=1.#e3
-        units_mn=units_var
-        xrange_mn=(-0.5,0.5)
-        xrange_mn2=(-0.1,0.1)
-
-  # Equiv potential temp
+      # Equiv potential temp
       elif iplot == 'the': 
         var = theta_equiv(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-  
-        # Figure settings
-        fig_title=r"$\theta_e$"
-        fig_tag='the'
-        units_var='K'
-  
-  # Vertical mass flux
+      # Vertical mass flux
       elif iplot == 'vmf':
         # Density
         rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
@@ -186,17 +225,6 @@ for knt in range(i_nt):
         var = varfil_cvar.variables['W'][t0:t1,:,:,xmin:1400-1] # m/s
         varfil_cvar.close()
         var *= rho
-  
-        # Figure settings
-        fig_title='VMF'
-        fig_tag='vmf'
-        units_var='kg m$^{-2}$ s$^{-1}$'
-
-        # For mean var
-        scale_mn=1e3
-        units_mn='$10^{-3}$ '+units_var
-        xrange_mn=(-1,8)
-        xrange_mn2=(-1,1)
   
   # Th_v' weighted by qv'
   #thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
@@ -206,23 +234,20 @@ for knt in range(i_nt):
   #qvp /= qvscale[:,:,np.newaxis,np.newaxis]
   #thp *= qvp
   
-  # Calculate var' as time-increment: var[t,z,y,x] - mean_xy(var[t,z])
+      # Calculate var' as anomaly from x-y-average: var[t,z,y,x] - mean_xy(var[t,z])
       if do_prm_xy == 1:
         v_mean = np.mean(var,axis=(2,3))
         var -= v_mean[:,:,np.newaxis,np.newaxis]
-        fig_tag+='_xyp'
-        fig_title+=' (xp)'
   
-  # Calculate var' as time-increment: var[t] - var[t-1]
-      if do_prm_inc == 1:
-        tmpvar = var[range(1,nt),:,:,:] - var[range(0,nt-1),:,:,:]
-        del var
-        var = tmpvar
-        fig_tag+='_tp'
-        fig_title+=' (tp)'
-  
-  # Save ens member
+      # Save ens member
       var_all[imemb,:,:,:,:] = var
+
+  #### Calculate basic mean
+    var_mn[ktest,:] = np.mean(var_all,axis=(0,1,3,4))
+
+  # Calculate var' as time-increment: var[t] - var[t-1]
+    if do_prm_inc == 1:
+      var_all = var_all[:,range(1,nt),:,:,:] - var_all[:,range(0,nt-1),:,:,:]
   
   
   #### Calculate frequency ##############################################
@@ -234,9 +259,6 @@ for knt in range(i_nt):
     
     ncell=nx1*nx2*nt*nmem
     var_freq[ktest,:,:] *= 100./ncell
-
-  #### Calculate basic mean
-    var_mn[ktest,:] = np.mean(var_all,axis=(0,1,3,4))  
 
   
   # ### Plotting routines ##############################################
@@ -269,13 +291,15 @@ for knt in range(i_nt):
     for col in range(2):
         
         ax = plt.subplot(1,2,1+col)
+
         ax.set_yscale('log')
         ax.invert_yaxis()
         ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-        ax.set_xlabel(units_var)
         ax.tick_params(axis='both',length=7)
         plt.yticks(ticks=pres)
         plt.ylim(np.max(pres), np.min(pres))
+
+        ax.set_xlabel(units_var)
 
 
     ####### Fill contour ##############
@@ -292,19 +316,14 @@ for knt in range(i_nt):
                 locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
                 ax.xaxis.set_major_locator(locmin)
                 ticks=[1e-2,1e-1,1,1e1]
-            elif iplot == 'thv':
+            elif iplot == 'thv' or iplot == 'the':
                 clevs=[0.01,0.05,0.1,0.5,1,5,10,50]
                 ticks=None
     
-            var_plt=np.transpose(np.ma.masked_equal(var_freq,0))
-
             im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.LogNorm(),
                              cmap=cmocean.cm.ice_r, alpha=1.0, extend='max', zorder=2)
             
             plt.xlim(np.min(bin_axis), np.max(bin_axis))
-            locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
-            ax.xaxis.set_major_locator(locmin)
-            # ax.xaxis.set_minor_formatter(ticker.NullFormatter())
             
             cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticks, format=ticker.LogFormatterMathtext())
             cbar.ax.set_ylabel('%')
@@ -325,6 +344,8 @@ for knt in range(i_nt):
     plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                 bbox_inches='tight', pad_inches=0.2)
 
+
+
   
   # ### Plot difference CFAD ########################
   
@@ -341,13 +362,15 @@ for knt in range(i_nt):
   for col in range(2):
   
       ax = plt.subplot(1,2,1+col)
+
       ax.set_yscale('log')
       ax.invert_yaxis()
       ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-      ax.set_xlabel(units_var)
       ax.tick_params(axis='both',length=7)
       plt.yticks(ticks=pres)
       plt.ylim(np.max(pres), np.min(pres))
+
+      ax.set_xlabel(units_var)
   
   
   ####### Fill contour ##############
@@ -356,36 +379,47 @@ for knt in range(i_nt):
   
           ax.set_title('CFAD')
           ax.set_ylabel('Pressure [hPa]')
-          ax.set_xscale('symlog')
-  
-          clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
-          clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
-        
-          im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]), \
-               cmap='RdBu_r', alpha=1, extend='max', zorder=2)
-  
+
+          if iplot == 'vmf':
+              ax.set_xscale('symlog')
+              clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
+              clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
+
+              locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
+              ax.xaxis.set_major_locator(locmin)
+              ticks=[1e-2,1e-1,1,1e1]
+          elif iplot == 'thv' or iplot == 'the':
+#              clevsi=[0.01,0.05,0.1,0.5,1,5,10,50]
+              clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
+              clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
+#              ticks=None
+              ticks=[1e-2,1e-1,1,1e1]
+
+          im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]),
+                           cmap='RdBu_r', alpha=1.0, extend='max', zorder=2)
+
           plt.xlim(np.min(bin_axis), np.max(bin_axis))
-          locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
-          ax.xaxis.set_major_locator(locmin)
-          # ax.xaxis.set_minor_formatter(ticker.NullFormatter())
-  
+
+          #if iplot == 'thv': 
+          plt.axvline(x=0,color='k',linewidth=1.)
+
           cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticker.SymmetricalLogLocator(base=10.0, linthresh=.5),
                               format=ticker.LogFormatterMathtext())
           cbar.ax.set_ylabel('%')
-  
-  
-  ####### Mean profile ##############
-  
+
+    ####### Mean profile ##############
+
       elif col == 1:
-  
+
           ax.set_title('Mean')
           ax.yaxis.set_major_formatter(ticker.NullFormatter())
-  
+
           ax.plot(var_mn_plt, pres, "-k", linewidth=2)
           plt.xlim(xrange_mn2)
           plt.axvline(x=0,color='k',linewidth=0.5)
           ax.set_xlabel(units_mn)
-  
+
   plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_diff_'+hr_tag+'.png',dpi=200, facecolor='white', \
               bbox_inches='tight', pad_inches=0.2)
-  
+
+
