@@ -25,14 +25,14 @@ from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtua
 # #### Variable selection
 
 # Fill variable
-iplot = 'vmf'#'the'#'thv'#'vmf'
+iplot = 'thv'#'thv'#'vmf'
 # options: vmf, thv, the
 
 # Settings
 # Calculate anomaly as deviation from xy-mean
 do_prm_xy = 1
 # Calculate anomaly as time-increment
-do_prm_inc = 0
+do_prm_inc = 1
 
 # Should be off for VMF
 if iplot == 'vmf':
@@ -56,15 +56,12 @@ ntall=[1,3,6,12,24,36]
 i_nt=np.shape(ntall)[0]
 
 for knt in range(i_nt):
-#for knt in range(2,3):
+#for knt in range(0,1):
   
   nt = ntall[knt]
   hr_tag = str(np.char.zfill(str(nt), 2))
   
-  # Skip null time step
-  if nt == 1 and do_prm_inc == 1: continue
-
-
+  
   # #### Directories
   
   figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
@@ -91,6 +88,7 @@ for knt in range(i_nt):
   
   
   # Variable settings
+
   if iplot == 'thv':
 
       # Bin settings
@@ -179,16 +177,20 @@ for knt in range(i_nt):
     elif ktest == 1:
       itest='ncrf'
       t0=0
-    t0=t0+1 # add one time step since NCRF(t=0) = CTL
+
+    if do_prm_inc == 0: 
+      t0=t0+1 # add one time step since NCRF(t=0) = CTL
+
     t1 = t0+nt
-  
+    if do_prm_inc == 1: t1+=1
+
     print('Running itest: ',itest)
   
     # Create arrays to save ens members
-#    if do_prm_inc == 1:
-#      var_all = np.zeros((nmem,nt-1,nz,nx1,nx2))
-#    else:
-    var_all = np.zeros((nmem,nt,nz,nx1,nx2))
+    if do_prm_inc == 1:
+      var_all = np.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
+    else:
+      var_all = np.zeros((nmem,nt,nz,nx1,nx2))
   
     for imemb in range(nmem):
   
@@ -207,9 +209,9 @@ for knt in range(i_nt):
       varfil_main = Dataset(datdir+'T.nc')
       tmpk = varfil_main.variables['T'][t0:t1,:,:,xmin:1400-1] # K
       varfil_main.close()
-  
-  
-  ### Variable selection ##############################################
+      
+      
+      ### Variable selection ##############################################
   
       # Virtual potential temp
       if iplot == 'thv':
@@ -247,7 +249,7 @@ for knt in range(i_nt):
 
   # Calculate var' as time-increment: var[t] - var[t-1]
     if do_prm_inc == 1:
-      var_all = var_all[:,range(1,nt),:,:,:] - var_all[:,range(0,nt-1),:,:,:]
+      var_all = var_all[:,1:,:,:,:] - var_all[:,:-1,:,:,:]
   
   
   #### Calculate frequency ##############################################
