@@ -25,14 +25,14 @@ from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtua
 # #### Variable selection
 
 # Fill variable
-iplot = 'thv'#'thv'#'vmf'
+iplot = 'vmf'#'the'#'thv'#'vmf'
 # options: vmf, thv, the
 
 # Settings
 # Calculate anomaly as deviation from xy-mean
 do_prm_xy = 1
 # Calculate anomaly as time-increment
-do_prm_inc = 1
+do_prm_inc = 0
 
 # Should be off for VMF
 if iplot == 'vmf':
