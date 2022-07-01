@@ -3,5 +3,6 @@ __pycache__
 .ipynb_checkpoints
 *.swp
 outbatch.txt
+outbatch2.txt
 batch.job
 
