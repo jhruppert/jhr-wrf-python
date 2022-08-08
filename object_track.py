@@ -24,25 +24,48 @@
 # 
 
 import numpy as np
+from scipy import ndimage
+import sys
 
-def track_object(f, lon, lat):
+def object_track(f, lon, lat, nx_sm):
 
     shape=np.shape(f)
-    nt,nx,ny = shape[0:2]
+    nt,nx,ny = shape
+
+    if len(shape) != 3:
+        print("Check input dimensions!")
+        print("Shape: ",shape)
+        sys.exit()
 
     # SETTINGS
-    # nx_sm=round(0.5*1./(dims.lat[1]-dims.lat[0])) # Half-degree smoothing in space
-    nx_sm=9    # Following Chavas 2013 (smoothing run x30 times)
-    nt_sm=3    # temporal smoothing (n time steps)
-    lmin=1e3   # Minimum distance threshold [km] between storms
+    # nx_sm=9    # Following Chavas 2013 (XX smoothing run x30 times)
+    n_repeat=3 # Run smoothing n-times
+    # lmin=1e3   # Minimum distance threshold [km] between storms
 
     # CONSTANTS
     m2deg=1./(111e3)
     # THE BELOW ARE FOR TRACKING VORTEX SUBJECT TO C_MAX
-    dt=(time[1]-time[0])*86400.d # s
-    idt=1d/dt
-    rmax_track = c_max * dt * m2deg # maximum single-time-step displacement [degrees]
+        # dt=(time[1]-time[0])*86400.d # s
+        # idt=1d/dt
+        # rmax_track = c_max * dt * m2deg # maximum single-time-step displacement [degrees]
 
     # Smooth input variable
-    return shape
+    f_smooth = ndimage.uniform_filter(f,size=(0,nx_sm,nx_sm),mode='nearest')
+    for ido in range(n_repeat-1):
+        f_smooth = ndimage.uniform_filter(f_smooth,size=(0,nx_sm,nx_sm),mode='nearest')
 
+    # Retain only values ≥ 3 sigma
+    f_sigma = f_smooth / np.std(f_smooth)
+    f_masked = np.ma.array(f_sigma)
+    f_masked = np.ma.masked_where(np.abs(f_masked) < 3, f_masked) #copy=True)
+
+    # Assurance
+    # print(np.min(f_sigma))
+    # print(np.max(f_sigma))
+    # print(np.min(np.abs(f_sigma)))
+    # print()
+    # print(np.min(f_masked))
+    # print(np.max(f_masked))
+    # print(np.min(np.abs(f_masked)))
+
+    return f_masked
