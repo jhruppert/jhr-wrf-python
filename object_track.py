@@ -45,6 +45,8 @@ def object_track(f, lon, lat, nx_sm):
 
     # MAXIMUM RADIUS RANGE FROM TIME-SPACE MAX
     r_max=5 # Masked out beyond this radius at the neighboring time steps [degrees]
+        # ^ also used to determine buffer from boundaries
+    dxkm=3 # Grid spacing [km]
 
     # CONSTANTS
     # m2deg=1./(111e3)
