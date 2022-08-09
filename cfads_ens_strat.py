@@ -25,18 +25,28 @@ from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtua
 # #### Variable selection
 
 # Fill variable
-iplot = 'thv'#'vmf'
+iplot = 'rh'#'vmf'
 # options: vmf, thv, the
 
 # Settings
 # Calculate anomaly as deviation from xy-mean
 do_prm_xy = 1
 # Calculate anomaly as time-increment
-do_prm_inc = 0#1
+do_prm_inc = 0
 
 # Should be off for VMF
 if iplot == 'vmf':
   do_prm_xy=0
+
+# Strat/Conv index subset
+istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+if istrat == 0:
+  fig_extra='_nonrain'
+elif istrat == 1:
+  fig_extra='_conv'
+elif istrat == 2:
+  fig_extra='_strat'
+#fig_extra=''
 
 
 # #### Test/storm selection
@@ -44,15 +54,19 @@ if iplot == 'vmf':
 storm = 'haiyan'
 #storm = 'maria'
 
+# Tests to read and compare
 tests = ['ctl','ncrf']
 #tests = ['crfon','ncrf']
 
+# Shift starting-read time step for CRFON comparison
 t0_ncrf=0
 if tests[0] == 'crfon': t0_ncrf=24
 
-nmem = 5 # number of ensemble members (1-5 have NCRF)
-#nmem = 1
+# How many members
+#nmem = 5 # number of ensemble members (1-5 have NCRF)
+nmem = 1
 
+# Starting member to read
 memb0=1
 #memb0=5 # for CRFFON test
 
@@ -64,8 +78,8 @@ xmin=780
 ntall=[1,3,6,12,24,36]
 i_nt=np.shape(ntall)[0]
 
-for knt in range(i_nt):
-#for knt in range(1,2):
+#for knt in range(i_nt):
+for knt in range(0,4):
 #for knt in range(3,i_nt+1):
   
   nt = ntall[knt]
@@ -161,6 +175,24 @@ for knt in range(i_nt):
       xrange_mn=(-1,8)
       xrange_mn2=(-1,1)
 
+  elif iplot == 'rh':
+
+      # Bin settings
+      bins=np.logspace(-3,1.1,num=20)
+      bins=np.concatenate((-1.*np.flip(bins),bins))
+      nbin=np.shape(bins)[0]
+
+      # Figure settings
+      fig_title='RH'
+      fig_tag='rh'
+      units_var='-'
+
+      # For mean var
+      scale_mn=1e3
+      units_mn='$10^{-3}$ '+units_var
+      xrange_mn=(-1,8)
+      xrange_mn2=(-1,1)
+
   # Create axis of bin center-points
   bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
 
@@ -200,8 +232,10 @@ for knt in range(i_nt):
     # Create arrays to save ens members
     if do_prm_inc == 1:
       var_all = np.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
+      strat_all = np.zeros((nmem,nt+1,1,nx1,nx2)) # time dim will be reduced to nt in the subtraction
     else:
       var_all = np.zeros((nmem,nt,nz,nx1,nx2))
+      strat_all = np.zeros((nmem,nt,1,nx1,nx2))
   
     for imemb in range(nmem):
   
@@ -209,11 +243,19 @@ for knt in range(i_nt):
   
       datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+datdir2
   
+  # Two-dimensional variables
+
+  # Stratiform index
+      varfil_main = Dataset(datdir+'strat.nc')
+      strat = varfil_main.variables['strat'][t0:t1,:,:,xmin:1400-1] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+      varfil_main.close()
+      strat_all[imemb,:,:,:,:] = strat
+
   # Three-dimensional variables
   
   # Mixing ratio
       varfil_main = Dataset(datdir+'QVAPOR.nc')
-      qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,xmin:1400-1] # kg/kg
+      qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,xmin:1400-1]*1e3 # kg/kg
       varfil_main.close()
   
   # Temperature
@@ -234,10 +276,16 @@ for knt in range(i_nt):
       elif iplot == 'vmf':
         # Density
         rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
-        varfil_cvar = Dataset(datdir+'W.nc') # this opens the netcdf file
-        var = varfil_cvar.variables['W'][t0:t1,:,:,xmin:1400-1] # m/s
-        varfil_cvar.close()
+        varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
+        var = varfil.variables['W'][t0:t1,:,:,xmin:1400-1] # m/s
+        varfil.close()
         var *= rho
+      # Humidity
+      elif iplot == 'rh':
+        # Density
+        varfil = Dataset(datdir+'QVAPOR.nc') # this opens the netcdf file
+        var = varfil.variables['QVAPOR'][t0:t1,:,:,xmin:1400-1] # kg/kg
+        varfil.close()
   
   # Th_v' weighted by qv'
   #thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
@@ -251,7 +299,7 @@ for knt in range(i_nt):
       if do_prm_xy == 1:
         v_mean = np.mean(var,axis=(2,3))
         var -= v_mean[:,:,np.newaxis,np.newaxis]
-  
+
       # Save ens member
       var_all[imemb,:,:,:,:] = var
 
@@ -267,11 +315,13 @@ for knt in range(i_nt):
   
     for iz in range(nz):
         for ibin in range(nbin-1):
-            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
+#            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
+            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1]) & (strat_all[:,:,0,:,:] == istrat)).nonzero()
             var_freq[ktest,ibin,iz]=np.shape(indices)[1]
+        var_freq[ktest,:,iz] /= np.sum(var_freq[ktest,:,iz])
     
-    ncell=nx1*nx2*nt*nmem
-    var_freq[ktest,:,:] *= 100./ncell
+    #ncell=nx1*nx2*nt*nmem
+    var_freq[ktest,:,:] *= 100. #/ncell
 
   
   # ### Plotting routines ##############################################
@@ -326,7 +376,7 @@ for knt in range(i_nt):
                 locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
                 ax.xaxis.set_major_locator(locmin)
                 ticks=[1e-2,1e-1,1,1e1]
-            elif iplot == 'thv' or iplot == 'the':
+            else: #if iplot == 'thv' or iplot == 'the':
                 clevs=[0.01,0.05,0.1,0.5,1,5,10,50]
                 ticks=None
     
@@ -351,7 +401,7 @@ for knt in range(i_nt):
             plt.axvline(x=0,color='k',linewidth=0.5)
             ax.set_xlabel(units_mn)
 
-    plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
+    plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                 bbox_inches='tight', pad_inches=0.2)
 
 
@@ -398,7 +448,7 @@ for knt in range(i_nt):
               locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
               ax.xaxis.set_major_locator(locmin)
               ticks=[1e-2,1e-1,1,1e1]
-          elif iplot == 'thv' or iplot == 'the':
+          else: #if iplot == 'thv' or iplot == 'the':
 #              clevsi=[0.01,0.05,0.1,0.5,1,5,10,50]
               clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
               clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
@@ -429,7 +479,7 @@ for knt in range(i_nt):
           plt.axvline(x=0,color='k',linewidth=0.5)
           ax.set_xlabel(units_mn)
 
-  plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_diff_'+hr_tag+'.png',dpi=200, facecolor='white', \
+  plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_diff_'+hr_tag+'.png',dpi=200, facecolor='white', \
               bbox_inches='tight', pad_inches=0.2)
 
 

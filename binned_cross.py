@@ -25,8 +25,18 @@ ivar_select = 'pw'
 # options: pw, vmf, rain, lwacre
 
 # Fill variable
-fillvar_select = 'thprm'
+fillvar_select = 'lwcrf'#'thprm'
 # options: lwcrf, thprm, dbz
+
+# Strat/Conv index subset
+#set_istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+#if set_istrat == 0:
+#  fig_extra='_nonrain'
+#elif set_istrat == 1:
+#  fig_extra='_conv'
+#elif set_istrat == 2:
+#  fig_extra='_strat'
+#fig_extra=''
 
 
 # #### Test/storm selection
@@ -248,6 +258,7 @@ for itim in range(nt):
     for ibin in range(nbins-1):
         # indices = ((ivar[itim,0,:,:] >= bins[ibin]-0.5*step) & (ivar[itim,0,:,:] < bins[ibin]+0.5*step)).nonzero()
         indices = ((ivar[itim,0,:,:] >= bins[ibin]) & (ivar[itim,0,:,:] < bins[ibin+1])).nonzero()
+        # indices = ((ivar[itim,0,:,:] >= bins[ibin]) & (ivar[itim,0,:,:] < bins[ibin+1]) & (strat_in[itim,0,:,:] == set_istrat)).nonzero()
         tmp_f = binvar_f_in[itim,:,indices[0],indices[1]]
         binvar_f[ibin,itim,:] = np.mean(tmp_f,axis=0,dtype=np.float64)
         tmp_c = binvar_c_in[itim,:,indices[0],indices[1]]
@@ -343,6 +354,7 @@ if ivar_select == 'olr':
 
 # plt.show()
 plt.savefig(figdir+figtag+'_compcross_'+imemb+'_'+itest+'_'+ivar_select+'.png',dpi=200, facecolor='white', \
+# plt.savefig(figdir+figtag+'_compcross_'+imemb+'_'+itest+'_'+ivar_select+fig_extra+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 
 # No strat variable for Maria

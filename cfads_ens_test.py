@@ -25,7 +25,7 @@ from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtua
 # #### Variable selection
 
 # Fill variable
-iplot = 'thv'#'thv'#'vmf'
+iplot = 'thv'#'vmf'
 # options: vmf, thv, the
 
 # Settings
@@ -38,14 +38,32 @@ do_prm_inc = 1
 if iplot == 'vmf':
   do_prm_xy=0
 
+# Strat/Conv index subset
+istrat=0 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+fig_extra='_nonrain'
+#fig_extra=''
+
 
 # #### Test/storm selection
 
 storm = 'haiyan'
 #storm = 'maria'
 
-nmem = 5 # number of ensemble members (1-5 have NCRF)
-#nmem = 1
+# Tests to read and compare
+tests = ['ctl','ncrf']
+#tests = ['crfon','ncrf']
+
+# Shift starting-read time step for CRFON comparison
+t0_ncrf=0
+if tests[0] == 'crfon': t0_ncrf=24
+
+# How many members
+#nmem = 5 # number of ensemble members (1-5 have NCRF)
+nmem = 1
+
+# Starting member to read
+memb0=1
+#memb0=5 # for CRFFON test
 
 xmin=780
 
@@ -55,22 +73,20 @@ xmin=780
 ntall=[1,3,6,12,24,36]
 i_nt=np.shape(ntall)[0]
 
-for knt in range(i_nt):
-#for knt in range(2,3):
+#for knt in range(i_nt):
+for knt in range(1,2):
+#for knt in range(3,i_nt+1):
   
   nt = ntall[knt]
   hr_tag = str(np.char.zfill(str(nt), 2))
   
-  # Skip null time step
-  if nt == 1 and do_prm_inc == 1: continue
-
-
+  
   # #### Directories
   
   figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
   main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
   
-  nums=np.arange(1,nmem+1,1); nums=nums.astype(str)
+  nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
   nustr = np.char.zfill(nums, 2)
   memb_all=np.char.add('memb_',nustr)
   
@@ -91,6 +107,7 @@ for knt in range(i_nt):
   
   
   # Variable settings
+
   if iplot == 'thv':
 
       # Bin settings
@@ -171,24 +188,31 @@ for knt in range(i_nt):
   var_mn=np.zeros((ntest,nz))
   
   for ktest in range(ntest):
-#  for ktest in range(1):
   
-    if ktest == 0:
-      itest='ctl'
+    itest=tests[ktest]
+
+    if itest == 'ctl':
       t0=36
-    elif ktest == 1:
-      itest='ncrf'
+    elif itest == 'ncrf':
+      t0=t0_ncrf
+    elif itest == 'crfon':
       t0=0
-    t0=t0+1 # add one time step since NCRF(t=0) = CTL
+
+    if do_prm_inc == 0: 
+      t0=t0+1 # add one time step since NCRF(t=0) = CTL
+
     t1 = t0+nt
-  
+    if do_prm_inc == 1: t1+=1
+
     print('Running itest: ',itest)
   
     # Create arrays to save ens members
-#    if do_prm_inc == 1:
-#      var_all = np.zeros((nmem,nt-1,nz,nx1,nx2))
-#    else:
-    var_all = np.zeros((nmem,nt,nz,nx1,nx2))
+    if do_prm_inc == 1:
+      var_all = np.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
+      strat_all = np.zeros((nmem,nt+1,1,nx1,nx2)) # time dim will be reduced to nt in the subtraction
+    else:
+      var_all = np.zeros((nmem,nt,nz,nx1,nx2))
+      strat_all = np.zeros((nmem,nt,1,nx1,nx2))
   
     for imemb in range(nmem):
   
@@ -196,6 +220,14 @@ for knt in range(i_nt):
   
       datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+datdir2
   
+  # Two-dimensional variables
+
+  # Stratiform index
+      varfil_main = Dataset(datdir+'strat.nc')
+      strat = varfil_main.variables['strat'][t0:t1,:,:,xmin:1400-1] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+      varfil_main.close()
+      strat_all[imemb,:,:,:,:] = strat
+
   # Three-dimensional variables
   
   # Mixing ratio
@@ -207,9 +239,9 @@ for knt in range(i_nt):
       varfil_main = Dataset(datdir+'T.nc')
       tmpk = varfil_main.variables['T'][t0:t1,:,:,xmin:1400-1] # K
       varfil_main.close()
-  
-  
-  ### Variable selection ##############################################
+      
+      
+      ### Variable selection ##############################################
   
       # Virtual potential temp
       if iplot == 'thv':
@@ -238,7 +270,7 @@ for knt in range(i_nt):
       if do_prm_xy == 1:
         v_mean = np.mean(var,axis=(2,3))
         var -= v_mean[:,:,np.newaxis,np.newaxis]
-  
+
       # Save ens member
       var_all[imemb,:,:,:,:] = var
 
@@ -247,14 +279,14 @@ for knt in range(i_nt):
 
   # Calculate var' as time-increment: var[t] - var[t-1]
     if do_prm_inc == 1:
-      var_all = var_all[:,range(1,nt),:,:,:] - var_all[:,range(0,nt-1),:,:,:]
+      var_all = var_all[:,1:,:,:,:] - var_all[:,:-1,:,:,:]
   
   
   #### Calculate frequency ##############################################
   
     for iz in range(nz):
         for ibin in range(nbin-1):
-            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
+            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1]) & (strat_all == istrat)).nonzero()
             var_freq[ktest,ibin,iz]=np.shape(indices)[1]
     
     ncell=nx1*nx2*nt*nmem
@@ -274,10 +306,7 @@ for knt in range(i_nt):
   
   for ktest in range(ntest):
   
-    if ktest == 0:
-      itest='ctl'
-    elif ktest == 1:
-      itest='ncrf'
+    itest=tests[ktest]
 
     pltvar = np.transpose(np.ma.masked_equal(var_freq[ktest,:,:],0))
     var_mn_plt = var_mn[ktest,:]*scale_mn
@@ -341,7 +370,7 @@ for knt in range(i_nt):
             plt.axvline(x=0,color='k',linewidth=0.5)
             ax.set_xlabel(units_mn)
 
-    plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
+    plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                 bbox_inches='tight', pad_inches=0.2)
 
 
@@ -349,14 +378,14 @@ for knt in range(i_nt):
   
   # ### Plot difference CFAD ########################
   
-  # var_diff = NCRF - CTL
+  # var_diff = CTL - NCRF
   pltvar = np.transpose( var_freq[0,:,:] - var_freq[1,:,:] )
   var_mn_plt = (var_mn[0,:] - var_mn[1,:])*scale_mn
   
   fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
                           constrained_layout=True, figsize=(12, 8))
   
-  ifig_title=fig_title+' (CTL - NCRF)'
+  ifig_title=fig_title+' ('+tests[0].upper()+' - '+tests[1].upper()+')'
   fig.suptitle(ifig_title)
   
   for col in range(2):
@@ -419,7 +448,7 @@ for knt in range(i_nt):
           plt.axvline(x=0,color='k',linewidth=0.5)
           ax.set_xlabel(units_mn)
 
-  plt.savefig(figdir+'cfad_'+fig_tag+'_ens5m_diff_'+hr_tag+'.png',dpi=200, facecolor='white', \
+  plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_diff_'+hr_tag+'.png',dpi=200, facecolor='white', \
               bbox_inches='tight', pad_inches=0.2)
 
 
