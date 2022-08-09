@@ -37,22 +37,46 @@ def object_track(f, lon, lat, nx_sm):
         print("Shape: ",shape)
         sys.exit()
 
+    #############################################
+
     # SETTINGS
     # nx_sm=9    # Following Chavas 2013 (XX smoothing run x30 times)
     n_repeat=3 # Run smoothing n-times
-    # lmin=1e3   # Minimum distance threshold [km] between storms
+
+    # MAXIMUM RADIUS RANGE FROM TIME-SPACE MAX
+    r_max=5 # Masked out beyond this radius at the neighboring time steps [degrees]
 
     # CONSTANTS
-    m2deg=1./(111e3)
+    # m2deg=1./(111e3)
     # THE BELOW ARE FOR TRACKING VORTEX SUBJECT TO C_MAX
         # dt=(time[1]-time[0])*86400.d # s
         # idt=1d/dt
         # rmax_track = c_max * dt * m2deg # maximum single-time-step displacement [degrees]
 
-    # Smooth input variable
+    # 3-dimensional lon/lat for weighting
+    lon_tim = np.repeat(lon[np.newaxis,:,:], nt, axis=0)
+    lat_tim = np.repeat(lat[np.newaxis,:,:], nt, axis=0)
+
+    # OBJECT TRACKING SUBJECT TO A MAXIMUM ALLOWABLE TRANSLATION SPEED
+    # m2deg=1./(111e3)
+    # c_max=40. # A maximum allowable translation speed (should be set to something very liberal)
+    # dt=3600.  # Data time step [seconds]
+    # idt=1./dt
+    # rmax_track = c_max * dt * m2deg ; maximum single-time-step displacement [degrees]
+
+    #############################################
+
+    # Smooth input variable in x,y
     f_smooth = ndimage.uniform_filter(f,size=(0,nx_sm,nx_sm),mode='nearest')
     for ido in range(n_repeat-1):
         f_smooth = ndimage.uniform_filter(f_smooth,size=(0,nx_sm,nx_sm),mode='nearest')
+
+    # Smooth input variable in time
+    # n_repeat=3
+    nt_smooth=3
+    # Smooth input variable
+    # for ido in range(n_repeat):
+    f_smooth = ndimage.uniform_filter(f_smooth,size=(nt_smooth,0,0),mode='nearest')
 
     # Retain only values ≥ 3 sigma
     f_sigma = f_smooth / np.std(f_smooth)
@@ -67,5 +91,15 @@ def object_track(f, lon, lat, nx_sm):
     # print(np.min(f_masked))
     # print(np.max(f_masked))
     # print(np.min(np.abs(f_masked)))
+
+    #############################################
+
+    # Track maxima in time by finding the centroid
+
+    lon_tim = np.repeat(lon[np.newaxis,:,:], nt, axis=0)
+    lat_tim = np.repeat(lat[np.newaxis,:,:], nt, axis=0)
+
+    clon = np.average(lon_tim,axis=(1,2),weights=f_masked)
+    clat = np.average(lat_tim,axis=(1,2),weights=f_masked)
 
     return f_masked
