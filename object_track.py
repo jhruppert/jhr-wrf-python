@@ -40,6 +40,7 @@ def object_track(f, lon, lat, nx_sm):
     #############################################
 
     # SETTINGS
+
     # nx_sm=9    # Following Chavas 2013 (XX smoothing run x30 times)
     n_repeat=3 # Run smoothing n-times
 
@@ -56,8 +57,8 @@ def object_track(f, lon, lat, nx_sm):
         # rmax_track = c_max * dt * m2deg # maximum single-time-step displacement [degrees]
 
     # 3-dimensional lon/lat for weighting
-    lon_tim = np.repeat(lon[np.newaxis,:,:], nt, axis=0)
-    lat_tim = np.repeat(lat[np.newaxis,:,:], nt, axis=0)
+    lon3d = np.repeat(lon[np.newaxis,:,:], nt, axis=0)
+    lat3d = np.repeat(lat[np.newaxis,:,:], nt, axis=0)
 
     # OBJECT TRACKING SUBJECT TO A MAXIMUM ALLOWABLE TRANSLATION SPEED
     # m2deg=1./(111e3)
@@ -67,6 +68,8 @@ def object_track(f, lon, lat, nx_sm):
     # rmax_track = c_max * dt * m2deg ; maximum single-time-step displacement [degrees]
 
     #############################################
+
+    # SMOOTHING AND MASKING
 
     # Smooth input variable in x,y
     f_smooth = ndimage.uniform_filter(f,size=(0,nx_sm,nx_sm),mode='nearest')
@@ -80,10 +83,17 @@ def object_track(f, lon, lat, nx_sm):
     # for ido in range(n_repeat):
     f_smooth = ndimage.uniform_filter(f_smooth,size=(nt_smooth,0,0),mode='nearest')
 
-    # Retain only values ≥ 3 sigma
+    # Mask out values < 3 sigma
     f_sigma = f_smooth / np.std(f_smooth)
     f_masked = np.ma.array(f_sigma)
     f_masked = np.ma.masked_where(np.abs(f_masked) < 3, f_masked) #copy=True)
+
+    # Mask out data within 0.5*r_max from boundaries
+    nxmask = round( 0.5*r_max*111./dxkm )
+    f_masked = np.ma.masked_where(lon3d <= lon1d[nxmask], f_masked, copy=True)
+    f_masked = np.ma.masked_where(lon3d >= lon1d[nx-nxmask-1], f_masked, copy=True)
+    f_masked = np.ma.masked_where(lat3d <= lat1d[nxmask], f_masked, copy=True)
+    f_masked = np.ma.masked_where(lat3d >= lat1d[ny-nxmask-1], f_masked, copy=True)
 
     # Assurance
     # print(np.min(f_sigma))
