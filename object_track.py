@@ -77,9 +77,9 @@ def object_track(f, lon, lat):
     f_masked = np.ma.masked_invalid(f_masked, copy=False)
 
     # Mask out data within 0.5*r_max from boundaries
-    f_masked = np.ma.masked_where(lon3d <= lon1d[0]+0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lon3d <= lon1d[0]+0.5*r_max   , f_masked, copy=False)
     f_masked = np.ma.masked_where(lon3d >= lon1d[nx-1]-0.5*r_max, f_masked, copy=False)
-    f_masked = np.ma.masked_where(lat3d <= lat1d[0]+0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lat3d <= lat1d[0]+0.5*r_max   , f_masked, copy=False)
     f_masked = np.ma.masked_where(lat3d >= lat1d[ny-1]-0.5*r_max, f_masked, copy=False)
 
     #############################################
