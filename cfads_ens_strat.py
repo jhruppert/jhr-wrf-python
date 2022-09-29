@@ -25,12 +25,12 @@ from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtua
 # #### Variable selection
 
 # Fill variable
-iplot = 'rh'#'vmf'
+iplot = 'qrad'#'vmf'#'rh'#
 # options: vmf, thv, the
 
 # Settings
 # Calculate anomaly as deviation from xy-mean
-do_prm_xy = 1
+do_prm_xy = 0
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
@@ -40,7 +40,9 @@ if iplot == 'vmf':
 
 # Strat/Conv index subset
 istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
-if istrat == 0:
+if istrat == -1:
+  fig_extra=''
+elif istrat == 0:
   fig_extra='_nonrain'
 elif istrat == 1:
   fig_extra='_conv'
@@ -59,12 +61,12 @@ tests = ['ctl','ncrf']
 #tests = ['crfon','ncrf']
 
 # Shift starting-read time step for CRFON comparison
-t0_ncrf=0
-if tests[0] == 'crfon': t0_ncrf=24
+t0_test=0
+if tests[0] == 'crfon': t0_test=24
 
 # How many members
-#nmem = 5 # number of ensemble members (1-5 have NCRF)
-nmem = 1
+nmem = 1 # number of ensemble members (1-5 have NCRF)
+# nmem = 1
 
 # Starting member to read
 memb0=1
@@ -75,11 +77,12 @@ xmin=780
 
 # #### Time selection
 
-ntall=[1,3,6,12,24,36]
+# ntall=[1,3,6,12,24,36]
+ntall=[3]
 i_nt=np.shape(ntall)[0]
 
-#for knt in range(i_nt):
-for knt in range(0,4):
+for knt in range(i_nt):
+# for knt in range(0,1):
 #for knt in range(3,i_nt+1):
   
   nt = ntall[knt]
@@ -102,14 +105,11 @@ for knt in range(0,4):
   
   datdir = main+storm+'/'+memb_all[0]+'/ctl/'+datdir2
   varfil_main = Dataset(datdir+'T.nc')
-  tmpv = varfil_main.variables['T'][0:1,:,:,xmin:1400-1] # K
+  nz = varfil_main.dimensions['level'].size
+  nx1 = varfil_main.dimensions['lat'].size
+  nx2 = varfil_main.dimensions['lon'].size-xmin-1
   pres = varfil_main.variables['pres'][:] # hPa
   varfil_main.close()
-  bv_shape = np.shape(tmpv)
-  nz = bv_shape[1]
-  nx1 = bv_shape[2]
-  nx2 = bv_shape[3]
-  
   
   # Variable settings
 
@@ -192,6 +192,28 @@ for knt in range(0,4):
       units_mn='$10^{-3}$ '+units_var
       xrange_mn=(-1,8)
       xrange_mn2=(-1,1)
+    
+  elif iplot == 'qrad':
+
+      # Bin settings
+      nbin=60
+      fmax=5 #; fmin=-10
+      #step=(fmax-fmin)/nbin
+      step=fmax*2/nbin
+      bins=np.arange(0,fmax,step)+step
+      bins=np.concatenate((-1.*np.flip(bins),bins))
+      nbin=np.shape(bins)[0]
+
+      # Figure settings
+      fig_title='$Q_R$'
+      fig_tag='qrad'
+      units_var='K d$^{-1}$'
+
+      # For mean var
+      scale_mn=1.
+      units_mn=units_var
+      xrange_mn=(-3,3)
+      xrange_mn2=(-3,3)
 
   # Create axis of bin center-points
   bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
@@ -217,12 +239,12 @@ for knt in range(0,4):
     if itest == 'ctl':
       t0=36
     elif itest == 'ncrf':
-      t0=t0_ncrf
+      t0=t0_test
     elif itest == 'crfon':
       t0=0
 
     if do_prm_inc == 0: 
-      t0=t0+1 # add one time step since NCRF(t=0) = CTL
+      t0+=1 # add one time step since NCRF(t=0) = CTL
 
     t1 = t0+nt
     if do_prm_inc == 1: t1+=1
@@ -242,25 +264,27 @@ for knt in range(0,4):
       print('Running imemb: ',memb_all[imemb])
   
       datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+datdir2
+      print(datdir)
   
   # Two-dimensional variables
 
   # Stratiform index
-      varfil_main = Dataset(datdir+'strat.nc')
-      strat = varfil_main.variables['strat'][t0:t1,:,:,xmin:1400-1] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
-      varfil_main.close()
-      strat_all[imemb,:,:,:,:] = strat
+      if istrat != -1:
+        varfil_main = Dataset(datdir+'strat.nc')
+        strat = varfil_main.variables['strat'][t0:t1,:,:,xmin:1400-1] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        varfil_main.close()
+        strat_all[imemb,:,:,:,:] = strat
 
   # Three-dimensional variables
   
   # Mixing ratio
       varfil_main = Dataset(datdir+'QVAPOR.nc')
-      qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,xmin:1400-1]*1e3 # kg/kg
+      qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,xmin:1400-1] # kg/kg
       varfil_main.close()
   
   # Temperature
       varfil_main = Dataset(datdir+'T.nc')
-      tmpk = varfil_main.variables['T'][t0:t1,:,:,xmin:1400-1] # K
+      tmpk = varfil_main.variables['T'][34:35,:,:,xmin:1400-1] # K
       varfil_main.close()
       
       
@@ -286,6 +310,15 @@ for knt in range(0,4):
         varfil = Dataset(datdir+'QVAPOR.nc') # this opens the netcdf file
         var = varfil.variables['QVAPOR'][t0:t1,:,:,xmin:1400-1] # kg/kg
         varfil.close()
+      # Radiation
+      elif iplot == 'qrad':
+        # Density
+        varfil = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
+        var = varfil.variables['RTHRATLW'][t0:t1,:,:,xmin:1400-1]*3600*24 # K/s --> K/d
+        varfil.close()
+        varfil = Dataset(datdir+'RTHRATSW.nc') # this opens the netcdf file
+        var += varfil.variables['RTHRATSW'][t0:t1,:,:,xmin:1400-1]*3600*24 # K/s --> K/d
+        varfil.close()
   
   # Th_v' weighted by qv'
   #thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
@@ -304,7 +337,12 @@ for knt in range(0,4):
       var_all[imemb,:,:,:,:] = var
 
   #### Calculate basic mean
-    var_mn[ktest,:] = np.mean(var_all,axis=(0,1,3,4))
+    if istrat == -1:
+      var_mn[ktest,:]=np.mean(var_all,axis=(0,1,3,4))
+    else:
+      indices = (strat_all == istrat).nonzero()
+      # for iz in range(nz):
+      var_mn[ktest,:]=np.mean(var_all[indices[0],indices[1],:,indices[3],indices[4]],axis=0)
 
   # Calculate var' as time-increment: var[t] - var[t-1]
     if do_prm_inc == 1:
@@ -315,8 +353,10 @@ for knt in range(0,4):
   
     for iz in range(nz):
         for ibin in range(nbin-1):
-#            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
-            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1]) & (strat_all[:,:,0,:,:] == istrat)).nonzero()
+            if istrat == -1:
+              indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
+            else:
+              indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1]) & (strat_all[:,:,0,:,:] == istrat)).nonzero()
             var_freq[ktest,ibin,iz]=np.shape(indices)[1]
         var_freq[ktest,:,iz] /= np.sum(var_freq[ktest,:,iz])
     
