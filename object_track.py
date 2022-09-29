@@ -13,8 +13,8 @@
 # 
 # Input:
 #   f   = input variable assumed to be in form f = f(t,x,y)
-#   lon = longitude points (deg) as lon = lon(x)
-#   lat = longitude points (deg) as lat = lat(y)
+#   lon = longitude points (deg) as lon = lon(x,y)
+#   lat = longitude points (deg) as lat = lat(x,y)
 #  
 # Returns: numpy array[itrack,2] where itrack corresponds to (potentially)
 #   multiple identified tracks and the second dimension is (lon,lat).
@@ -77,10 +77,10 @@ def object_track(f, lon, lat):
     f_masked = np.ma.masked_invalid(f_masked, copy=False)
 
     # Mask out data within 0.5*r_max from boundaries
-    f_masked = np.ma.masked_where(lon3d <= lon1d[0]+0.5*r_max   , f_masked, copy=False)
-    f_masked = np.ma.masked_where(lon3d >= lon1d[nx-1]-0.5*r_max, f_masked, copy=False)
-    f_masked = np.ma.masked_where(lat3d <= lat1d[0]+0.5*r_max   , f_masked, copy=False)
-    f_masked = np.ma.masked_where(lat3d >= lat1d[ny-1]-0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lon3d <= np.min(lon)+0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lon3d >= np.max(lon)-0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lat3d <= np.min(lat)+0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lat3d >= np.max(lat)-0.5*r_max, f_masked, copy=False)
 
     #############################################
 
