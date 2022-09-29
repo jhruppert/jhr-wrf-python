@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+ 
 # Smooth an array of the form array(time, x, y) or array(time, x, y)
 #   using a simple boxcar running mean by leveraging numpy.cumsum
 # 
