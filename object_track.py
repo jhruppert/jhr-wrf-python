@@ -6,15 +6,15 @@
 #   can be used as input.
 # 
 # Steps:
-#   1) Large-scale smoothing XXX in time and space.
+#   1) Large-scale smoothing XX in time and space.
 #   2) Top-5% of variable is retained.
 #   3) Centroid is found via weighted integral approach.
 #  xxx 4) Sanity check for maximum possible phase speed for continuity.
 # 
 # Input:
-#   f   = input variable assumed to be in form f = f(t,x,y)
-#   lon = longitude points (deg) as lon = lon(x,y)
-#   lat = longitude points (deg) as lat = lat(x,y)
+#   f   = input variable assumed to be in form f = f(t,y,x)
+#   lon = longitude points (deg) as lon = lon(y,x)
+#   lat = longitude points (deg) as lat = lat(y,x)
 #  
 # Returns: numpy array[itrack,2] where itrack corresponds to (potentially)
 #   multiple identified tracks and the second dimension is (lon,lat).
@@ -30,7 +30,7 @@ import sys
 def object_track(f, lon, lat):
 
     shape=np.shape(f)
-    nt,nx,ny = shape
+    nt,ny,nx = shape
 
     if len(shape) != 3:
         print("Check input dimensions!")
@@ -77,10 +77,10 @@ def object_track(f, lon, lat):
     f_masked = np.ma.masked_invalid(f_masked, copy=False)
 
     # Mask out data within 0.5*r_max from boundaries
-    f_masked = np.ma.masked_where(lon3d <= np.min(lon)+0.5*r_max, f_masked, copy=False)
-    f_masked = np.ma.masked_where(lon3d >= np.max(lon)-0.5*r_max, f_masked, copy=False)
-    f_masked = np.ma.masked_where(lat3d <= np.min(lat)+0.5*r_max, f_masked, copy=False)
-    f_masked = np.ma.masked_where(lat3d >= np.max(lat)-0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lon3d <= lon[0,0]   +0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lon3d >= lon[0,nx-1]-0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lat3d <= lat[0,0]   +0.5*r_max, f_masked, copy=False)
+    f_masked = np.ma.masked_where(lat3d >= lat[ny-1,0]-0.5*r_max, f_masked, copy=False)
 
     #############################################
 
@@ -93,7 +93,7 @@ def object_track(f, lon, lat):
     xmax=mloc[2][0]
     ymax=mloc[1][0]
 
-    radius = np.sqrt( (lon-lon1d[xmax])**2 + (lat-lat1d[ymax])**2 )
+    radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
 
     # Mask surrounding points
     for it in range(itmax-1,np.minimum(itmax+1,nt-1)+1):
@@ -107,7 +107,7 @@ def object_track(f, lon, lat):
         xmax = mloc[1][0]
         ymax = mloc[0][0]
 
-        radius = np.sqrt( (lon-lon1d[xmax])**2 + (lat-lat1d[ymax])**2 )
+        radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
         f_masked[it-1,:,:] = np.ma.masked_where(radius > r_max, f_masked[it-1,:,:], copy=False)
 
     # Iterate upward from itmax
@@ -118,7 +118,7 @@ def object_track(f, lon, lat):
         xmax = mloc[1][0]
         ymax = mloc[0][0]
 
-        radius = np.sqrt( (lon-lon1d[xmax])**2 + (lat-lat1d[ymax])**2 )
+        radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
         f_masked[it+1,:,:] = np.ma.masked_where(radius > r_max, f_masked[it+1,:,:], copy=False)
 
     #############################################
@@ -129,6 +129,6 @@ def object_track(f, lon, lat):
     clon = np.average(lon3d,axis=(1,2),weights=f_masked)
     clat = np.average(lat3d,axis=(1,2),weights=f_masked)
 
-    track=np.stack([clon,clat])
+    track = np.ma.concatenate([clon[np.newaxis,:],clat[np.newaxis,:]])
 
-    return track
+    return track, f_masked

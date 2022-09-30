@@ -279,7 +279,7 @@ for ktest in range(ntest):
     v = varfil_main.variables['V'][t0:t1,ikread,:,:] # m/s
     varfil_main.close()
     
-    vor=relvort(u,v,lon1d,lat1d,londim=2,latdim=1)
+    vor=relvort(u,v,lat1d,lon1d)
     print(vor.shape)
     track = object_track(vor, lon, lat)
     print(track.shape)
