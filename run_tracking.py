@@ -15,7 +15,7 @@ from object_track import object_track
 ptrack  = 600 # tracking pressure level
 istorm  = 'haiyan'
 # imemb   = 'memb_01'
-itest   = 'ctl'
+itest   = 'ncrf' #'ctl'
 var_tag = 'rvor'
 
 # ------------------------------------------
@@ -23,7 +23,7 @@ var_tag = 'rvor'
 print('Tracking at:',ptrack,'hPa')
 
 # Ens members
-nmem = 20 # number of ensemble members (1-5 have NCRF)
+nmem = 5 #20 # number of ensemble members (1-5 have NCRF)
 memb0=1
 nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
