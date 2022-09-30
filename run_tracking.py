@@ -4,18 +4,20 @@
 # jruppert@ou.edu  
 # September 2022
 
+from distutils.log import info
 from netCDF4 import Dataset
 import numpy as np
 import sys
+import subprocess
 from relvort import relvort
 from object_track import object_track
 
 
 # Choices
 ptrack  = 600 # tracking pressure level
-istorm  = 'haiyan'
+istorm  = 'maria' #'haiyan'
 # imemb   = 'memb_01'
-itest   = 'ncrf' #'ctl'
+itest   = 'ctl'
 var_tag = 'rvor'
 
 # ------------------------------------------
@@ -23,39 +25,45 @@ var_tag = 'rvor'
 print('Tracking at:',ptrack,'hPa')
 
 # Ens members
-nmem = 5 #20 # number of ensemble members (1-5 have NCRF)
+nmem = 20 # number of ensemble members (1-5 have NCRF)
 memb0=1
 nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
 memb_all=np.char.add('memb_',nustr)
 
+
+wrfenkf = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+
+# LonLat
+main = wrfenkf+istorm+'/memb_01/ctl/'
+process = subprocess.Popen(['ls '+main+'wrfout_d02_*'],shell=True,
+    stdout=subprocess.PIPE,universal_newlines=True)
+output = process.stdout.readline()
+m1ctl = output.strip() #[3]
+fil = Dataset(m1ctl) # this opens the netcdf file
+lon = fil.variables['XLONG'][:][0] # deg
+lon1d=lon[0,:]
+lat = fil.variables['XLAT'][:][0] # deg
+lat1d=lat[:,0]
+fil.close()
+llshape=np.shape(lon)
+nx = llshape[1]
+ny = llshape[0]
+
+# Pressure
+fil = Dataset(datdir+'U.nc') # this opens the netcdf file
+pres = fil.variables['pres'][:] # hPa
+fil.close()
+
+# Level selection
+ikread = np.where(pres == ptrack)[0][0]
+
+
 for imemb in range(nmem):
 
-    wrfenkf = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
     main = wrfenkf+istorm+'/'+memb_all[imemb]+'/'+itest+'/'
     datdir = main+'post/d02/'
     print("Running ",main)
-
-
-    # LonLat
-    m1ctl = wrfenkf+istorm+'/memb_01/ctl/wrfout_d02_2013-11-01_00:00:00'
-    fil = Dataset(m1ctl) # this opens the netcdf file
-    lon = fil.variables['XLONG'][:][0] # deg
-    lon1d=lon[0,:]
-    lat = fil.variables['XLAT'][:][0] # deg
-    lat1d=lat[:,0]
-    fil.close()
-    llshape=np.shape(lon)
-    nx = llshape[1]
-    ny = llshape[0]
-
-    # Pressure
-    fil = Dataset(datdir+'U.nc') # this opens the netcdf file
-    pres = fil.variables['pres'][:] # hPa
-    fil.close()
-
-    # Level selection
-    ikread = np.where(pres == ptrack)[0][0]
 
     # Prepare variable to use for tracking
     if var_tag == 'rvor':
