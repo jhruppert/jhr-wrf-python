@@ -18,9 +18,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib import ticker, cm
 import sys
+import subprocess
 # import cmocean
-from relvort import relvort
-from object_track import object_track
 from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtual #, relh
 
 
@@ -33,8 +32,6 @@ iplot = 'vmf'
 # Settings
 # Calculate anomaly as deviation from xy-mean
 do_prm_xy = 0
-# Calculate anomaly as time-increment
-do_prm_inc = 0
 
 # Should be off for VMF
 if iplot == 'vmf':
@@ -52,6 +49,10 @@ elif istrat == 2:
   fig_extra='_strat'
 #fig_extra=''
 
+
+# TC tracking
+ptrack=600 # tracking pressure level
+var_tag = 'rvor' # variable
 
 # #### Test/storm selection
 
@@ -73,8 +74,6 @@ nmem = 1 # number of ensemble members (1-5 have NCRF)
 # Starting member to read
 memb0=1
 #memb0=5 # for CRFFON test
-
-# xmin=780
 
 
 # #### Time selection
@@ -98,7 +97,10 @@ datdir2 = 'post/d02/'
 
 ##### Get dimensions
 
-wrffil = main+storm+'/memb_01/ctl/wrfout_d02_2013-11-01_00:00:00'
+process = subprocess.Popen(['ls '+main+storm+'/memb_01/ctl/wrfout_d02_*'],shell=True,
+    stdout=subprocess.PIPE,universal_newlines=True)
+output = process.stdout.readline()
+wrffil = output.strip() #[3]
 varfil_main = Dataset(wrffil)
 lat = varfil_main.variables['XLAT'][:][0] # deg
 lon = varfil_main.variables['XLONG'][:][0] # deg
@@ -118,15 +120,6 @@ varfil_main.close()
 
 if iplot == 'thv':
 
-    # Bin settings
-    nbin=60
-    fmax=3 #5 #; fmin=-5
-    #step=(fmax-fmin)/nbin
-    step=fmax*2/nbin
-    bins=np.arange(0,fmax,step)+step
-    bins=np.concatenate((-1.*np.flip(bins),bins))
-    nbin=np.shape(bins)[0]
-
     # Figure settings
     fig_title=r"$\theta_v$"
     fig_tag='thv'
@@ -139,15 +132,6 @@ if iplot == 'thv':
     xrange_mn2=(-0.1,0.1)
 
 elif iplot == 'the':
-
-    # Bin settings
-    nbin=60
-    fmax=5 #; fmin=-10
-    #step=(fmax-fmin)/nbin
-    step=fmax*2/nbin
-    bins=np.arange(0,fmax,step)+step
-    bins=np.concatenate((-1.*np.flip(bins),bins))
-    nbin=np.shape(bins)[0]
 
     # Figure settings
     fig_title=r"$\theta_e$"
@@ -162,11 +146,6 @@ elif iplot == 'the':
 
 elif iplot == 'vmf':
 
-    # Bin settings
-    bins=np.logspace(-3,1.1,num=20)
-    bins=np.concatenate((-1.*np.flip(bins),bins))
-    nbin=np.shape(bins)[0]
-
     # Figure settings
     fig_title='VMF'
     fig_tag='vmf'
@@ -179,11 +158,6 @@ elif iplot == 'vmf':
     xrange_mn2=(-1,1)
 
 elif iplot == 'rh':
-
-    # Bin settings
-    bins=np.logspace(-3,1.1,num=20)
-    bins=np.concatenate((-1.*np.flip(bins),bins))
-    nbin=np.shape(bins)[0]
 
     # Figure settings
     fig_title='RH'
@@ -198,15 +172,6 @@ elif iplot == 'rh':
   
 elif iplot == 'qrad':
 
-    # Bin settings
-    nbin=60
-    fmax=5 #; fmin=-10
-    #step=(fmax-fmin)/nbin
-    step=fmax*2/nbin
-    bins=np.arange(0,fmax,step)+step
-    bins=np.concatenate((-1.*np.flip(bins),bins))
-    nbin=np.shape(bins)[0]
-
     # Figure settings
     fig_title='$Q_R$'
     fig_tag='qrad'
@@ -218,15 +183,9 @@ elif iplot == 'qrad':
     xrange_mn=(-3,3)
     xrange_mn2=(-3,3)
 
-# Create axis of bin center-points
-bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
-
 if do_prm_xy == 1:
     fig_tag+='_xyp'
     fig_title+=' (xp)'
-if do_prm_inc == 1:
-    fig_tag+='_tp'
-    fig_title+=' (tp)'
 
 
 # #### Read variables ##############################################
@@ -245,21 +204,14 @@ for ktest in range(ntest):
   elif itest == 'crfon':
     t0=0
 
-  if do_prm_inc == 0: 
-    t0+=1 # add one time step since NCRF(t=0) = CTL
-
+  t0+=1 # add one time step since NCRF(t=0) = CTL
   t1 = t0+nt
-  if do_prm_inc == 1: t1+=1
 
   print('Running itest: ',itest)
 
   # Create arrays to save ens members
-  if do_prm_inc == 1:
-    var_all = np.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
-    strat_all = np.zeros((nmem,nt+1,1,nx1,nx2)) # time dim will be reduced to nt in the subtraction
-  else:
-    var_all = np.zeros((nmem,nt,nz,nx1,nx2))
-    strat_all = np.zeros((nmem,nt,1,nx1,nx2))
+  var_all = np.zeros((nmem,nt,nz,nx1,nx2))
+  strat_all = np.zeros((nmem,nt,1,nx1,nx2))
 
   for imemb in range(nmem):
 
@@ -267,23 +219,6 @@ for ktest in range(ntest):
 
     datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+datdir2
     print(datdir)
-
-# Conduct storm tracking via RELVOR
-    ptrack=600 # tracking pressure level
-    ikread = np.where(pres == ptrack)[0][0]
-
-    varfil_main = Dataset(datdir+'U.nc')
-    u = varfil_main.variables['U'][t0:t1,ikread,:,:] # m/s
-    varfil_main.close()
-    varfil_main = Dataset(datdir+'V.nc')
-    v = varfil_main.variables['V'][t0:t1,ikread,:,:] # m/s
-    varfil_main.close()
-    
-    vor=relvort(u,v,lat1d,lon1d)
-    print(vor.shape)
-    track = object_track(vor, lon, lat)
-    print(track.shape)
-    sys.exit()
 
 # Two-dimensional variables
 
@@ -342,19 +277,6 @@ for ktest in range(ntest):
 
     # Save ens member
     var_all[imemb,:,:,:,:] = var
-
-#### Calculate basic mean
-  if istrat == -1:
-    var_mn[ktest,:]=np.mean(var_all,axis=(0,1,3,4))
-  else:
-    indices = (strat_all == istrat).nonzero()
-    # for iz in range(nz):
-    var_mn[ktest,:]=np.mean(var_all[indices[0],indices[1],:,indices[3],indices[4]],axis=0)
-
-# Calculate var' as time-increment: var[t] - var[t-1]
-  if do_prm_inc == 1:
-    var_all = var_all[:,1:,:,:,:] - var_all[:,:-1,:,:,:]
-
 
 #### Calculate frequency ##############################################
 

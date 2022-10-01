@@ -51,6 +51,8 @@ nx = llshape[1]
 ny = llshape[0]
 
 # Pressure
+main = wrfenkf+istorm+'/memb_01/'+itest+'/'
+datdir = main+'post/d02/'
 fil = Dataset(datdir+'U.nc') # this opens the netcdf file
 pres = fil.variables['pres'][:] # hPa
 fil.close()
