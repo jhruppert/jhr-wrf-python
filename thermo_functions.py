@@ -202,9 +202,6 @@ def theta_equiv(T, rv, pres):
 
 def relh(MIXR,p,T,ice):
     
-    if np.max(pres) < 1e4:
-        pres*=1e2 # Convert to Pa
-    
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:

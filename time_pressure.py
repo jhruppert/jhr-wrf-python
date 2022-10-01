@@ -10,6 +10,7 @@
 # 9/29/22
 
 
+from sqlite3 import TimestampFromTicks
 from netCDF4 import Dataset
 import numpy as np
 import matplotlib
@@ -20,7 +21,7 @@ from matplotlib import ticker, cm
 import sys
 import subprocess
 # import cmocean
-from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtual #, relh
+from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtual, relh
 
 
 # #### Variable selection
@@ -51,8 +52,8 @@ elif istrat == 2:
 
 
 # TC tracking
-ptrack=600 # tracking pressure level
-var_tag = 'rvor' # variable
+ptrack='600' # tracking pressure level
+var_track = 'rvor' # variable
 
 # #### Test/storm selection
 
@@ -218,11 +219,10 @@ for ktest in range(ntest):
     print('Running imemb: ',memb_all[imemb])
 
     datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+datdir2
-    print(datdir)
 
 # Two-dimensional variables
 
-# Stratiform index
+  # Stratiform index
     if istrat != -1:
       varfil_main = Dataset(datdir+'strat.nc')
       strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
@@ -231,42 +231,52 @@ for ktest in range(ntest):
 
 # Three-dimensional variables
 
-# Mixing ratio
-    varfil_main = Dataset(datdir+'QVAPOR.nc')
-    qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
-    varfil_main.close()
-    
+    if iplot == 'thv' or iplot == 'the' or iplot == 'vmf' or iplot == 'rh':
+    # Mixing ratio
+      varfil_main = Dataset(datdir+'QVAPOR.nc')
+      qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
+      varfil_main.close()
+    # Temp
+      varfil_main = Dataset(datdir+'T.nc')
+      tmpk = varfil_main.variables['T'][t0:t1,:,:,:] # K
+      varfil_main.close()
+
     ### Variable selection ##############################################
 
-    # Virtual potential temp
     if iplot == 'thv':
+    # Virtual potential temp
       var = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-    # Equiv potential temp
     elif iplot == 'the': 
+    # Equiv potential temp
       var = theta_equiv(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-    # Vertical mass flux
     elif iplot == 'vmf':
+    # Vertical mass flux
       # Density
       rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
       varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
+      # Vertical motion
       var = varfil.variables['W'][t0:t1,:,:,:] # m/s
       varfil.close()
       var *= rho
-    # Humidity
     elif iplot == 'rh':
-      # Density
-      varfil = Dataset(datdir+'QVAPOR.nc') # this opens the netcdf file
-      var = varfil.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
-      varfil.close()
-    # Radiation
+    # Humidity
+      var = relh(qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2,tmpk,ice=1) # %
     elif iplot == 'qrad':
-      # Density
+    # Radiation
       varfil = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
       var = varfil.variables['RTHRATLW'][t0:t1,:,:,:]*3600*24 # K/s --> K/d
       varfil.close()
       varfil = Dataset(datdir+'RTHRATSW.nc') # this opens the netcdf file
       var += varfil.variables['RTHRATSW'][t0:t1,:,:,:]*3600*24 # K/s --> K/d
       varfil.close()
+
+    # Localize to TC track
+    track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
+    ncfile = Dataset(track_file)
+    clon = varfil.variables['clon'][:] # deg
+    clat = varfil.variables['clat'][:] # deg
+    print(clon)
+    sys.exit()
 
     # Calculate var' as anomaly from x-y-average: var[t,z,y,x] - mean_xy(var[t,z])
     if do_prm_xy == 1:
@@ -280,17 +290,6 @@ for ktest in range(ntest):
 
 #### Calculate frequency ##############################################
 
-  for iz in range(nz):
-      for ibin in range(nbin-1):
-          if istrat == -1:
-            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
-          else:
-            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1]) & (strat_all[:,:,0,:,:] == istrat)).nonzero()
-          var_freq[ktest,ibin,iz]=np.shape(indices)[1]
-      var_freq[ktest,:,iz] /= np.sum(var_freq[ktest,:,iz])
-  
-  #ncell=nx1*nx2*nt*nmem
-  var_freq[ktest,:,:] *= 100. #/ncell
 
 
 # ### Plotting routines ##############################################
