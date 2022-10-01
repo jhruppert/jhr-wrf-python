@@ -54,6 +54,7 @@ elif istrat == 2:
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
+rmax = 800 # radius (km) limit to keep unmasked
 
 # #### Test/storm selection
 
@@ -192,7 +193,7 @@ if do_prm_xy == 1:
 # #### Read variables ##############################################
 
 ntest=2
-var=np.zeros((ntest,nmem,nt,nz))
+# var=np.zeros((ntest,nmem,nt,nz))
 
 for ktest in range(ntest):
 
@@ -211,8 +212,7 @@ for ktest in range(ntest):
   print('Running itest: ',itest)
 
   # Create arrays to save ens members
-  var_all = np.zeros((nmem,nt,nz,nx1,nx2))
-  strat_all = np.zeros((nmem,nt,1,nx1,nx2))
+  var_all = np.zeros((nmem,nt,nz))
 
   for imemb in range(nmem):
 
@@ -253,8 +253,8 @@ for ktest in range(ntest):
     # Vertical mass flux
       # Density
       rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
-      varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
       # Vertical motion
+      varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
       var = varfil.variables['W'][t0:t1,:,:,:] # m/s
       varfil.close()
       var *= rho
@@ -273,23 +273,23 @@ for ktest in range(ntest):
     # Localize to TC track
     track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
     ncfile = Dataset(track_file)
-    clon = varfil.variables['clon'][:] # deg
-    clat = varfil.variables['clat'][:] # deg
-    print(clon)
-    sys.exit()
+    clon = ncfile.variables['clon'][:] # deg
+    clat = ncfile.variables['clat'][:] # deg
+    ncfile.close()
 
-    # Calculate var' as anomaly from x-y-average: var[t,z,y,x] - mean_xy(var[t,z])
-    if do_prm_xy == 1:
-      print("MUST UPDATE THIS")
-      sys.exit()
-      v_mean = np.mean(var,axis=(2,3))
-      var -= v_mean[:,:,np.newaxis,np.newaxis]
+    lon3d = np.repeat(lon[np.newaxis,:,:], nt, axis=0)
+    lat3d = np.repeat(lat[np.newaxis,:,:], nt, axis=0)
+    lon3d -= clon[t0:t1,np.newaxis,np.newaxis]
+    lat3d -= clat[t0:t1,np.newaxis,np.newaxis]
+    radius3d = np.sqrt( lon3d**2 + lat3d**2 )
+    radius4d = np.repeat(radius3d[:,np.newaxis,:,:], nz, axis=1)
 
+    var = np.ma.masked_where(radius4d > rmax, var)
+
+    # Average in x,y
     # Save ens member
-    var_all[imemb,:,:,:,:] = var
-
-#### Calculate frequency ##############################################
-
+    var_all[imemb,:,:] = np.mean(var,axis=(2,3))
+    sys.exit()
 
 
 # ### Plotting routines ##############################################
