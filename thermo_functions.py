@@ -294,9 +294,6 @@ def esat(T):
 
 def eice(T):
     
-    if np.max(pres) < 1e4:
-        pres*=1e2 # Convert to Pa
-    
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:
