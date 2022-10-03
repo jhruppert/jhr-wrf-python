@@ -24,11 +24,13 @@
 from netCDF4 import Dataset
 import numpy as np
 
-def azim_wind_latlon(track_file, u, v, lon, lat, rmax, t0, t1):
+def azim_wind_latlon(track_file, u, v, lon, lat, t0, t1):
+
+    # Settings
+    rmax = 3 # degrees
 
     # Input dimensions
     nt,nz,nx1,nx2 = u.shape
-
 
     # Read TC track
     ncfile = Dataset(track_file)
