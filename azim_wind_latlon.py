@@ -12,7 +12,7 @@
 #       t0, t1 - bounding time indices of var, assuming shorter in time than clon/clat
 # 
 # RETURNS:
-#       returns a masked array of identical shape to var.
+#       returns a time series masked array of identical shape to var.
 # 
 # James Ruppert  
 # jruppert@ou.edu  
@@ -53,6 +53,6 @@ def azim_wind_latlon(track_file, u, v, lon, lat, t0, t1):
     vtx = u*np.sin(azim)
     vty = v*np.cos(azim)
     v_tan = vty - vtx
-    v_tan_mask = np.ma.masked_where(radius4d > rmax, v_tan)
-    v_tan_max = np.max(v_tan_mask, axis=(1,2,3))
-    return v_tan_max
+    # v_tan_mask = np.ma.masked_where(radius4d > rmax_vtan_max, vtan)
+    # v_tan_max = np.max(v_tan_mask, axis=(1,2,3))
+    return v_tan
