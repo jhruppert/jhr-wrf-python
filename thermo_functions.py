@@ -259,6 +259,11 @@ def esat(T):
     esat=e1*10**(10.79586*(1-TK/T)-5.02808*np.log10(T/TK)+\
                 1.50474*1e-4*(1-10**(-8.29692*(T/TK-1)))+\
                 0.42873*1e-3*(10**(4.76955*(1-TK/T))-1)-2.2195983)
+
+    # Bolton 1980 (much faster)
+    # need T in Celsius
+    # esat=611.2*np.exp(17.67*(T-273.16)/(243.5+(T-273.16)))
+
     return esat
 
 
@@ -278,19 +283,6 @@ def esat(T):
 
 # James Ruppert (jruppert@ou.edu), converted to python and placed here, June 2022
 #   Converted all input/output to SI units, June 2022
-
-# ; Formula with T = temperature in K
-# ;    esat = exp( -6763.6/(T+T0) - 4.9283*alog((T+T0)) + 54.2190 )
-# ; Formula close to that of Magnus, 1844 with temperature TC in Celsius
-# ;    ESAT = 6.1078 * EXP( 17.2693882 * TC / (TC + 237.3) ) ; TC in Celsius
-# ; or Emanuel's formula (also approximation in form of Magnus' formula,
-# ; 1844), which was taken from Bolton, Mon. Wea. Rev. 108, 1046-1053, 1980.
-# ; This formula is very close to Goff and Gratch with differences of
-# ; less than 0.25% between -50 and 0 deg C (and only 0.4% at -60degC)    
-# ;    esat=6.112*EXP(17.67*TC/(243.5+TC))
-# 
-# ; WMO reference formula is that of Goff and Gratch (1946), slightly
-# ; modified by Goff in 1965:
 
 def eice(T):
     
