@@ -21,11 +21,12 @@ import sys
 def relvort(u, v, lat, lon):
     
     a = 6371e3 # Earth radius, m
-    inva = 1./a
-    inv_cos = 1./np.cos(np.radians(lat))
+    deg2rad = np.pi/180
+    deg2meters = a * deg2rad
+    cosf = np.cos(np.radians(lat))
 
-    dudy = np.gradient(u,lat,axis=1) * inva
-    dvdx = np.gradient(v,lon,axis=2) * inv_cos[np.newaxis,:,np.newaxis] * inva
+    dudy = np.gradient( u , lat*deg2meters , axis=1)
+    dvdx = np.gradient( v , lon*deg2meters , axis=2) / cosf[np.newaxis,:,np.newaxis]
 
     # print("Shape of gradient variable:",np.shape(dvdx))
     vor = (dvdx - dudy)
