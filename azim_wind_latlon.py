@@ -1,5 +1,5 @@
-# Function to convert wind from (time,lat,lon) to the azimuthal-maximum tangential
-#   wind as f(time) based on a TC track.
+# Function to convert wind from (time,lat,lon) to the tangential
+#   wind as f(time,z,x,y) based on a TC track.
 # 
 # INPUTS:
 #       track_file - file path and name for netCDF file containing track as clon,clat
@@ -27,7 +27,7 @@ import numpy as np
 def azim_wind_latlon(track_file, u, v, lon, lat, t0, t1):
 
     # Settings
-    rmax = 3 # degrees
+    # rmax = 3 # degrees
 
     # Input dimensions
     nt,nz,nx1,nx2 = u.shape
