@@ -27,7 +27,7 @@ from mask_tc_track import mask_tc_track
 # #### Variable selection
 
 # Fill variable
-iplot = 'vmf'#'rh'#'qrad'#
+iplot = 'qrad'#'vmf'#'rh'#
 # options: vmf, thv, the
 
 # Settings
@@ -284,7 +284,7 @@ for knt in range(i_nt):
       print(datdir)
   
       # Localize to TC track
-      track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
+      track_file = datdir+'../../../track_'+var_track+'_'+ptrack+'hPa.nc'
 
   # Two-dimensional variables
 
@@ -420,8 +420,9 @@ for knt in range(i_nt):
         ax.invert_yaxis()
         ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
         ax.tick_params(axis='both',length=7)
-        plt.yticks(ticks=pres)
-        plt.ylim(np.max(pres), np.min(pres))
+        ytick_loc=np.arange(900,0,-100)
+        plt.yticks(ticks=ytick_loc)
+        plt.ylim(np.max(pres), 100)#np.min(pres))
 
         ax.set_xlabel(units_var)
 
@@ -491,7 +492,8 @@ for knt in range(i_nt):
       ax.invert_yaxis()
       ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
       ax.tick_params(axis='both',length=7)
-      plt.yticks(ticks=pres)
+      ytick_loc=np.arange(900,0,-100)
+      plt.yticks(ticks=ytick_loc)
       plt.ylim(np.max(pres), np.min(pres))
 
       ax.set_xlabel(units_var)
