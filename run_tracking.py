@@ -15,9 +15,9 @@ from object_track import object_track
 
 # Choices
 ptrack  = 600 # tracking pressure level
-istorm  = 'maria' #'haiyan'
+istorm  = 'haiyan'#'maria' #
 # imemb   = 'memb_01'
-itest   = 'ctl'
+itest   = 'crfon'
 var_tag = 'rvor'
 
 # ------------------------------------------
@@ -25,8 +25,8 @@ var_tag = 'rvor'
 print('Tracking at:',ptrack,'hPa')
 
 # Ens members
-nmem = 20 # number of ensemble members (1-5 have NCRF)
-memb0=1
+nmem = 1#20 # number of ensemble members (1-5 have NCRF)
+memb0=5
 nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
 memb_all=np.char.add('memb_',nustr)
@@ -51,7 +51,7 @@ nx = llshape[1]
 ny = llshape[0]
 
 # Pressure
-main = wrfenkf+istorm+'/memb_01/'+itest+'/'
+main = wrfenkf+istorm+'/'+memb_all[0]+'/'+itest+'/'
 datdir = main+'post/d02/'
 fil = Dataset(datdir+'U.nc') # this opens the netcdf file
 pres = fil.variables['pres'][:] # hPa

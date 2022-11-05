@@ -27,7 +27,7 @@ from mask_tc_track import mask_tc_track
 # #### Variable selection
 
 # Fill variable
-iplot = 'vmf'#'rh'#'qrad'#
+iplot = 'qrad'#'vmf'#'rh'#'qrad'#
 # options: vmf, thv, the
 
 # Settings
@@ -52,15 +52,14 @@ elif istrat == 2:
   fig_extra='_strat'
 #fig_extra=''
 
-
 # #### Test/storm selection
 
 storm = 'haiyan'
 #storm = 'maria'
 
 # Tests to read and compare
-tests = ['ctl','ncrf']
-#tests = ['crfon','ncrf']
+# tests = ['ctl','ncrf']
+tests = ['crfon','ncrf']
 
 # Shift starting-read time step for CRFON comparison
 t0_test=0
@@ -71,7 +70,7 @@ nmem = 1 # number of ensemble members (1-5 have NCRF)
 # nmem = 1
 
 # Starting member to read
-memb0=1
+memb0=5
 #memb0=5 # for CRFFON test
 
 # TC tracking
@@ -84,7 +83,7 @@ rmax = 8 # radius (deg) limit to keep unmasked
 # #### Time selection
 
 # ntall=[1,3,6,12,24,36]
-ntall=[3]
+ntall=[1]
 i_nt=np.shape(ntall)[0]
 
 for knt in range(i_nt):
@@ -109,7 +108,7 @@ for knt in range(i_nt):
   
   ##### Get dimensions
   
-  datdir = main+storm+'/'+memb_all[0]+'/ctl/'+datdir2
+  datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
   varfil_main = Dataset(datdir+'T.nc')
   nz = varfil_main.dimensions['level'].size
   # lat = varfil_main.variables['XLAT'][:][0] # deg
@@ -119,7 +118,7 @@ for knt in range(i_nt):
   pres = varfil_main.variables['pres'][:] # hPa
   varfil_main.close()
 
-  process = subprocess.Popen(['ls '+main+storm+'/'+memb_all[0]+'/ctl/wrfout_d02_*'],shell=True,
+  process = subprocess.Popen(['ls '+main+storm+'/'+memb_all[0]+'/'+tests[0]+'/wrfout_d02_*'],shell=True,
       stdout=subprocess.PIPE,universal_newlines=True)
   output = process.stdout.readline()
   wrffil = output.strip() #[3]
@@ -189,8 +188,8 @@ for knt in range(i_nt):
       # For mean var
       scale_mn=1e3
       units_mn='$10^{-3}$ '+units_var
-      xrange_mn=(-60,110)
-      xrange_mn2=(-1,5)
+      xrange_mn=(-60,120)
+      xrange_mn2=(-2,8)
 
   elif iplot == 'rh':
 
@@ -214,7 +213,7 @@ for knt in range(i_nt):
 
       # Bin settings
       nbin=60
-      fmax=8 #; fmin=-10
+      fmax=20 #; fmin=-10
       #step=(fmax-fmin)/nbin
       step=fmax*2/nbin
       bins=np.arange(0,fmax,step)+step
@@ -229,8 +228,8 @@ for knt in range(i_nt):
       # For mean var
       scale_mn=1.
       units_mn=units_var
-      xrange_mn=(-3,3)
-      xrange_mn2=(-3,3)
+      xrange_mn=(-7,2)
+      xrange_mn2=(-7,5)
 
   # Create axis of bin center-points
   bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
@@ -267,7 +266,7 @@ for knt in range(i_nt):
     if do_prm_inc == 1: t1+=1
 
     print('Running itest: ',itest)
-  
+
     # Create arrays to save ens members
     if do_prm_inc == 1:
       var_all = np.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
