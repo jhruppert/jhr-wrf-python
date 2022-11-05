@@ -17,15 +17,17 @@ matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib import ticker, cm
+import subprocess
 import sys
 import cmocean
 from thermo_functions import density_moist, theta_dry, theta_equiv, theta_virtual #, relh
+from mask_tc_track import mask_tc_track
 
 
 # #### Variable selection
 
 # Fill variable
-iplot = 'qrad'#'vmf'#'rh'#
+iplot = 'vmf'#'rh'#'qrad'#
 # options: vmf, thv, the
 
 # Settings
@@ -72,7 +74,11 @@ nmem = 1 # number of ensemble members (1-5 have NCRF)
 memb0=1
 #memb0=5 # for CRFFON test
 
-xmin=780
+# TC tracking
+# xmin=780
+ptrack='600' # tracking pressure level
+var_track = 'rvor' # variable
+rmax = 8 # radius (deg) limit to keep unmasked
 
 
 # #### Time selection
@@ -98,7 +104,7 @@ for knt in range(i_nt):
   nustr = np.char.zfill(nums, 2)
   memb_all=np.char.add('memb_',nustr)
   
-  datdir2 = 'post/d02/'
+  datdir2 = 'post/d02/v2/'
   
   
   ##### Get dimensions
@@ -106,11 +112,22 @@ for knt in range(i_nt):
   datdir = main+storm+'/'+memb_all[0]+'/ctl/'+datdir2
   varfil_main = Dataset(datdir+'T.nc')
   nz = varfil_main.dimensions['level'].size
+  # lat = varfil_main.variables['XLAT'][:][0] # deg
+  # lon = varfil_main.variables['XLONG'][:][0] # deg
   nx1 = varfil_main.dimensions['lat'].size
-  nx2 = varfil_main.dimensions['lon'].size-xmin-1
+  nx2 = varfil_main.dimensions['lon'].size#-xmin-1
   pres = varfil_main.variables['pres'][:] # hPa
   varfil_main.close()
-  
+
+  process = subprocess.Popen(['ls '+main+storm+'/'+memb_all[0]+'/ctl/wrfout_d02_*'],shell=True,
+      stdout=subprocess.PIPE,universal_newlines=True)
+  output = process.stdout.readline()
+  wrffil = output.strip() #[3]
+  varfil_main = Dataset(wrffil)
+  lat = varfil_main.variables['XLAT'][:][0] # deg
+  lon = varfil_main.variables['XLONG'][:][0] # deg
+  varfil_main.close()
+
   # Variable settings
 
   if iplot == 'thv':
@@ -172,8 +189,8 @@ for knt in range(i_nt):
       # For mean var
       scale_mn=1e3
       units_mn='$10^{-3}$ '+units_var
-      xrange_mn=(-1,8)
-      xrange_mn2=(-1,1)
+      xrange_mn=(-60,110)
+      xrange_mn2=(-1,5)
 
   elif iplot == 'rh':
 
@@ -197,7 +214,7 @@ for knt in range(i_nt):
 
       # Bin settings
       nbin=60
-      fmax=5 #; fmin=-10
+      fmax=8 #; fmin=-10
       #step=(fmax-fmin)/nbin
       step=fmax*2/nbin
       bins=np.arange(0,fmax,step)+step
@@ -266,25 +283,30 @@ for knt in range(i_nt):
       datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+datdir2
       print(datdir)
   
+      # Localize to TC track
+      track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
+
   # Two-dimensional variables
 
   # Stratiform index
       if istrat != -1:
         varfil_main = Dataset(datdir+'strat.nc')
-        strat = varfil_main.variables['strat'][t0:t1,:,:,xmin:1400-1] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
         varfil_main.close()
+        # Localize to TC track
+        strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
         strat_all[imemb,:,:,:,:] = strat
 
   # Three-dimensional variables
   
   # Mixing ratio
       varfil_main = Dataset(datdir+'QVAPOR.nc')
-      qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,xmin:1400-1] # kg/kg
+      qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
       varfil_main.close()
   
   # Temperature
       varfil_main = Dataset(datdir+'T.nc')
-      tmpk = varfil_main.variables['T'][34:35,:,:,xmin:1400-1] # K
+      tmpk = varfil_main.variables['T'][34:35,:,:,:] # K
       varfil_main.close()
       
       
@@ -301,23 +323,22 @@ for knt in range(i_nt):
         # Density
         rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
         varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
-        var = varfil.variables['W'][t0:t1,:,:,xmin:1400-1] # m/s
+        var = varfil.variables['W'][t0:t1,:,:,:] # m/s
         varfil.close()
         var *= rho
       # Humidity
       elif iplot == 'rh':
         # Density
         varfil = Dataset(datdir+'QVAPOR.nc') # this opens the netcdf file
-        var = varfil.variables['QVAPOR'][t0:t1,:,:,xmin:1400-1] # kg/kg
+        var = varfil.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
         varfil.close()
       # Radiation
       elif iplot == 'qrad':
-        # Density
         varfil = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
-        var = varfil.variables['RTHRATLW'][t0:t1,:,:,xmin:1400-1]*3600*24 # K/s --> K/d
+        var = varfil.variables['RTHRATLW'][t0:t1,:,:,:]*3600*24 # K/s --> K/d
         varfil.close()
         varfil = Dataset(datdir+'RTHRATSW.nc') # this opens the netcdf file
-        var += varfil.variables['RTHRATSW'][t0:t1,:,:,xmin:1400-1]*3600*24 # K/s --> K/d
+        var += varfil.variables['RTHRATSW'][t0:t1,:,:,:]*3600*24 # K/s --> K/d
         varfil.close()
   
   # Th_v' weighted by qv'
@@ -328,6 +349,9 @@ for knt in range(i_nt):
   #qvp /= qvscale[:,:,np.newaxis,np.newaxis]
   #thp *= qvp
   
+      # Localize to TC track
+      var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+
       # Calculate var' as anomaly from x-y-average: var[t,z,y,x] - mean_xy(var[t,z])
       if do_prm_xy == 1:
         v_mean = np.mean(var,axis=(2,3))
