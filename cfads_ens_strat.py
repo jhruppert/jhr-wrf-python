@@ -27,7 +27,7 @@ from mask_tc_track import mask_tc_track
 # #### Variable selection
 
 # Fill variable
-iplot = 'qrad'#'vmf'#'rh'#
+iplot = 'vmf'#'rh'#'qrad'#
 # options: vmf, thv, the
 
 # Settings
@@ -494,7 +494,7 @@ for knt in range(i_nt):
       ax.tick_params(axis='both',length=7)
       ytick_loc=np.arange(900,0,-100)
       plt.yticks(ticks=ytick_loc)
-      plt.ylim(np.max(pres), np.min(pres))
+      plt.ylim(np.max(pres), 100)#np.min(pres))
 
       ax.set_xlabel(units_var)
   
