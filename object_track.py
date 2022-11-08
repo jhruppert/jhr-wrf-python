@@ -73,8 +73,8 @@ def object_track(f, lon, lat):
     f_masked = np.ma.masked_where(np.abs(f_masked) < 3, f_masked, copy=False)
 
     # Mask out first time step
-    f_masked[0,:,:] = np.nan
-    f_masked = np.ma.masked_invalid(f_masked, copy=False)
+    # f_masked[0,:,:] = np.nan
+    # f_masked = np.ma.masked_invalid(f_masked, copy=False)
 
     # Mask out data within 0.5*r_max from boundaries
     f_masked = np.ma.masked_where(lon3d <= lon[0,0]   +0.5*r_max, f_masked, copy=False)
