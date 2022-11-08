@@ -17,7 +17,7 @@ from object_track import object_track
 ptrack  = 600 # tracking pressure level
 istorm  = 'haiyan'#'maria' #
 # imemb   = 'memb_01'
-itest   = 'ncrf'#'crfon'
+itest   = 'crfon'#'ncrf'#'ctl'#
 var_tag = 'rvor'
 
 # ------------------------------------------
