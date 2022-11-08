@@ -27,7 +27,7 @@ from mask_tc_track import mask_tc_track
 # #### Variable selection
 
 # Fill variable
-iplot = 'qrad'#'vmf'#'rh'#'qrad'#
+iplot = 'vmf'#'rh'#'qrad'#
 # options: vmf, thv, the
 
 # Settings
@@ -58,8 +58,8 @@ storm = 'haiyan'
 #storm = 'maria'
 
 # Tests to read and compare
-# tests = ['ctl','ncrf']
-tests = ['crfon','ncrf']
+tests = ['ctl','ncrf']
+# tests = ['crfon','ncrf']
 
 # Shift starting-read time step for CRFON comparison
 t0_test=0
@@ -70,7 +70,7 @@ nmem = 1 # number of ensemble members (1-5 have NCRF)
 # nmem = 1
 
 # Starting member to read
-memb0=5
+memb0=1#5
 #memb0=5 # for CRFFON test
 
 # TC tracking
@@ -181,9 +181,12 @@ for knt in range(i_nt):
       nbin=np.shape(bins)[0]
 
       # Figure settings
-      fig_title='VMF'
-      fig_tag='vmf'
-      units_var='kg m$^{-2}$ s$^{-1}$'
+      # fig_title='VMF'
+      # fig_tag='vmf'
+      # units_var='kg m$^{-2}$ s$^{-1}$'
+      fig_title='$w$'
+      fig_tag='w'
+      units_var='m s$^{-1}$'
 
       # For mean var
       scale_mn=1e3
@@ -320,11 +323,11 @@ for knt in range(i_nt):
       # Vertical mass flux
       elif iplot == 'vmf':
         # Density
-        rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+        # rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
         varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
         var = varfil.variables['W'][t0:t1,:,:,:] # m/s
         varfil.close()
-        var *= rho
+        # var *= rho
       # Humidity
       elif iplot == 'rh':
         # Density

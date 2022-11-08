@@ -25,8 +25,8 @@ var_tag = 'rvor'
 print('Tracking at:',ptrack,'hPa')
 
 # Ens members
-nmem = 5#20 # number of ensemble members (1-5 have NCRF)
-memb0=1
+nmem = 1#20 # number of ensemble members (1-5 have NCRF)
+memb0=5
 nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
 memb_all=np.char.add('memb_',nustr)

@@ -100,13 +100,13 @@ def object_track(f, lon, lat):
         f_masked[it,:,:] = np.ma.masked_where(radius > r_max, f_masked[it,:,:], copy=False)
 
     # Iterate downward from itmax
-    for it in range(itmax-1,1,-1):
+    for it in range(itmax-1,0,-1):
 
         fmax = np.max(f_masked[it,:,:])
         mloc = np.where(f_masked[it,:,:] == fmax)
         xmax = mloc[1][0]
         ymax = mloc[0][0]
-
+        
         radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
         f_masked[it-1,:,:] = np.ma.masked_where(radius > r_max, f_masked[it-1,:,:], copy=False)
 
