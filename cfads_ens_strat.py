@@ -37,7 +37,7 @@ do_prm_xy = 0
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
-istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 
 # Strat/Conv index subset
 if istrat == -1:
@@ -74,7 +74,7 @@ memb0=1#5
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
-rmax = 6 # radius (deg) limit to keep unmasked
+rmax = 8 # radius (deg) limit for masking around TC center
 
 ## AUTO ###################
 # Should be off for VMF
@@ -177,7 +177,8 @@ for knt in range(i_nt):
   elif iplot == 'vmf':
 
       # Bin settings
-      bins=np.logspace(-3,1.1,num=20)
+      # bins=np.logspace(-3,1.1,num=20)
+      bins=np.logspace(-3.5,0.7,num=20)
       bins=np.concatenate((-1.*np.flip(bins),bins))
       nbin=np.shape(bins)[0]
 
@@ -499,20 +500,17 @@ for knt in range(i_nt):
           if iplot == 'vmf':
               ax.set_xscale('symlog')
               clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
-              clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
 
               locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
               ax.xaxis.set_major_locator(locmin)
-              ticks=[1e-2,1e-1,1,1e1]
           else: #if iplot == 'thv' or iplot == 'the':
-#              clevsi=[0.01,0.05,0.1,0.5,1,5,10,50]
               if iplot == 'qrad':
                 clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0,np.arange(2,11,2)*1e1))
               else:
                 clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0))
-              clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
-#              ticks=None
-              ticks=[1e-2,1e-1,1,1e1]
+          
+          clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
+          ticks=[1e-2,1e-1,1,1e1]
 
           im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]),
                            cmap='RdBu_r', alpha=1.0, extend='max', zorder=2)
