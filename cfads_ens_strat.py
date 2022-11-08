@@ -28,20 +28,18 @@ from mask_tc_track import mask_tc_track
 
 # Fill variable
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
+iplot = 'qrad'
+iplot = 'vmf'
 # options: vmf, thv, the
 
-# Settings
 # Calculate anomaly as deviation from xy-mean
-do_prm_xy = 1
+do_prm_xy = 0
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
-# Should be off for VMF
-if iplot == 'vmf':
-  do_prm_xy=0
+istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
 
 # Strat/Conv index subset
-istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
 if istrat == -1:
   fig_extra=''
 elif istrat == 0:
@@ -74,11 +72,14 @@ memb0=1#5
 #memb0=5 # for CRFFON test
 
 # TC tracking
-# xmin=780
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
-rmax = 8 # radius (deg) limit to keep unmasked
+rmax = 6 # radius (deg) limit to keep unmasked
 
+## AUTO ###################
+# Should be off for VMF
+if iplot == 'vmf':
+  do_prm_xy=0
 
 # #### Time selection
 
@@ -273,10 +274,8 @@ for knt in range(i_nt):
     # Create arrays to save ens members
     if do_prm_inc == 1:
       var_all = np.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
-      # strat_all = np.zeros((nmem,nt+1,1,nx1,nx2)) # time dim will be reduced to nt in the subtraction
     else:
       var_all = np.zeros((nmem,nt,nz,nx1,nx2))
-      # strat_all = np.zeros((nmem,nt,1,nx1,nx2))
   
     for imemb in range(nmem):
   
@@ -295,9 +294,6 @@ for knt in range(i_nt):
         varfil_main = Dataset(datdir+'strat.nc')
         strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
         varfil_main.close()
-        # Localize to TC track
-        strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
-        # strat_all[imemb,:,:,:,:] = strat
 
     # Three-dimensional variables
   
@@ -347,27 +343,23 @@ for knt in range(i_nt):
 
       # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
       if do_prm_xy == 1:
-        varm1 = mask_tc_track(track_file, 12, var, lon, lat, t0, t1)
+        radius_ls=12
+        varm1 = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
         var_ls = np.mean(varm1,axis=(2,3))
         var -= var_ls[:,:,np.newaxis,np.newaxis]
-
-      # Localize to TC track
-      var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
 
       # Mask out based on strat/conv
       if istrat != -1:
         var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
 
+      # Localize to TC track
+      var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+
       # Save ens member
       var_all[imemb,:,:,:,:] = var
 
   #### Calculate basic mean
-    # if istrat == -1:
     var_mn[ktest,:]=np.mean(var_all,axis=(0,1,3,4))
-    # else:
-    #   indices = (strat_all == istrat).nonzero()
-    #   # for iz in range(nz):
-    #   var_mn[ktest,:]=np.mean(var_all[indices[0],indices[1],:,indices[3],indices[4]],axis=0)
 
   # Calculate var' as time-increment: var[t] - var[t-1]
     if do_prm_inc == 1:
@@ -378,10 +370,7 @@ for knt in range(i_nt):
   
     for iz in range(nz):
         for ibin in range(nbin-1):
-            # if istrat == -1:
             indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
-            # else:
-              # indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1]) & (strat_all[:,:,0,:,:] == istrat)).nonzero()
             var_freq[ktest,ibin,iz]=np.shape(indices)[1]
         var_freq[ktest,:,iz] /= np.sum(var_freq[ktest,:,iz])
     
