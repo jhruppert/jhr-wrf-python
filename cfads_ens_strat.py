@@ -27,7 +27,7 @@ from mask_tc_track import mask_tc_track
 # #### Variable selection
 
 # Fill variable
-iplot = 'vmf'#'rh'#'qrad'#
+iplot = 'qrad'#'the'#'thv'#'vmf'#'rh'#
 # options: vmf, thv, the
 
 # Settings
@@ -155,7 +155,7 @@ for knt in range(i_nt):
 
       # Bin settings
       nbin=60
-      fmax=5 #; fmin=-10
+      fmax=15 #; fmin=-10
       #step=(fmax-fmin)/nbin
       step=fmax*2/nbin
       bins=np.arange(0,fmax,step)+step
@@ -181,12 +181,12 @@ for knt in range(i_nt):
       nbin=np.shape(bins)[0]
 
       # Figure settings
-      # fig_title='VMF'
-      # fig_tag='vmf'
-      # units_var='kg m$^{-2}$ s$^{-1}$'
-      fig_title='$w$'
-      fig_tag='w'
-      units_var='m s$^{-1}$'
+      fig_title='VMF'
+      fig_tag='vmf'
+      units_var='kg m$^{-2}$ s$^{-1}$'
+      # fig_title='$w$'
+      # fig_tag='w'
+      # units_var='m s$^{-1}$'
 
       # For mean var
       scale_mn=1e3
@@ -262,7 +262,7 @@ for knt in range(i_nt):
     elif itest == 'crfon':
       t0=0
 
-    if do_prm_inc == 0: 
+    if do_prm_inc == 0:
       t0+=1 # add one time step since NCRF(t=0) = CTL
 
     t1 = t0+nt
@@ -323,11 +323,11 @@ for knt in range(i_nt):
       # Vertical mass flux
       elif iplot == 'vmf':
         # Density
-        # rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+        rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
         varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
         var = varfil.variables['W'][t0:t1,:,:,:] # m/s
         varfil.close()
-        # var *= rho
+        var *= rho
       # Humidity
       elif iplot == 'rh':
         # Density
@@ -351,13 +351,22 @@ for knt in range(i_nt):
   #qvp /= qvscale[:,:,np.newaxis,np.newaxis]
   #thp *= qvp
   
+      # Save large-scale (large-radius) var avg for calculating anomaly below
+      if do_prm_xy == 1:
+        varm1 = mask_tc_track(track_file, 12, var, lon, lat, t0, t1)
+        var_ls = np.mean(varm1,axis=(2,3))
+
       # Localize to TC track
       var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
 
+      # Mask out based on strat/conv
+      if istrat == -1:
+        var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
+
       # Calculate var' as anomaly from x-y-average: var[t,z,y,x] - mean_xy(var[t,z])
       if do_prm_xy == 1:
-        v_mean = np.mean(var,axis=(2,3))
-        var -= v_mean[:,:,np.newaxis,np.newaxis]
+        # v_mean = np.mean(var,axis=(2,3))
+        var -= var_ls[:,:,np.newaxis,np.newaxis]
 
       # Save ens member
       var_all[imemb,:,:,:,:] = var
@@ -379,10 +388,10 @@ for knt in range(i_nt):
   
     for iz in range(nz):
         for ibin in range(nbin-1):
-            if istrat == -1:
-              indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
-            else:
-              indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1]) & (strat_all[:,:,0,:,:] == istrat)).nonzero()
+            # if istrat == -1:
+            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
+            # else:
+              # indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1]) & (strat_all[:,:,0,:,:] == istrat)).nonzero()
             var_freq[ktest,ibin,iz]=np.shape(indices)[1]
         var_freq[ktest,:,iz] /= np.sum(var_freq[ktest,:,iz])
     
