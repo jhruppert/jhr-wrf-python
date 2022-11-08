@@ -27,12 +27,12 @@ from mask_tc_track import mask_tc_track
 # #### Variable selection
 
 # Fill variable
-iplot = 'qrad'#'the'#'thv'#'vmf'#'rh'#
+iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
 # options: vmf, thv, the
 
 # Settings
 # Calculate anomaly as deviation from xy-mean
-do_prm_xy = 0
+do_prm_xy = 1
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
@@ -133,7 +133,7 @@ for knt in range(i_nt):
 
       # Bin settings
       nbin=60
-      fmax=3 #5 #; fmin=-5
+      fmax=6 #5 #; fmin=-5
       #step=(fmax-fmin)/nbin
       step=fmax*2/nbin
       bins=np.arange(0,fmax,step)+step
@@ -146,10 +146,10 @@ for knt in range(i_nt):
       units_var='K'
   
       # For mean var
-      scale_mn=1.#e3
+      scale_mn=1.
       units_mn=units_var
-      xrange_mn=(-0.5,0.5)
-      xrange_mn2=(-0.1,0.1)
+      xrange_mn=(-1,1)
+      xrange_mn2=(-1,1)
 
   elif iplot == 'the':
 
@@ -231,15 +231,15 @@ for knt in range(i_nt):
       # For mean var
       scale_mn=1.
       units_mn=units_var
-      xrange_mn=(-7,2)
-      xrange_mn2=(-7,5)
+      xrange_mn=(-4,1)
+      xrange_mn2=(-1.5,1.5)
 
   # Create axis of bin center-points
   bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
 
   if do_prm_xy == 1:
       fig_tag+='_xyp'
-      fig_title+=' (xp)'
+      fig_title+="$'$"# (xp)'
   if do_prm_inc == 1:
       fig_tag+='_tp'
       fig_title+=' (tp)'
@@ -273,10 +273,10 @@ for knt in range(i_nt):
     # Create arrays to save ens members
     if do_prm_inc == 1:
       var_all = np.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
-      strat_all = np.zeros((nmem,nt+1,1,nx1,nx2)) # time dim will be reduced to nt in the subtraction
+      # strat_all = np.zeros((nmem,nt+1,1,nx1,nx2)) # time dim will be reduced to nt in the subtraction
     else:
       var_all = np.zeros((nmem,nt,nz,nx1,nx2))
-      strat_all = np.zeros((nmem,nt,1,nx1,nx2))
+      # strat_all = np.zeros((nmem,nt,1,nx1,nx2))
   
     for imemb in range(nmem):
   
@@ -288,31 +288,31 @@ for knt in range(i_nt):
       # Localize to TC track
       track_file = datdir+'../../../track_'+var_track+'_'+ptrack+'hPa.nc'
 
-  # Two-dimensional variables
+    # Two-dimensional variables
 
-  # Stratiform index
+    # Stratiform index
       if istrat != -1:
         varfil_main = Dataset(datdir+'strat.nc')
         strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
         varfil_main.close()
         # Localize to TC track
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
-        strat_all[imemb,:,:,:,:] = strat
+        # strat_all[imemb,:,:,:,:] = strat
 
-  # Three-dimensional variables
+    # Three-dimensional variables
   
-  # Mixing ratio
+    # Mixing ratio
       varfil_main = Dataset(datdir+'QVAPOR.nc')
       qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
       varfil_main.close()
   
-  # Temperature
+    # Temperature
       varfil_main = Dataset(datdir+'T.nc')
       tmpk = varfil_main.variables['T'][34:35,:,:,:] # K
       varfil_main.close()
       
       
-      ### Variable selection ##############################################
+    ### Variable selection ##############################################
   
       # Virtual potential temp
       if iplot == 'thv':
@@ -343,41 +343,31 @@ for knt in range(i_nt):
         var += varfil.variables['RTHRATSW'][t0:t1,:,:,:]*3600*24 # K/s --> K/d
         varfil.close()
   
-  # Th_v' weighted by qv'
-  #thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-  #thp = thv[range(1,nt),:,:,:] - thv[range(0,nt-1),:,:,:]
-  #qvp = np.absolute(qv[range(1,nt),:,:,:] - qv[range(0,nt-1),:,:,:])
-  #qvscale = np.mean(qvp,axis=(2,3))
-  #qvp /= qvscale[:,:,np.newaxis,np.newaxis]
-  #thp *= qvp
-  
-      # Save large-scale (large-radius) var avg for calculating anomaly below
+      ### Process variable ##############################################
+
+      # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
       if do_prm_xy == 1:
         varm1 = mask_tc_track(track_file, 12, var, lon, lat, t0, t1)
         var_ls = np.mean(varm1,axis=(2,3))
+        var -= var_ls[:,:,np.newaxis,np.newaxis]
 
       # Localize to TC track
       var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
 
       # Mask out based on strat/conv
-      if istrat == -1:
+      if istrat != -1:
         var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-
-      # Calculate var' as anomaly from x-y-average: var[t,z,y,x] - mean_xy(var[t,z])
-      if do_prm_xy == 1:
-        # v_mean = np.mean(var,axis=(2,3))
-        var -= var_ls[:,:,np.newaxis,np.newaxis]
 
       # Save ens member
       var_all[imemb,:,:,:,:] = var
 
   #### Calculate basic mean
-    if istrat == -1:
-      var_mn[ktest,:]=np.mean(var_all,axis=(0,1,3,4))
-    else:
-      indices = (strat_all == istrat).nonzero()
-      # for iz in range(nz):
-      var_mn[ktest,:]=np.mean(var_all[indices[0],indices[1],:,indices[3],indices[4]],axis=0)
+    # if istrat == -1:
+    var_mn[ktest,:]=np.mean(var_all,axis=(0,1,3,4))
+    # else:
+    #   indices = (strat_all == istrat).nonzero()
+    #   # for iz in range(nz):
+    #   var_mn[ktest,:]=np.mean(var_all[indices[0],indices[1],:,indices[3],indices[4]],axis=0)
 
   # Calculate var' as time-increment: var[t] - var[t-1]
     if do_prm_inc == 1:
@@ -527,7 +517,10 @@ for knt in range(i_nt):
               ticks=[1e-2,1e-1,1,1e1]
           else: #if iplot == 'thv' or iplot == 'the':
 #              clevsi=[0.01,0.05,0.1,0.5,1,5,10,50]
-              clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
+              if iplot == 'qrad':
+                clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0,np.arange(2,11,2)*1e1))
+              else:
+                clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0))
               clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
 #              ticks=None
               ticks=[1e-2,1e-1,1,1e1]
