@@ -41,7 +41,7 @@ istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 
 # Time selection
 # ntall=[1,3,6,12,24,36]
-ntall=[1]
+ntall=[3]
 
 # #### Test/storm selection
 
@@ -53,7 +53,7 @@ tests = ['ctl','ncrf']
 # tests = ['crfon','ncrf']
 
 # How many members
-nmem = 5 # number of ensemble members (1-5 have NCRF)
+nmem = 1 # number of ensemble members (1-5 have NCRF)
 # nmem = 1
 
 # Starting member to read
@@ -109,6 +109,7 @@ for knt in range(i_nt):
   memb_all=np.char.add('memb_',nustr)
   
   datdir2 = 'post/d02/v2/'
+  # datdir2 = 'post/d02/'
   
   
   ##### Get dimensions
@@ -261,6 +262,11 @@ for knt in range(i_nt):
   
     itest=tests[ktest]
 
+    # if ktest == 0:
+    #   nmem=1
+    # else:
+    #   nmem=5
+
     # This has been tested for corresponding time steps:
     #   t0=37,1 are the first divergent time steps in CTL,NCRF
     #   t0=25,1 are the first divergent time steps in NCRF,CRFON
@@ -295,6 +301,7 @@ for knt in range(i_nt):
   
       # Localize to TC track
       track_file = datdir+'../../../track_'+var_track+'_'+ptrack+'hPa.nc'
+      # track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
 
     # Two-dimensional variables
 
