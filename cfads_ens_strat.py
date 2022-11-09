@@ -28,27 +28,16 @@ from mask_tc_track import mask_tc_track
 
 # Fill variable
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
-iplot = 'qrad'
-iplot = 'vmf'
+# iplot = 'qrad'
+# iplot = 'vmf'
 # options: vmf, thv, the
 
 # Calculate anomaly as deviation from xy-mean
-do_prm_xy = 0
+do_prm_xy = 1
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
 istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
-
-# Strat/Conv index subset
-if istrat == -1:
-  fig_extra=''
-elif istrat == 0:
-  fig_extra='_nonrain'
-elif istrat == 1:
-  fig_extra='_conv'
-elif istrat == 2:
-  fig_extra='_strat'
-#fig_extra=''
 
 # #### Test/storm selection
 
@@ -80,6 +69,17 @@ rmax = 8 # radius (deg) limit for masking around TC center
 # Should be off for VMF
 if iplot == 'vmf':
   do_prm_xy=0
+
+# Strat/Conv index subset
+if istrat == -1:
+  fig_extra=''
+elif istrat == 0:
+  fig_extra='_nonrain'
+elif istrat == 1:
+  fig_extra='_conv'
+elif istrat == 2:
+  fig_extra='_strat'
+#fig_extra=''
 
 # #### Time selection
 
@@ -177,8 +177,8 @@ for knt in range(i_nt):
   elif iplot == 'vmf':
 
       # Bin settings
-      # bins=np.logspace(-3,1.1,num=20)
-      bins=np.logspace(-3.5,0.7,num=20)
+      bins=np.logspace(-3,1.1,num=20)
+      # bins=np.logspace(-3.5,0.7,num=20)
       bins=np.concatenate((-1.*np.flip(bins),bins))
       nbin=np.shape(bins)[0]
 
@@ -193,8 +193,8 @@ for knt in range(i_nt):
       # For mean var
       scale_mn=1e3
       units_mn='$10^{-3}$ '+units_var
-      xrange_mn=(-60,120)
-      xrange_mn2=(-2,8)
+      xrange_mn=(-100,100)
+      xrange_mn2=(-4,4)
 
   elif iplot == 'rh':
 
@@ -233,8 +233,8 @@ for knt in range(i_nt):
       # For mean var
       scale_mn=1.
       units_mn=units_var
-      xrange_mn=(-4,1)
-      xrange_mn2=(-1.5,1.5)
+      xrange_mn=(-8,3)
+      xrange_mn2=(-10,7)
 
   # Create axis of bin center-points
   bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
@@ -250,8 +250,8 @@ for knt in range(i_nt):
   # #### Read variables ##############################################
   
   ntest=2
-  var_freq=np.zeros((ntest,nbin-1,nz))
-  var_mn=np.zeros((ntest,nz))
+  var_freq=np.ma.zeros((ntest,nbin-1,nz))
+  var_mn=np.ma.zeros((ntest,nz))
   
   for ktest in range(ntest):
   
@@ -274,9 +274,9 @@ for knt in range(i_nt):
 
     # Create arrays to save ens members
     if do_prm_inc == 1:
-      var_all = np.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
+      var_all = np.ma.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
     else:
-      var_all = np.zeros((nmem,nt,nz,nx1,nx2))
+      var_all = np.ma.zeros((nmem,nt,nz,nx1,nx2))
   
     for imemb in range(nmem):
   
@@ -343,24 +343,30 @@ for knt in range(i_nt):
       ### Process variable ##############################################
 
       # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
+      print( )
+      print("Before masking: ",var[:,5,:,:].count())
       if do_prm_xy == 1:
         radius_ls=12
-        varm1 = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
-        var_ls = np.mean(varm1,axis=(2,3))
-        var -= var_ls[:,:,np.newaxis,np.newaxis]
+        var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
+        var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
+        var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
+      print("After xyp: ",var[:,5,:,:].count())
 
       # Mask out based on strat/conv
       if istrat != -1:
         var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
+      print("After mask1: ",var[:,5,:,:].count())
 
       # Localize to TC track
       var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+      print("After mask2: ",var[:,5,:,:].count())
+      print( )
 
       # Save ens member
       var_all[imemb,:,:,:,:] = var
 
   #### Calculate basic mean
-    var_mn[ktest,:]=np.mean(var_all,axis=(0,1,3,4))
+    var_mn[ktest,:]=np.ma.mean(var_all,axis=(0,1,3,4))
 
   # Calculate var' as time-increment: var[t] - var[t-1]
     if do_prm_inc == 1:
@@ -368,13 +374,12 @@ for knt in range(i_nt):
   
   
   #### Calculate frequency ##############################################
-  
+
     for iz in range(nz):
-        for ibin in range(nbin-1):
-            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
-            var_freq[ktest,ibin,iz]=np.shape(indices)[1]
-        var_freq[ktest,:,iz] /= np.sum(var_freq[ktest,:,iz])
-    
+      for ibin in range(nbin-1):
+          indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
+          var_freq[ktest,ibin,iz]=np.shape(indices)[1]
+      var_freq[ktest,:,iz] /= np.ma.sum(var_freq[ktest,:,iz])
     #ncell=nx1*nx2*nt*nmem
     var_freq[ktest,:,:] *= 100. #/ncell
 
@@ -394,7 +399,8 @@ for knt in range(i_nt):
   
     itest=tests[ktest]
 
-    pltvar = np.transpose(np.ma.masked_equal(var_freq[ktest,:,:],0))
+    # pltvar = np.transpose(np.ma.masked_equal(var_freq[ktest,:,:],0))
+    pltvar = np.transpose(var_freq[ktest,:,:])
     var_mn_plt = var_mn[ktest,:]*scale_mn
 
     fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
@@ -508,7 +514,7 @@ for knt in range(i_nt):
                 clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0,np.arange(2,11,2)*1e1))
               else:
                 clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0))
-          
+
           clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
           ticks=[1e-2,1e-1,1,1e1]
 
