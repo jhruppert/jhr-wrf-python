@@ -29,15 +29,19 @@ from mask_tc_track import mask_tc_track
 # Fill variable
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
 # iplot = 'qrad'
-# iplot = 'vmf'
+iplot = 'vmf'
 # options: vmf, thv, the
 
 # Calculate anomaly as deviation from xy-mean
-do_prm_xy = 1
+do_prm_xy = 0
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
 istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
+
+# Time selection
+# ntall=[1,3,6,12,24,36]
+ntall=[1]
 
 # #### Test/storm selection
 
@@ -48,17 +52,18 @@ storm = 'haiyan'
 tests = ['ctl','ncrf']
 # tests = ['crfon','ncrf']
 
-# Shift starting-read time step for CRFON comparison
-t0_test=0
-if tests[0] == 'crfon': t0_test=24
-
 # How many members
-nmem = 1 # number of ensemble members (1-5 have NCRF)
+nmem = 5 # number of ensemble members (1-5 have NCRF)
 # nmem = 1
 
 # Starting member to read
-memb0=1#5
-#memb0=5 # for CRFFON test
+memb0=1
+
+# Shift starting-read time step for CRFON comparison
+t0_test=0
+if tests[0] == 'crfon':
+  t0_test=24
+  memb0=5 # for CRFFON test
 
 # TC tracking
 ptrack='600' # tracking pressure level
@@ -79,12 +84,11 @@ elif istrat == 1:
   fig_extra='_conv'
 elif istrat == 2:
   fig_extra='_strat'
+elif istrat == 3:
+  fig_extra='_anv'
 #fig_extra=''
 
 # #### Time selection
-
-# ntall=[1,3,6,12,24,36]
-ntall=[1]
 i_nt=np.shape(ntall)[0]
 
 for knt in range(i_nt):
@@ -257,6 +261,9 @@ for knt in range(i_nt):
   
     itest=tests[ktest]
 
+    # This has been tested for corresponding time steps:
+    #   t0=37,1 are the first divergent time steps in CTL,NCRF
+    #   t0=25,1 are the first divergent time steps in NCRF,CRFON
     if itest == 'ctl':
       t0=36
     elif itest == 'ncrf':
@@ -268,7 +275,8 @@ for knt in range(i_nt):
       t0+=1 # add one time step since NCRF(t=0) = CTL
 
     t1 = t0+nt
-    if do_prm_inc == 1: t1+=1
+    if do_prm_inc == 1:
+      t1+=1
 
     print('Running itest: ',itest)
 
@@ -277,7 +285,7 @@ for knt in range(i_nt):
       var_all = np.ma.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
     else:
       var_all = np.ma.zeros((nmem,nt,nz,nx1,nx2))
-  
+
     for imemb in range(nmem):
   
       print('Running imemb: ',memb_all[imemb])
@@ -302,10 +310,10 @@ for knt in range(i_nt):
       varfil_main = Dataset(datdir+'QVAPOR.nc')
       qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
       varfil_main.close()
-  
+
     # Temperature
       varfil_main = Dataset(datdir+'T.nc')
-      tmpk = varfil_main.variables['T'][34:35,:,:,:] # K
+      tmpk = varfil_main.variables['T'][t0:t1,:,:,:] # K
       varfil_main.close()
       
       
@@ -339,28 +347,22 @@ for knt in range(i_nt):
         varfil = Dataset(datdir+'RTHRATSW.nc') # this opens the netcdf file
         var += varfil.variables['RTHRATSW'][t0:t1,:,:,:]*3600*24 # K/s --> K/d
         varfil.close()
-  
+
       ### Process variable ##############################################
 
       # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
-      print( )
-      print("Before masking: ",var[:,5,:,:].count())
       if do_prm_xy == 1:
         radius_ls=12
         var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
         var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
         var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
-      print("After xyp: ",var[:,5,:,:].count())
 
       # Mask out based on strat/conv
       if istrat != -1:
         var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-      print("After mask1: ",var[:,5,:,:].count())
 
       # Localize to TC track
       var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-      print("After mask2: ",var[:,5,:,:].count())
-      print( )
 
       # Save ens member
       var_all[imemb,:,:,:,:] = var
@@ -399,8 +401,8 @@ for knt in range(i_nt):
   
     itest=tests[ktest]
 
-    # pltvar = np.transpose(np.ma.masked_equal(var_freq[ktest,:,:],0))
-    pltvar = np.transpose(var_freq[ktest,:,:])
+    # pltvar = np.transpose(var_freq[ktest,:,:])
+    pltvar = np.transpose(np.ma.masked_equal(var_freq[ktest,:,:],0))
     var_mn_plt = var_mn[ktest,:]*scale_mn
 
     fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
@@ -542,7 +544,9 @@ for knt in range(i_nt):
           plt.axvline(x=0,color='k',linewidth=0.5)
           ax.set_xlabel(units_mn)
 
-  plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_diff_'+hr_tag+'.png',dpi=200, facecolor='white', \
+  difftag='diff'
+  if tests[0] == 'crfon': difftag+='v2'
+  plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+difftag+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
               bbox_inches='tight', pad_inches=0.2)
 
 
