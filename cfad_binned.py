@@ -29,25 +29,27 @@ from mask_tc_track import mask_tc_track
 # Fill variable
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
 # iplot = 'qrad'
-iplot = 'vmf'
-# iplot = 'rh'
+# iplot = 'vmf'
+iplot = 'rh'
 # options: vmf, thv, the
 
+binvar_tag='vmf'
+
 # Calculate anomaly as deviation from xy-mean
-do_prm_xy = 0
+do_prm_xy = 1
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
 # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # for istrat in range(-1,3):
-for istrat in range(1,3):
+for istrat in range(2,3):
   
   print("Strat = ",istrat)
   # continue
 
   # Time selection
   # ntall=[1,3,6,12,24,36]
-  ntall=[3]
+  ntall=[1]
 
   # #### Test/storm selection
 
@@ -94,7 +96,6 @@ for istrat in range(1,3):
     elif istrat == 3:
       strattag='Anv'
     fig_extra='_'+strattag.lower()
-    print(strattag)
 
   # #### Time selection
   i_nt=np.shape(ntall)[0]
@@ -130,6 +131,7 @@ for istrat in range(1,3):
     nx1 = varfil_main.dimensions['lat'].size
     nx2 = varfil_main.dimensions['lon'].size#-xmin-1
     pres = varfil_main.variables['pres'][:] # hPa
+    dp = (pres[1]-pres[0])*1e2 # Pa
     varfil_main.close()
 
     process = subprocess.Popen(['ls '+main+storm+'/'+memb_all[0]+'/'+tests[0]+'/wrfout_d02_*'],shell=True,
@@ -302,8 +304,10 @@ for istrat in range(1,3):
       # Create arrays to save ens members
       if do_prm_inc == 1:
         var_all = np.ma.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
+        binvar_all = np.ma.zeros((nmem,nt+1,nx1,nx2)) # time dim will be reduced to nt in the subtraction
       else:
         var_all = np.ma.zeros((nmem,nt,nz,nx1,nx2))
+        binvar_all = np.ma.zeros((nmem,nt,nx1,nx2))
 
       for imemb in range(nmem):
     
@@ -339,6 +343,38 @@ for istrat in range(1,3):
         
       ### Variable selection ##############################################
     
+      # Bin variables
+        # Vertical mass flux
+        if binvar_tag == 'vmf':
+          # rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+          varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
+          binvar_z = varfil.variables['W'][t0:t1,:,:,:] # m/s
+          varfil.close()
+          # binvar_z *= rho
+          p_int = [900,500] # layer over which to integrate
+
+          # Bin settings
+          bins=np.logspace(-3,1.1,num=20)
+          # bins=np.logspace(-3.5,0.7,num=20)
+          bins=np.concatenate((-1.*np.flip(bins),bins))
+          nbin=np.shape(bins)[0]
+
+          # Figure settings
+          fig_title='VMF'
+          fig_tag='vmf'
+          units_var='kg m$^{-2}$ s$^{-1}$'
+          # fig_title='$w$'
+          # fig_tag='w'
+          # units_var='m s$^{-1}$'
+
+          # For mean var
+          scale_mn=1e3
+          units_mn='$10^{-3}$ '+units_var
+          xrange_mn=(-100,100)
+          xrange_mn2=(-4,4)
+
+
+      # Dependent variables
         # Virtual potential temp
         if iplot == 'thv':
           var = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
@@ -376,13 +412,23 @@ for istrat in range(1,3):
 
         # Mask out based on strat/conv
         if istrat != -1:
+          # if istrat == 2:
+          #   var = np.ma.masked_where((np.repeat(strat,nz,axis=1) < 2), var, copy=True)
+          # else:
           var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
+          binvar = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), binvar, copy=True)
 
         # Localize to TC track
         var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+        binvar = mask_tc_track(track_file, rmax, binvar, lon, lat, t0, t1)
 
         # Save ens member
         var_all[imemb,:,:,:,:] = var
+
+        # Integrate binvar
+        ik0 = np.where(pres == p_int[0])[0][0]; ik1 = np.where(pres == p_int[1])[0][0]
+        binvar = np.sum(binvar_z[:,ik0:ik1,:,:],axis=1) * dp / 9.81
+        binvar_all[imemb,:,:,:] = binvar
 
     #### Calculate basic mean
       var_mn[ktest,:]=np.ma.mean(var_all,axis=(0,1,3,4))
@@ -427,7 +473,7 @@ for istrat in range(1,3):
 
       ifig_title=fig_title+' ('+itest.upper()+')'
       if istrat != -1:
-          ifig_title+=' ('+strattag+')'
+         ifig_title+='('+strattag+')'
       fig.suptitle(ifig_title)
 
       for col in range(2):
@@ -501,7 +547,7 @@ for istrat in range(1,3):
     
     ifig_title=fig_title+' ('+tests[0].upper()+' - '+tests[1].upper()+')'
     if istrat != -1:
-        ifig_title+=' ('+strattag+')'
+        ifig_title+='('+strattag+')'
     fig.suptitle(ifig_title)
     
     for col in range(2):
