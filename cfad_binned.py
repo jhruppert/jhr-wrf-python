@@ -145,16 +145,18 @@ for istrat in range(2,3):
 
     # Variable settings
 
-    if iplot == 'thv':
+    # Bin variables
+    # Vertical mass flux
+    if binvar_tag == 'vmf':
+      p_int = [900,500] # layer to integrate over
+      # Bin settings
+      bins=np.logspace(-3,1.1,num=20)
+      # bins=np.logspace(-3.5,0.7,num=20)
+      bins=np.concatenate((-1.*np.flip(bins),bins))
+      nbin=np.shape(bins)[0]
 
-        # Bin settings
-        nbin=60
-        fmax=6 #5 #; fmin=-5
-        #step=(fmax-fmin)/nbin
-        step=fmax*2/nbin
-        bins=np.arange(0,fmax,step)+step
-        bins=np.concatenate((-1.*np.flip(bins),bins))
-        nbin=np.shape(bins)[0]
+    # Dependent variables
+    if iplot == 'thv':
     
         # Figure settings
         fig_title=r"$\theta_v$"
@@ -168,15 +170,6 @@ for istrat in range(2,3):
         xrange_mn2=(-1,1)
 
     elif iplot == 'the':
-
-        # Bin settings
-        nbin=60
-        fmax=15 #; fmin=-10
-        #step=(fmax-fmin)/nbin
-        step=fmax*2/nbin
-        bins=np.arange(0,fmax,step)+step
-        bins=np.concatenate((-1.*np.flip(bins),bins))
-        nbin=np.shape(bins)[0]
     
         # Figure settings
         fig_title=r"$\theta_e$"
@@ -190,12 +183,6 @@ for istrat in range(2,3):
         xrange_mn2=(-0.1,0.1)
 
     elif iplot == 'vmf':
-
-        # Bin settings
-        bins=np.logspace(-3,1.1,num=20)
-        # bins=np.logspace(-3.5,0.7,num=20)
-        bins=np.concatenate((-1.*np.flip(bins),bins))
-        nbin=np.shape(bins)[0]
 
         # Figure settings
         fig_title='VMF'
@@ -213,16 +200,6 @@ for istrat in range(2,3):
 
     elif iplot == 'rh':
 
-        # Bin settings
-        # bins=np.logspace(-3,1.1,num=20)
-        # bins=np.concatenate((-1.*np.flip(bins),bins))
-        # nbin=np.shape(bins)[0]
-        nbin=45
-        fmax=125; fmin=-10
-        step=(fmax-fmin)/nbin
-        bins=np.arange(fmin,fmax,step)
-        nbin=np.shape(bins)[0]
-
         # Figure settings
         fig_title='RH'
         fig_tag='rh'
@@ -231,8 +208,8 @@ for istrat in range(2,3):
         # For mean var
         scale_mn=1
         units_mn=units_var
-        xrange_mn=(-1,105)
-        xrange_mn2=(-2,2)
+        fmax=110
+        fmin=20
       
     elif iplot == 'qrad':
 
@@ -270,7 +247,7 @@ for istrat in range(2,3):
     # #### Read variables ##############################################
     
     ntest=2
-    var_freq=np.ma.zeros((ntest,nbin-1,nz))
+    var_binned=np.ma.zeros((ntest,nbin-1,nz))
     var_mn=np.ma.zeros((ntest,nz))
     
     for ktest in range(ntest):
@@ -351,28 +328,6 @@ for istrat in range(2,3):
           binvar_z = varfil.variables['W'][t0:t1,:,:,:] # m/s
           varfil.close()
           # binvar_z *= rho
-          p_int = [900,500] # layer over which to integrate
-
-          # Bin settings
-          bins=np.logspace(-3,1.1,num=20)
-          # bins=np.logspace(-3.5,0.7,num=20)
-          bins=np.concatenate((-1.*np.flip(bins),bins))
-          nbin=np.shape(bins)[0]
-
-          # Figure settings
-          fig_title='VMF'
-          fig_tag='vmf'
-          units_var='kg m$^{-2}$ s$^{-1}$'
-          # fig_title='$w$'
-          # fig_tag='w'
-          # units_var='m s$^{-1}$'
-
-          # For mean var
-          scale_mn=1e3
-          units_mn='$10^{-3}$ '+units_var
-          xrange_mn=(-100,100)
-          xrange_mn2=(-4,4)
-
 
       # Dependent variables
         # Virtual potential temp
@@ -416,11 +371,11 @@ for istrat in range(2,3):
           #   var = np.ma.masked_where((np.repeat(strat,nz,axis=1) < 2), var, copy=True)
           # else:
           var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-          binvar = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), binvar, copy=True)
+          binvar_z = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), binvar_z, copy=True)
 
         # Localize to TC track
         var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-        binvar = mask_tc_track(track_file, rmax, binvar, lon, lat, t0, t1)
+        binvar_z = mask_tc_track(track_file, rmax, binvar_z, lon, lat, t0, t1)
 
         # Save ens member
         var_all[imemb,:,:,:,:] = var
@@ -438,18 +393,16 @@ for istrat in range(2,3):
         var_all = var_all[:,1:,:,:,:] - var_all[:,:-1,:,:,:]
     
     
-    #### Calculate frequency ##############################################
+    #### Calculate binned cross section ##############################################
 
-      for iz in range(nz):
-        for ibin in range(nbin-1):
-            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
-            var_freq[ktest,ibin,iz]=np.shape(indices)[1]
-        var_freq[ktest,:,iz] /= np.ma.sum(var_freq[ktest,:,iz])
-      #ncell=nx1*nx2*nt*nmem
-      var_freq[ktest,:,:] *= 100. #/ncell
+      for ibin in range(nbin-1):
+        indices = ((binvar_all >= bins[ibin]) & (binvar_all < bins[ibin+1])).nonzero()
+        for iz in range(nz):
+          variz = var_all[:,:,iz,:,:]
+          var_binned[ktest,ibin,iz]=np.mean(variz[indices])
 
     
-    # ### Plotting routines ##############################################
+########### ### Plotting routines ##############################################
     
     font = {'family' : 'sans-serif',
             'weight' : 'normal',
@@ -465,72 +418,79 @@ for istrat in range(2,3):
       itest=tests[ktest]
 
       # pltvar = np.transpose(var_freq[ktest,:,:])
-      pltvar = np.transpose(np.ma.masked_equal(var_freq[ktest,:,:],0))
+      pltvar = np.transpose(np.ma.masked_equal(var_binned[ktest,:,:],0))
       var_mn_plt = var_mn[ktest,:]*scale_mn
 
-      fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
-                              constrained_layout=True, figsize=(12, 8))
+      # Two panel
+      # fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
+      #                         constrained_layout=True, figsize=(12, 8))
+      # Single panel
+      fig = plt.figure(figsize=(14,8))
+      ax = fig.add_subplot(111)
 
       ifig_title=fig_title+' ('+itest.upper()+')'
       if istrat != -1:
          ifig_title+='('+strattag+')'
       fig.suptitle(ifig_title)
 
-      for col in range(2):
+      # for col in range(1):
           
-          ax = plt.subplot(1,2,1+col)
+        # For two-panel
+        # ax = plt.subplot(1,2,1+col)
 
-          ax.set_yscale('log')
-          ax.invert_yaxis()
-          ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-          ax.tick_params(axis='both',length=7)
-          ytick_loc=np.arange(900,0,-100)
-          plt.yticks(ticks=ytick_loc)
-          plt.ylim(np.max(pres), 100)#np.min(pres))
+      ax.set_yscale('log')
+      ax.invert_yaxis()
+      ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
+      ax.tick_params(axis='both',length=7)
+      ytick_loc=np.arange(900,0,-100)
+      plt.yticks(ticks=ytick_loc)
+      plt.ylim(np.max(pres), 100)#np.min(pres))
 
-          ax.set_xlabel(units_var)
+      ax.set_xlabel(units_var)
 
 
       ####### Fill contour ##############
 
-          if col == 0:
+          # if col == 0:
 
-              ax.set_title('CFAD')
-              ax.set_ylabel('Pressure [hPa]')
+      ax.set_title('CFAD')
+      ax.set_ylabel('Pressure [hPa]')
 
-              if iplot == 'vmf':
-                  ax.set_xscale('symlog')
-                  clevs=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)))
-                  
-                  locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
-                  ax.xaxis.set_major_locator(locmin)
-                  ticks=[1e-2,1e-1,1,1e1]
-              else: #if iplot == 'thv' or iplot == 'the':
-                  clevs=[0.01,0.05,0.1,0.5,1,5,10,50]
-                  ticks=None
+      nlevs=30
+      step=(fmax-fmin)/nlevs
+      clevs=np.arange(fmin,fmax,step)
+
+      if iplot == 'vmf':
+        ax.set_xscale('symlog')
+        locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
+        ax.xaxis.set_major_locator(locmin)
+        ticks=[1e-2,1e-1,1,1e1]
+      else: #if iplot == 'thv' or iplot == 'the':
+        clevs=[0.01,0.05,0.1,0.5,1,5,10,50]
+        ticks=None
+
+      im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.LogNorm(),
+                      cmap=cmocean.cm.ice_r, alpha=1.0, extend='max', zorder=2)
       
-              im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.LogNorm(),
-                              cmap=cmocean.cm.ice_r, alpha=1.0, extend='max', zorder=2)
-              
-              plt.xlim(np.min(bin_axis), np.max(bin_axis))
-              
-              cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticks, format=ticker.LogFormatterMathtext())
-              cbar.ax.set_ylabel('%')
+      plt.xlim(np.min(bin_axis), np.max(bin_axis))
+      
+      cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticks, format=ticker.LogFormatterMathtext())
+      cbar.ax.set_ylabel('%')
 
 
       ####### Mean profile ##############
 
-          elif col == 1:
+          # elif col == 1:
       
-              ax.set_title('Mean')
-              ax.yaxis.set_major_formatter(ticker.NullFormatter())
+          #     ax.set_title('Mean')
+          #     ax.yaxis.set_major_formatter(ticker.NullFormatter())
               
-              ax.plot(var_mn_plt, pres, "-k", linewidth=2)
-              plt.xlim(xrange_mn)
-              plt.axvline(x=0,color='k',linewidth=0.5)
-              ax.set_xlabel(units_mn)
+          #     ax.plot(var_mn_plt, pres, "-k", linewidth=2)
+          #     plt.xlim(xrange_mn)
+          #     plt.axvline(x=0,color='k',linewidth=0.5)
+          #     ax.set_xlabel(units_mn)
 
-      plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
+      plt.savefig(figdir+'cfad_binned_'+fig_tag+fig_extra+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                   bbox_inches='tight', pad_inches=0.2)
 
 
@@ -539,81 +499,81 @@ for istrat in range(2,3):
     # ### Plot difference CFAD ########################
     
     # var_diff = CTL - NCRF
-    pltvar = np.transpose( var_freq[0,:,:] - var_freq[1,:,:] )
-    var_mn_plt = (var_mn[0,:] - var_mn[1,:])*scale_mn
+    # pltvar = np.transpose( var_freq[0,:,:] - var_freq[1,:,:] )
+    # var_mn_plt = (var_mn[0,:] - var_mn[1,:])*scale_mn
     
-    fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
-                            constrained_layout=True, figsize=(12, 8))
+    # fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
+    #                         constrained_layout=True, figsize=(12, 8))
     
-    ifig_title=fig_title+' ('+tests[0].upper()+' - '+tests[1].upper()+')'
-    if istrat != -1:
-        ifig_title+='('+strattag+')'
-    fig.suptitle(ifig_title)
+    # ifig_title=fig_title+' ('+tests[0].upper()+' - '+tests[1].upper()+')'
+    # if istrat != -1:
+    #     ifig_title+='('+strattag+')'
+    # fig.suptitle(ifig_title)
     
-    for col in range(2):
+    # for col in range(2):
     
-        ax = plt.subplot(1,2,1+col)
+    #     ax = plt.subplot(1,2,1+col)
 
-        ax.set_yscale('log')
-        ax.invert_yaxis()
-        ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-        ax.tick_params(axis='both',length=7)
-        ytick_loc=np.arange(900,0,-100)
-        plt.yticks(ticks=ytick_loc)
-        plt.ylim(np.max(pres), 100)#np.min(pres))
+    #     ax.set_yscale('log')
+    #     ax.invert_yaxis()
+    #     ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
+    #     ax.tick_params(axis='both',length=7)
+    #     ytick_loc=np.arange(900,0,-100)
+    #     plt.yticks(ticks=ytick_loc)
+    #     plt.ylim(np.max(pres), 100)#np.min(pres))
 
-        ax.set_xlabel(units_var)
+    #     ax.set_xlabel(units_var)
     
     
-    ####### Fill contour ##############
+    # ####### Fill contour ##############
     
-        if col == 0:
+    #     if col == 0:
     
-            ax.set_title('CFAD')
-            ax.set_ylabel('Pressure [hPa]')
+    #         ax.set_title('CFAD')
+    #         ax.set_ylabel('Pressure [hPa]')
 
-            if iplot == 'vmf':
-                ax.set_xscale('symlog')
-                clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
+    #         if iplot == 'vmf':
+    #             ax.set_xscale('symlog')
+    #             clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
 
-                locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
-                ax.xaxis.set_major_locator(locmin)
-            else: #if iplot == 'thv' or iplot == 'the':
-                if iplot == 'qrad':
-                  clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0,np.arange(2,11,2)*1e1))
-                else:
-                  clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0))
+    #             locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
+    #             ax.xaxis.set_major_locator(locmin)
+    #         else: #if iplot == 'thv' or iplot == 'the':
+    #             if iplot == 'qrad':
+    #               clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0,np.arange(2,11,2)*1e1))
+    #             else:
+    #               clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0))
 
-            clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
-            ticks=[1e-2,1e-1,1,1e1]
+    #         clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
+    #         ticks=[1e-2,1e-1,1,1e1]
 
-            im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]),
-                            cmap='RdBu_r', alpha=1.0, extend='max', zorder=2)
+    #         im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]),
+    #                         cmap='RdBu_r', alpha=1.0, extend='max', zorder=2)
 
-            plt.xlim(np.min(bin_axis), np.max(bin_axis))
+    #         plt.xlim(np.min(bin_axis), np.max(bin_axis))
 
-            #if iplot == 'thv': 
-            plt.axvline(x=0,color='k',linewidth=1.)
+    #         #if iplot == 'thv': 
+    #         plt.axvline(x=0,color='k',linewidth=1.)
 
-            cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticker.SymmetricalLogLocator(base=10.0, linthresh=.5),
-                                format=ticker.LogFormatterMathtext())
-            cbar.ax.set_ylabel('%')
+    #         cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticker.SymmetricalLogLocator(base=10.0, linthresh=.5),
+    #                             format=ticker.LogFormatterMathtext())
+    #         cbar.ax.set_ylabel('%')
 
-      ####### Mean profile ##############
+    #   ####### Mean profile ##############
 
-        elif col == 1:
+    #     elif col == 1:
 
-            ax.set_title('Mean')
-            ax.yaxis.set_major_formatter(ticker.NullFormatter())
+    #         ax.set_title('Mean')
+    #         ax.yaxis.set_major_formatter(ticker.NullFormatter())
 
-            ax.plot(var_mn_plt, pres, "-k", linewidth=2)
-            plt.xlim(xrange_mn2)
-            plt.axvline(x=0,color='k',linewidth=0.5)
-            ax.set_xlabel(units_mn)
+    #         ax.plot(var_mn_plt, pres, "-k", linewidth=2)
+    #         plt.xlim(xrange_mn2)
+    #         plt.axvline(x=0,color='k',linewidth=0.5)
+    #         ax.set_xlabel(units_mn)
 
-    difftag='diff'
-    if tests[0] == 'crfon': difftag+='v2'
-    plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+difftag+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
-                bbox_inches='tight', pad_inches=0.2)
+    # difftag='diff'
+    # if tests[0] == 'crfon': difftag+='v2'
+    # plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+difftag+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
+    #             bbox_inches='tight', pad_inches=0.2)
 
 
