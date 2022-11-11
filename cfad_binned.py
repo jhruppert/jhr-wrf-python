@@ -36,7 +36,7 @@ iplot = 'rh'
 binvar_tag='vmf'
 
 # Calculate anomaly as deviation from xy-mean
-do_prm_xy = 1
+do_prm_xy = 0
 # Calculate anomaly as time-increment
 do_prm_inc = 0
 
@@ -80,7 +80,7 @@ for istrat in range(2,3):
 
   ## AUTO ###################
   # Should be off for VMF
-  if iplot == 'vmf':
+  if iplot == 'vmf' or iplot == 'rh':
     do_prm_xy=0
 
   # Strat/Conv index subset
@@ -400,7 +400,8 @@ for istrat in range(2,3):
         for iz in range(nz):
           variz = var_all[:,:,iz,:,:]
           var_binned[ktest,ibin,iz]=np.mean(variz[indices])
-
+      print(var_binned[0,20,:])
+      
     
 ########### ### Plotting routines ##############################################
     
@@ -421,10 +422,6 @@ for istrat in range(2,3):
       pltvar = np.transpose(np.ma.masked_equal(var_binned[ktest,:,:],0))
       var_mn_plt = var_mn[ktest,:]*scale_mn
 
-      # Two panel
-      # fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
-      #                         constrained_layout=True, figsize=(12, 8))
-      # Single panel
       fig = plt.figure(figsize=(14,8))
       ax = fig.add_subplot(111)
 
@@ -432,11 +429,6 @@ for istrat in range(2,3):
       if istrat != -1:
          ifig_title+='('+strattag+')'
       fig.suptitle(ifig_title)
-
-      # for col in range(1):
-          
-        # For two-panel
-        # ax = plt.subplot(1,2,1+col)
 
       ax.set_yscale('log')
       ax.invert_yaxis()
@@ -451,8 +443,6 @@ for istrat in range(2,3):
 
       ####### Fill contour ##############
 
-          # if col == 0:
-
       ax.set_title('CFAD')
       ax.set_ylabel('Pressure [hPa]')
 
@@ -464,116 +454,15 @@ for istrat in range(2,3):
         ax.set_xscale('symlog')
         locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
         ax.xaxis.set_major_locator(locmin)
-        ticks=[1e-2,1e-1,1,1e1]
-      else: #if iplot == 'thv' or iplot == 'the':
-        clevs=[0.01,0.05,0.1,0.5,1,5,10,50]
-        ticks=None
+      # else: #if iplot == 'thv' or iplot == 'the':
 
-      im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.LogNorm(),
-                      cmap=cmocean.cm.ice_r, alpha=1.0, extend='max', zorder=2)
+      im = ax.contourf(bin_axis, pres, pltvar, clevs,
+                      cmap='RdBu_r', alpha=1.0, extend='max', zorder=2)
       
       plt.xlim(np.min(bin_axis), np.max(bin_axis))
       
-      cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticks, format=ticker.LogFormatterMathtext())
+      cbar = plt.colorbar(im, ax=ax, shrink=0.75)
       cbar.ax.set_ylabel('%')
-
-
-      ####### Mean profile ##############
-
-          # elif col == 1:
-      
-          #     ax.set_title('Mean')
-          #     ax.yaxis.set_major_formatter(ticker.NullFormatter())
-              
-          #     ax.plot(var_mn_plt, pres, "-k", linewidth=2)
-          #     plt.xlim(xrange_mn)
-          #     plt.axvline(x=0,color='k',linewidth=0.5)
-          #     ax.set_xlabel(units_mn)
 
       plt.savefig(figdir+'cfad_binned_'+fig_tag+fig_extra+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                   bbox_inches='tight', pad_inches=0.2)
-
-
-
-    
-    # ### Plot difference CFAD ########################
-    
-    # var_diff = CTL - NCRF
-    # pltvar = np.transpose( var_freq[0,:,:] - var_freq[1,:,:] )
-    # var_mn_plt = (var_mn[0,:] - var_mn[1,:])*scale_mn
-    
-    # fig, axd = plt.subplots(nrows=1, ncols=2, gridspec_kw={'width_ratios': [3, 1]},
-    #                         constrained_layout=True, figsize=(12, 8))
-    
-    # ifig_title=fig_title+' ('+tests[0].upper()+' - '+tests[1].upper()+')'
-    # if istrat != -1:
-    #     ifig_title+='('+strattag+')'
-    # fig.suptitle(ifig_title)
-    
-    # for col in range(2):
-    
-    #     ax = plt.subplot(1,2,1+col)
-
-    #     ax.set_yscale('log')
-    #     ax.invert_yaxis()
-    #     ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-    #     ax.tick_params(axis='both',length=7)
-    #     ytick_loc=np.arange(900,0,-100)
-    #     plt.yticks(ticks=ytick_loc)
-    #     plt.ylim(np.max(pres), 100)#np.min(pres))
-
-    #     ax.set_xlabel(units_var)
-    
-    
-    # ####### Fill contour ##############
-    
-    #     if col == 0:
-    
-    #         ax.set_title('CFAD')
-    #         ax.set_ylabel('Pressure [hPa]')
-
-    #         if iplot == 'vmf':
-    #             ax.set_xscale('symlog')
-    #             clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
-
-    #             locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
-    #             ax.xaxis.set_major_locator(locmin)
-    #         else: #if iplot == 'thv' or iplot == 'the':
-    #             if iplot == 'qrad':
-    #               clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0,np.arange(2,11,2)*1e1))
-    #             else:
-    #               clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0))
-
-    #         clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
-    #         ticks=[1e-2,1e-1,1,1e1]
-
-    #         im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]),
-    #                         cmap='RdBu_r', alpha=1.0, extend='max', zorder=2)
-
-    #         plt.xlim(np.min(bin_axis), np.max(bin_axis))
-
-    #         #if iplot == 'thv': 
-    #         plt.axvline(x=0,color='k',linewidth=1.)
-
-    #         cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticker.SymmetricalLogLocator(base=10.0, linthresh=.5),
-    #                             format=ticker.LogFormatterMathtext())
-    #         cbar.ax.set_ylabel('%')
-
-    #   ####### Mean profile ##############
-
-    #     elif col == 1:
-
-    #         ax.set_title('Mean')
-    #         ax.yaxis.set_major_formatter(ticker.NullFormatter())
-
-    #         ax.plot(var_mn_plt, pres, "-k", linewidth=2)
-    #         plt.xlim(xrange_mn2)
-    #         plt.axvline(x=0,color='k',linewidth=0.5)
-    #         ax.set_xlabel(units_mn)
-
-    # difftag='diff'
-    # if tests[0] == 'crfon': difftag+='v2'
-    # plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+difftag+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
-    #             bbox_inches='tight', pad_inches=0.2)
-
-
