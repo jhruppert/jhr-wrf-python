@@ -209,8 +209,8 @@ def relh(MIXR,p,T,ice):
     T+=T0
     
     es=esat(T)
-    if ice == 1:
-        es[(T < 273.16)]=eice(T[(T < 273.16)])
+    # if ice == 1:
+    #     es[(T < 273.16)]=eice(T[(T < 273.16)])
     
     Mw=18.0160 # molecular weight of water
     Md=28.9660 # molecular weight of dry air
@@ -256,13 +256,26 @@ def esat(T):
     
     e1=101325.0
     TK=273.16
-    esat=e1*10**(10.79586*(1-TK/T)-5.02808*np.log10(T/TK)+\
-                1.50474*1e-4*(1-10**(-8.29692*(T/TK-1)))+\
-                0.42873*1e-3*(10**(4.76955*(1-TK/T))-1)-2.2195983)
+    # esat=e1*10**(10.79586*(1-TK/T)-5.02808*np.log10(T/TK)+
+    #             1.50474*(1e-4)*(1-10**(-8.29692*(T/TK-1)))+
+    #             0.42873*(1e-3)*(10**(4.76955*(1-TK/T))-1)-2.2195983)
+
+
+    # JHR (11/2022): Revised based on http://cires1.colorado.edu/~voemel/vp.html
+    # esat=e1*10**(10.79574*(1-TK/T)
+    #              -5.02800*np.log10(T/TK)
+    #              +1.50475*(1e-4)*(1-(10**(-8.2969*(T/TK-1))))
+    #              +0.42873*(1e-3)*(10**(4.76955*(1-TK/T))-1)
+    #              +0.78614)
 
     # Bolton 1980 (much faster)
     # need T in Celsius
-    # esat=611.2*np.exp(17.67*(T-273.16)/(243.5+(T-273.16)))
+    # esat=611.2*np.exp(17.67*(T-TK)/(243.5+(T-TK)))
+
+    # WMO, 2008
+    # http://cires1.colorado.edu/~voemel/vp.html
+    # https://library.wmo.int/doc_num.php?explnum_id=7450
+    esat=611.2*np.exp(17.62*(T-TK)/(243.12+(T-TK)))
 
     return esat
 
@@ -293,11 +306,19 @@ def eice(T):
     T+=T0
     
     # ; Define constants
-    A=-2663.5
-    B=12.537
-    logp=A/T+B
-    # return (10**logp)/100. # conversion to hPa
-    return 10**logp
+    # A=-2663.5
+    # B=12.537
+    # logp=A/T+B
+    # # return (10**logp)/100. # conversion to hPa
+    # return 10**logp
+    
+    # Guide to Meteorological Instruments and Methods of Observation (CIMO Guide)
+    # -- WMO, 2008
+    # http://cires1.colorado.edu/~voemel/vp.html
+    # https://library.wmo.int/doc_num.php?explnum_id=7450
+    TK=273.16
+    eice=611.2*np.exp(22.46*(T-TK)/(272.62+(T-TK)))
+    return eice
 
 
 
