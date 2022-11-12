@@ -4,4 +4,4 @@ __pycache__
 *.swp
 outbatch*
 batch.job
-
+.vscode
