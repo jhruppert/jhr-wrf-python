@@ -30,7 +30,7 @@ from mask_tc_track import mask_tc_track
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
 # iplot = 'qrad'
 iplot = 'vmf'
-iplot = 'rh'
+# iplot = 'rh'
 # options: vmf, thv, the
 
 # Calculate anomaly as deviation from xy-mean
@@ -102,13 +102,13 @@ for istrat in range(2,3):
   for knt in range(i_nt):
   # for knt in range(0,1):
   #for knt in range(3,i_nt+1):
-    
+
     nt = ntall[knt]
     hr_tag = str(np.char.zfill(str(nt), 2))
-    
-    
+
+
     # #### Directories
-    
+
     figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
     main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
     
