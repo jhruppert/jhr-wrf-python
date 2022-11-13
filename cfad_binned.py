@@ -154,6 +154,7 @@ for istrat in range(2,3):
       # bins=np.logspace(-3.5,0.7,num=20)
       bins=np.concatenate((-1.*np.flip(bins),bins))
       nbin=np.shape(bins)[0]
+      units_var='kg m$^{-2}$ s$^{-1}$'
 
     # Dependent variables
     if iplot == 'thv':
@@ -161,7 +162,7 @@ for istrat in range(2,3):
         # Figure settings
         fig_title=r"$\theta_v$"
         fig_tag='thv'
-        units_var='K'
+        # units_var='K'
     
         # For mean var
         scale_mn=1.
@@ -174,7 +175,7 @@ for istrat in range(2,3):
         # Figure settings
         fig_title=r"$\theta_e$"
         fig_tag='the'
-        units_var='K'
+        # units_var='K'
     
         # For mean var
         scale_mn=1.#e3
@@ -203,7 +204,7 @@ for istrat in range(2,3):
         # Figure settings
         fig_title='RH'
         fig_tag='rh'
-        units_var='%'
+        # units_var='%'
 
         # For mean var
         scale_mn=1
@@ -225,7 +226,7 @@ for istrat in range(2,3):
         # Figure settings
         fig_title='$Q_R$'
         fig_tag='qrad'
-        units_var='K d$^{-1}$'
+        # units_var='K d$^{-1}$'
 
         # For mean var
         scale_mn=1.
@@ -394,13 +395,15 @@ for istrat in range(2,3):
     
     
     #### Calculate binned cross section ##############################################
-
       for ibin in range(nbin-1):
         indices = ((binvar_all >= bins[ibin]) & (binvar_all < bins[ibin+1])).nonzero()
-        for iz in range(nz):
-          variz = var_all[:,:,iz,:,:]
-          var_binned[ktest,ibin,iz]=np.mean(variz[indices])
-      print(var_binned[0,20,:])
+        # for iz in range(nz):
+          # variz = var_all[:,:,iz,:,:]
+        # tmp_bin = var_all[indices[0],indices[1],:,indices[2],indices[3]]
+        var_binned[ktest,ibin,:]=np.mean(var_all[indices[0],indices[1],:,indices[2],indices[3]],
+                                          axis=0,dtype=np.float64)
+        # var_binned[ktest,ibin,:]=np.mean(tmp_bin,axis=(0,1,3,4),dtype=np.float64)
+
       
     
 ########### ### Plotting routines ##############################################
@@ -430,6 +433,7 @@ for istrat in range(2,3):
          ifig_title+='('+strattag+')'
       fig.suptitle(ifig_title)
 
+      # Y-axis settings
       ax.set_yscale('log')
       ax.invert_yaxis()
       ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
@@ -437,20 +441,21 @@ for istrat in range(2,3):
       ytick_loc=np.arange(900,0,-100)
       plt.yticks(ticks=ytick_loc)
       plt.ylim(np.max(pres), 100)#np.min(pres))
+      ax.set_ylabel('Pressure [hPa]')
 
+      # X-axis settings
       ax.set_xlabel(units_var)
 
 
       ####### Fill contour ##############
 
       ax.set_title('CFAD')
-      ax.set_ylabel('Pressure [hPa]')
 
       nlevs=30
       step=(fmax-fmin)/nlevs
       clevs=np.arange(fmin,fmax,step)
 
-      if iplot == 'vmf':
+      if binvar_tag == 'vmf':
         ax.set_xscale('symlog')
         locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
         ax.xaxis.set_major_locator(locmin)
@@ -458,9 +463,10 @@ for istrat in range(2,3):
 
       im = ax.contourf(bin_axis, pres, pltvar, clevs,
                       cmap='RdBu_r', alpha=1.0, extend='max', zorder=2)
-      
+
       plt.xlim(np.min(bin_axis), np.max(bin_axis))
-      
+      plt.axvline(x=0,color='k',linewidth=1.)
+
       cbar = plt.colorbar(im, ax=ax, shrink=0.75)
       cbar.ax.set_ylabel('%')
 
