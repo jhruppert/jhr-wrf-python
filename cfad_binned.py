@@ -150,9 +150,11 @@ for istrat in range(2,3):
     if binvar_tag == 'vmf':
       p_int = [900,500] # layer to integrate over
       # Bin settings
-      bins=np.logspace(-3,1.1,num=20)
-      # bins=np.logspace(-3.5,0.7,num=20)
-      bins=np.concatenate((-1.*np.flip(bins),bins))
+      # bins=np.logspace(-3,1.1,num=20)
+      # bins=np.concatenate((-1.*np.flip(bins),bins))
+      fmin=-10;fmax=10
+      step=0.5
+      bins=np.arange(fmin,fmax+step,step)
       nbin=np.shape(bins)[0]
       units_var='kg m$^{-2}$ s$^{-1}$'
 
@@ -455,10 +457,10 @@ for istrat in range(2,3):
       step=(fmax-fmin)/nlevs
       clevs=np.arange(fmin,fmax,step)
 
-      if binvar_tag == 'vmf':
-        ax.set_xscale('symlog')
-        locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
-        ax.xaxis.set_major_locator(locmin)
+      # if binvar_tag == 'vmf':
+      #   ax.set_xscale('symlog')
+      #   locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
+      #   ax.xaxis.set_major_locator(locmin)
       # else: #if iplot == 'thv' or iplot == 'the':
 
       im = ax.contourf(bin_axis, pres, pltvar, clevs,

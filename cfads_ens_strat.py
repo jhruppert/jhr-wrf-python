@@ -40,14 +40,14 @@ do_prm_inc = 0
 
 # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # for istrat in range(-1,3):
-for istrat in range(2,3):
-  
+for istrat in range(-1,0):
+
   print("Strat = ",istrat)
   # continue
 
   # Time selection
   # ntall=[1,3,6,12,24,36]
-  ntall=[3]
+  ntall=[1]
 
   # #### Test/storm selection
 
@@ -111,17 +111,17 @@ for istrat in range(2,3):
 
     figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
     main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
-    
+
     nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
     nustr = np.char.zfill(nums, 2)
     memb_all=np.char.add('memb_',nustr)
-    
+
     datdir2 = 'post/d02/v2/'
     # datdir2 = 'post/d02/'
-    
-    
+
+
     ##### Get dimensions
-    
+
     datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
     varfil_main = Dataset(datdir+'T.nc')
     nz = varfil_main.dimensions['level'].size
@@ -269,6 +269,7 @@ for istrat in range(2,3):
     
     ntest=2
     var_freq=np.ma.zeros((ntest,nbin-1,nz))
+    var_freq_int=np.ma.zeros((ntest,nbin-1))
     var_mn=np.ma.zeros((ntest,nz))
     
     for ktest in range(ntest):
@@ -304,6 +305,7 @@ for istrat in range(2,3):
         var_all = np.ma.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
       else:
         var_all = np.ma.zeros((nmem,nt,nz,nx1,nx2))
+        var_copy = np.ma.zeros((nmem,nt,nz,nx1,nx2))
 
       for imemb in range(nmem):
     
@@ -352,6 +354,7 @@ for istrat in range(2,3):
           varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
           var = varfil.variables['W'][t0:t1,:,:,:] # m/s
           varfil.close()
+          vmf_copy=np.copy(var)
           var *= rho
         # Humidity
         elif iplot == 'rh':
@@ -377,12 +380,15 @@ for istrat in range(2,3):
         # Mask out based on strat/conv
         if istrat != -1:
           var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
+          vmf_copy = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), vmf_copy, copy=True)
 
         # Localize to TC track
         var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+        vmf_copy = mask_tc_track(track_file, rmax, vmf_copy, lon, lat, t0, t1)
 
         # Save ens member
         var_all[imemb,:,:,:,:] = var
+        var_copy[imemb,:,:,:,:] = vmf_copy
 
     #### Calculate basic mean
       var_mn[ktest,:]=np.ma.mean(var_all,axis=(0,1,3,4))
@@ -396,13 +402,29 @@ for istrat in range(2,3):
 
       for iz in range(nz):
         for ibin in range(nbin-1):
-            indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
-            var_freq[ktest,ibin,iz]=np.shape(indices)[1]
+          indices = ((var_all[:,:,iz,:,:] >= bins[ibin]) & (var_all[:,:,iz,:,:] < bins[ibin+1])).nonzero()
+          var_freq[ktest,ibin,iz]=np.shape(indices)[1]
         var_freq[ktest,:,iz] /= np.ma.sum(var_freq[ktest,:,iz])
       #ncell=nx1*nx2*nt*nmem
       var_freq[ktest,:,:] *= 100. #/ncell
 
-    
+      # Integrate binvar
+      dp = (pres[1]-pres[0])*1e2 # Pa
+      # p_int = [900,500] # layer to integrate over
+      p_int = [800,600] # layer to integrate over
+      ik0 = np.where(pres == p_int[0])[0][0]; ik1 = np.where(pres == p_int[1])[0][0]
+      var_copy.shape
+      var_int = np.sum(var_copy[:,:,ik0:ik1,:,:],axis=2) * dp / 9.81
+
+      # Vertically integrated variable
+      for ibin in range(nbin-1):
+        indices = ((var_int >= bins[ibin]) & (var_int < bins[ibin+1])).nonzero()
+        var_freq_int[ktest,ibin]=np.shape(indices)[1]
+        # print(np.shape(indices)[1])
+      var_freq_int[ktest,:] /= np.ma.sum(var_freq_int[ktest,:])
+      var_freq_int[ktest,:] *= 100.
+
+
     # ### Plotting routines ##############################################
     
     font = {'family' : 'sans-serif',
@@ -468,6 +490,10 @@ for istrat in range(2,3):
               
               plt.xlim(np.min(bin_axis), np.max(bin_axis))
               
+              ax2 = ax.twinx()
+              # plt.ylim()
+              plt.plot(bin_axis,var_freq_int[ktest,:])
+
               cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticks, format=ticker.LogFormatterMathtext())
               cbar.ax.set_ylabel('%')
 
