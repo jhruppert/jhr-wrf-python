@@ -159,7 +159,7 @@ for istrat in range(2,3):
       units_var='kg m$^{-2}$ s$^{-1}$'
 
     # Dependent variables
-    if iplot == 'thv':
+    elif iplot == 'thv':
     
         # Figure settings
         fig_title=r"$\theta_v$"
