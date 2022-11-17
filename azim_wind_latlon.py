@@ -49,10 +49,19 @@ def azim_wind_latlon(track_file, u, v, lon, lat, t0, t1):
     azim = np.arctan(lat4d/lon4d)
     azim[(lon4d < 0 )] += np.pi
 
+    # Subtract storm motion
+    deg2x = 6371e3*np.pi/180 # m / deg
+    # Assume hourly time steps
+    dt = 3600. # s/time step
+    mpsec = deg2x/dt # m / deg / (s / time step)
+    u_track = np.gradient(clon,m=1) * np.cos(clat*np.pi/180) * mpsec # deg / time step --> m / s
+    v_track = np.gradient(clat,m=1) * mpsec # deg / time step --> m / s
+    print('U = ',u_track)
+    print('V = ',v_track)
+
     # Get tangential wind
-    vtx = u*np.sin(azim)
-    vty = v*np.cos(azim)
+    vtx = (u - u_track[:,np.newaxis,np.newaxis,np.newaxis]) * np.sin(azim)
+    vty = (v - v_track[:,np.newaxis,np.newaxis,np.newaxis]) * np.cos(azim)
     v_tan = vty - vtx
-    # v_tan_mask = np.ma.masked_where(radius4d > rmax_vtan_max, vtan)
-    # v_tan_max = np.max(v_tan_mask, axis=(1,2,3))
+
     return v_tan
