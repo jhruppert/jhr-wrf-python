@@ -54,14 +54,16 @@ def azim_wind_latlon(track_file, u, v, lon, lat, t0, t1):
     # Assume hourly time steps
     dt = 3600. # s/time step
     mpsec = deg2x/dt # m / deg / (s / time step)
-    u_track = np.gradient(clon,m=1) * np.cos(clat*np.pi/180) * mpsec # deg / time step --> m / s
-    v_track = np.gradient(clat,m=1) * mpsec # deg / time step --> m / s
-    print('U = ',u_track)
-    print('V = ',v_track)
+    u_track = np.gradient(clon) * np.cos(clat*np.pi/180) * mpsec # deg / time step --> m / s
+    v_track = np.gradient(clat) * mpsec # deg / time step --> m / s
+    # print('U = ',u_track)
+    # print('V = ',v_track)
 
     # Get tangential wind
-    vtx = (u - u_track[:,np.newaxis,np.newaxis,np.newaxis]) * np.sin(azim)
-    vty = (v - v_track[:,np.newaxis,np.newaxis,np.newaxis]) * np.cos(azim)
+    vtx = (u - u_track[t0:t1,np.newaxis,np.newaxis,np.newaxis]) * np.sin(azim)
+    vty = (v - v_track[t0:t1,np.newaxis,np.newaxis,np.newaxis]) * np.cos(azim)
+    # vtx = u * np.sin(azim)
+    # vty = v * np.cos(azim)
     v_tan = vty - vtx
 
     return v_tan
