@@ -44,6 +44,13 @@ def mask_tc_track(track_file, rmax, var, lon, lat, t0, t1):
     # Apply mask
     var_mask = np.ma.masked_where(radius4d > rmax, var, copy=True)
 
-    #XX Mask out domain edges
+    # Mask out domain edges, within 0.5*r_max from boundaries
+    edge = 1 # deg
+    npts = int(np.rint(edge/(lon[0,1]-lon[0,0])))
+    # var_mask.mask[:,:,0:npts,:] = True
+    var_mask.mask[:,:,0:npts,:] = True
+    var_mask.mask[:,:,:,0:npts] = True
+    var_mask.mask[:,:,-npts:,:] = True
+    var_mask.mask[:,:,:,-npts:] = True
 
     return var_mask
