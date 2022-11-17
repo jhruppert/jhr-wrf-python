@@ -30,7 +30,7 @@ from mask_tc_track import mask_tc_track
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
 # iplot = 'qrad'
 iplot = 'vmf'
-# iplot = 'rh'
+iplot = 'rh'
 # options: vmf, thv, the
 
 # Calculate anomaly as deviation from xy-mean
@@ -380,15 +380,15 @@ for istrat in range(-1,0):
         # Mask out based on strat/conv
         if istrat != -1:
           var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-          vmf_copy = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), vmf_copy, copy=True)
+          # vmf_copy = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), vmf_copy, copy=True)
 
         # Localize to TC track
         var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-        vmf_copy = mask_tc_track(track_file, rmax, vmf_copy, lon, lat, t0, t1)
+        # vmf_copy = mask_tc_track(track_file, rmax, vmf_copy, lon, lat, t0, t1)
 
         # Save ens member
         var_all[imemb,:,:,:,:] = var
-        var_copy[imemb,:,:,:,:] = vmf_copy
+        # var_copy[imemb,:,:,:,:] = vmf_copy
 
     #### Calculate basic mean
       var_mn[ktest,:]=np.ma.mean(var_all,axis=(0,1,3,4))
