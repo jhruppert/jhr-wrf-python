@@ -512,6 +512,7 @@ for istrat in range(-1,0):
 
       plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                   bbox_inches='tight', pad_inches=0.2)
+      plt.close()
 
 
 
@@ -595,5 +596,4 @@ for istrat in range(-1,0):
     if tests[0] == 'crfon': difftag+='v2'
     plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+difftag+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                 bbox_inches='tight', pad_inches=0.2)
-
-
+    plt.close()
