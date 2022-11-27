@@ -41,8 +41,8 @@ do_prm_inc = 0
 
 # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # for istrat in range(-1,3):
-for istrat in range(-1,0):
-# for istrat in range(1,3):
+# for istrat in range(-1,0):
+for istrat in range(2,3):
 
   print("Strat = ",istrat)
   # continue
@@ -280,8 +280,8 @@ for istrat in range(-1,0):
         # For mean var
         scale_mn=1.
         units_mn=units_var
-        xrange_mn=(-100,100)
-        xrange_mn2=(-30,30)
+        xrange_mn=(-5,5)
+        xrange_mn2=(-1,1)
 
     # Create axis of bin center-points
     bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
@@ -411,8 +411,8 @@ for istrat in range(-1,0):
           varfil.close()
         # Latent heat
         elif iplot == 'lh':
-          varfil = Dataset(datdir+'H_DIBATIC.nc') # this opens the netcdf file
-          var = varfil.variables['H_DIBATIC'][t0:t1,:,:,:]*3600 # K/s --> K/hr
+          varfil = Dataset(datdir+'H_DIABATIC.nc') # this opens the netcdf file
+          var = varfil.variables['H_DIABATIC'][t0:t1,:,:,:]*3600 # K/s --> K/hr
           varfil.close()
 
         ### Process variable ##############################################
