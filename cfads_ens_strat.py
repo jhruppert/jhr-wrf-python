@@ -30,7 +30,7 @@ from mask_tc_track import mask_tc_track
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
 # iplot = 'qrad'
 iplot = 'vmf'
-iplot = 'rh'
+# iplot = 'rh'
 # options: vmf, thv, the
 
 # Calculate anomaly as deviation from xy-mean
@@ -59,7 +59,7 @@ for istrat in range(-1,0):
   # tests = ['crfon','ncrf']
 
   # How many members
-  nmem = 1 # number of ensemble members (1-5 have NCRF)
+  nmem = 5 # number of ensemble members (1-5 have NCRF)
   # nmem = 1
 
   # Starting member to read
