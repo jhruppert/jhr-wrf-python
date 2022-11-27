@@ -23,7 +23,7 @@ import sys
 # #### Variable selection
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # Tests to read and compare
 itest = 'ctl'
@@ -107,6 +107,9 @@ matplotlib.rc('font', **font)
 # select plotting area
 plt_area=[lon1d[0], lon1d[-1], lat1d[0], lat1d[-1]] # W,E,S,N
 
+
+# ### Combined plot ##############################################
+
 # create figure
 fig = plt.figure(figsize=(20,10))
 proj = cartopy.crs.PlateCarree(central_longitude=offset)
@@ -121,8 +124,6 @@ ax.set_prop_cycle(color=[
     # '#e377c2', '#f7b6d2', '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d',
     # '#17becf', '#9edae5'])#,
     # marker=["s"]*20)
-
-# memb_name = nustr
 
 
 for imemb in range(nmem):
@@ -168,3 +169,51 @@ plt.legend(loc="upper right")
 plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 plt.close()
+
+
+# ### Single member plots ##############################################
+
+for imemb in range(nmem):
+
+    print('Running imemb: ',memb_all[imemb])
+
+    datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
+    track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+    print(track_file)
+
+    # Read track
+    ncfile = Dataset(track_file)
+    clon = ncfile.variables['clon'][:] # deg
+    clat = ncfile.variables['clat'][:] # deg
+    ncfile.close()
+    nt = clon.shape[0]
+
+    clon_shift = clon
+    if storm == 'haiyan':
+        clon_offset = dateline_lon_shift(clon, reverse=0)
+        clon_shift += clon_offset
+    clon_shift -= offset
+
+    fig = plt.figure(figsize=(20,10))
+    ax = fig.add_subplot(111,projection=proj)
+    ax.set_title(ptrack + '-hPa RVor, Ens Memb '+str(imemb+1), fontsize=20)
+
+    # storm track
+    plt.plot(clon_shift, clat, linewidth=2, label=nustr[imemb])#, color='k')
+    skip=24
+    itim=np.arange(0,nt,skip)
+    plt.plot(clon_shift[itim], clat[itim], "s", color='r')
+
+    # add map features
+    ax.add_feature(cartopy.feature.LAND,facecolor="lightgray") #land color
+    # ax.add_feature(cartopy.feature.OCEAN) #ocean color
+    ax.add_feature(cartopy.feature.COASTLINE)
+    # ax.add_feature(cartopy.feature.STATES)
+    ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
+
+    ax.set_extent(plt_area)
+
+    # plt.show()
+    plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
+                bbox_inches='tight', pad_inches=0.2)
+    plt.close()

@@ -30,7 +30,7 @@ from mask_tc_track import mask_tc_track
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
 # iplot = 'qrad'
 iplot = 'vmf'
-# iplot = 'rh'
+iplot = 'rh'
 # options: vmf, thv, the
 
 # Calculate anomaly as deviation from xy-mean
@@ -40,7 +40,7 @@ do_prm_inc = 0
 
 # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # for istrat in range(-1,3):
-for istrat in range(2,3):
+for istrat in range(1,3):
 
   print("Strat = ",istrat)
   # continue
@@ -52,15 +52,17 @@ for istrat in range(2,3):
   # #### Test/storm selection
 
   storm = 'haiyan'
-  #storm = 'maria'
+  # storm = 'maria'
 
   # Tests to read and compare
-  tests = ['ctl','ncrf']
+  tests = ['ctl','ncrf36h']
+  # tests = ['ctl','ncrf48h']
   # tests = ['crfon','ncrf']
 
   # How many members
   nmem = 5 # number of ensemble members (1-5 have NCRF)
-  nmem = 1
+  # nmem = 1
+  enstag = str(nmem)
 
   # Starting member to read
   memb0=1
@@ -110,14 +112,15 @@ for istrat in range(2,3):
     # #### Directories
 
     figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
-    main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+    # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+    main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
     nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
     nustr = np.char.zfill(nums, 2)
     memb_all=np.char.add('memb_',nustr)
 
-    datdir2 = 'post/d02/v2/'
-    # datdir2 = 'post/d02/'
+    # datdir2 = 'post/d02/v2/'
+    datdir2 = 'post/d02/'
 
 
     ##### Get dimensions
@@ -285,8 +288,13 @@ for istrat in range(2,3):
       #   t0=37,1 are the first divergent time steps in CTL,NCRF
       #   t0=25,1 are the first divergent time steps in NCRF,CRFON
       if itest == 'ctl':
-        t0=36
-      elif itest == 'ncrf':
+        if tests[1] == 'ncrf36h':
+          t0=36
+        elif tests[1] == 'ncrf48h':
+          t0=48
+      elif itest == 'ncrf36h':
+        t0=t0_test
+      elif itest == 'ncrf48h':
         t0=t0_test
       elif itest == 'crfon':
         t0=0
@@ -305,7 +313,7 @@ for istrat in range(2,3):
         var_all = np.ma.zeros((nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
       else:
         var_all = np.ma.zeros((nmem,nt,nz,nx1,nx2))
-        var_copy = np.ma.zeros((nmem,nt,nz,nx1,nx2))
+        # var_copy = np.ma.zeros((nmem,nt,nz,nx1,nx2))
 
       for imemb in range(nmem):
     
@@ -315,8 +323,8 @@ for istrat in range(2,3):
         print(datdir)
     
         # Localize to TC track
-        track_file = datdir+'../../../track_'+var_track+'_'+ptrack+'hPa.nc'
-        # track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
+        # track_file = datdir+'../../../track_'+var_track+'_'+ptrack+'hPa.nc'
+        track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
 
       # Two-dimensional variables
 
@@ -417,20 +425,20 @@ for istrat in range(2,3):
       var_freq[ktest,:,:] *= 100. #/ncell
 
       # Integrate binvar
-      dp = (pres[1]-pres[0])*1e2 # Pa
-      # p_int = [900,500] # layer to integrate over
-      p_int = [800,600] # layer to integrate over
-      ik0 = np.where(pres == p_int[0])[0][0]; ik1 = np.where(pres == p_int[1])[0][0]
-      var_copy.shape
-      var_int = np.sum(var_copy[:,:,ik0:ik1,:,:],axis=2) * dp / 9.81
+      # dp = (pres[1]-pres[0])*1e2 # Pa
+      # # p_int = [900,500] # layer to integrate over
+      # p_int = [800,600] # layer to integrate over
+      # ik0 = np.where(pres == p_int[0])[0][0]; ik1 = np.where(pres == p_int[1])[0][0]
+      # var_copy.shape
+      # var_int = np.sum(var_copy[:,:,ik0:ik1,:,:],axis=2) * dp / 9.81
 
       # Vertically integrated variable
-      for ibin in range(nbin-1):
-        indices = ((var_int >= bins[ibin]) & (var_int < bins[ibin+1])).nonzero()
-        var_freq_int[ktest,ibin]=np.shape(indices)[1]
-        # print(np.shape(indices)[1])
-      var_freq_int[ktest,:] /= np.ma.sum(var_freq_int[ktest,:])
-      var_freq_int[ktest,:] *= 100.
+      # for ibin in range(nbin-1):
+      #   indices = ((var_int >= bins[ibin]) & (var_int < bins[ibin+1])).nonzero()
+      #   var_freq_int[ktest,ibin]=np.shape(indices)[1]
+      #   # print(np.shape(indices)[1])
+      # var_freq_int[ktest,:] /= np.ma.sum(var_freq_int[ktest,:])
+      # var_freq_int[ktest,:] *= 100.
 
 
     # ### Plotting routines ##############################################
@@ -518,7 +526,7 @@ for istrat in range(2,3):
               plt.axvline(x=0,color='k',linewidth=0.5)
               ax.set_xlabel(units_mn)
 
-      plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
+      plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens'+enstag+'m_'+itest+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                   bbox_inches='tight', pad_inches=0.2)
       plt.close()
 
@@ -602,6 +610,6 @@ for istrat in range(2,3):
 
     difftag='diff'
     if tests[0] == 'crfon': difftag+='v2'
-    plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens5m_'+difftag+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
+    plt.savefig(figdir+'cfad_'+fig_tag+fig_extra+'_ens'+enstag+'m_'+difftag+'_'+hr_tag+'.png',dpi=200, facecolor='white', \
                 bbox_inches='tight', pad_inches=0.2)
     plt.close()
