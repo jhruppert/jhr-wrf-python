@@ -15,9 +15,12 @@ from object_track import object_track
 
 # Choices
 ptrack  = 600 # tracking pressure level
-istorm  = 'haiyan'#'maria' #
+#istorm  = 'haiyan'
+istorm  = 'maria'
 # imemb   = 'memb_01'
-itest   = 'ctl'#'ncrf'#
+#itest   = 'ctl'
+itest   = 'ncrf36h'
+itest   = 'ncrf48h'
 var_tag = 'rvor'
 
 # ------------------------------------------
@@ -62,8 +65,8 @@ fil.close()
 ikread = np.where(pres == ptrack)[0][0]
 
 
-#for imemb in range(nmem):
-for imemb in range(2):
+for imemb in range(nmem):
+# for imemb in range(1):
 
     main = top+istorm+'/'+memb_all[imemb]+'/'+itest+'/'
     datdir = main+'post/d02/'
@@ -88,11 +91,23 @@ for imemb in range(2):
 
     nt=np.shape(var)[0]
 
+    # Function to account for crossing of the Intl Date Line
+    def dateline_lon_shift(lon_in, reverse):
+        if reverse == 0:
+            lon_offset = np.zeros(lon_in.shape)
+            lon_offset[np.where(lon_in < 0)] += 360
+        else:
+            lon_offset = np.zeros(lon_in.shape)
+            lon_offset[np.where(lon_in > 180)] -= 360
+        # return lon_in + lon_offset
+        return lon_offset
+
     # Run tracking
-    track, f_masked = object_track(var, lon, lat)
-    print(track[0,:])
-    sys.exit()
-    # clon=track[0,:]
+    lon_offset = dateline_lon_shift(lon, reverse=0)
+    track, f_masked = object_track(var, lon + lon_offset, lat)
+    
+    clon=track[0,:]
+    clon_offset = dateline_lon_shift(clon, reverse=1)
     # clat=track[1,:]
 
 
@@ -110,6 +125,8 @@ for imemb in range(2):
     clon = ncfile.createVariable('clon', np.float64, ('time',))
     clon.units = 'degrees_east'
     clon.long_name = 'clon'
-    clon[:] = track[0,:]
+    clon[:] = track[0,:] + clon_offset
 
     ncfile.close()
+
+print("Done!")
