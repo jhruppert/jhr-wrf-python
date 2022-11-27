@@ -322,17 +322,17 @@ for istrat in range(2,3):
 
       # Stratiform index
         if istrat != -1:
-          # varfil_main = Dataset(datdir+'strat.nc')
-          # strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          varfil_main = Dataset(datdir+'strat.nc')
+          strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          varfil_main.close()
+          # Testing strat/conv classification mods
+          # varfil_main = Dataset(main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/v2/strat_origit1.nc') # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          # strat1 = varfil_main.variables['strat'][:,:,:,:]
           # varfil_main.close()
-          # Test out strat/conv classification mods
-          varfil_main = Dataset(main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/v2/strat_origit1.nc') # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
-          strat1 = varfil_main.variables['strat'][:,:,:,:]
-          varfil_main.close()
-          varfil_main = Dataset(main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+'post/d02/v2/strat.nc') # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
-          strat2 = varfil_main.variables['strat'][:,:,:,:]
-          varfil_main.close()
-          strat=strat1
+          # varfil_main = Dataset(main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+'post/d02/v2/strat.nc') # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          # strat2 = varfil_main.variables['strat'][:,:,:,:]
+          # varfil_main.close()
+          # strat=strat2
 
       # Three-dimensional variables
     
@@ -362,11 +362,8 @@ for istrat in range(2,3):
           varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
           var = varfil.variables['W'][t0:t1,:,:,:] # m/s
           varfil.close()
-          print(t0,t1)
-          print(datdir)
-          sys.exit()
           # vmf_copy=np.copy(var)
-          # var *= rho
+          var *= rho
         # Humidity
         elif iplot == 'rh':
           var = relh(qv,pres[np.newaxis,:,np.newaxis,np.newaxis]*1e2,tmpk,ice=1) # %
