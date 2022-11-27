@@ -73,20 +73,25 @@ for imemb in range(2):
     if var_tag == 'rvor':
 
         # Horizontal wind
-        ufil = Dataset(datdir+'U.nc') # this opens the netcdf file
-        u = ufil.variables['U'][:,ikread,:,:] # m/s
-        ufil.close()
-        vfil = Dataset(datdir+'V.nc') # this opens the netcdf file
-        v = vfil.variables['V'][:,ikread,:,:] # m/s
-        vfil.close()
+        # ufil = Dataset(datdir+'U.nc') # this opens the netcdf file
+        # u = ufil.variables['U'][:,ikread,:,:] # m/s
+        # ufil.close()
+        # vfil = Dataset(datdir+'V.nc') # this opens the netcdf file
+        # v = vfil.variables['V'][:,ikread,:,:] # m/s
+        # vfil.close()
+        fil = Dataset(datdir+'AVOR.nc') # this opens the netcdf file
+        var = fil.variables['AVOR'][:,ikread,:,:] # 10**-5 /s
+        fil.close()
 
         # Calculate vorticity
-        var=relvort(u,v,lat1d,lon1d)
+        # var=relvort(u,v,lat1d,lon1d)
 
     nt=np.shape(var)[0]
 
     # Run tracking
     track, f_masked = object_track(var, lon, lat)
+    print(track[0,:])
+    sys.exit()
     # clon=track[0,:]
     # clat=track[1,:]
 
