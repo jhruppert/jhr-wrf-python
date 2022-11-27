@@ -27,15 +27,15 @@ def mask_tc_track(track_file, rmax, var, lon, lat, t0, t1):
 
     # Read TC track
     ncfile = Dataset(track_file)
-    clon = ncfile.variables['clon'][:] # deg
-    clat = ncfile.variables['clat'][:] # deg
+    clon = ncfile.variables['clon'][t0:t1] # deg
+    clat = ncfile.variables['clat'][t0:t1] # deg
     ncfile.close()
 
     # Calculate radius from center as array(time,x,y)
     lon3d = np.repeat(lon[np.newaxis,:,:], nt, axis=0)
     lat3d = np.repeat(lat[np.newaxis,:,:], nt, axis=0)
-    lon3d -= clon[t0:t1,np.newaxis,np.newaxis]
-    lat3d -= clat[t0:t1,np.newaxis,np.newaxis]
+    lon3d -= clon[:,np.newaxis,np.newaxis]
+    lat3d -= clat[:,np.newaxis,np.newaxis]
     radius3d = np.sqrt( lon3d**2 + lat3d**2 )
     
     # Add vertical dimension to match shape of var

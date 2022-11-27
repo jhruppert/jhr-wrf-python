@@ -40,7 +40,7 @@ do_prm_inc = 0
 
 # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # for istrat in range(-1,3):
-for istrat in range(-1,0):
+for istrat in range(2,3):
 
   print("Strat = ",istrat)
   # continue
@@ -60,7 +60,7 @@ for istrat in range(-1,0):
 
   # How many members
   nmem = 5 # number of ensemble members (1-5 have NCRF)
-  # nmem = 1
+  nmem = 1
 
   # Starting member to read
   memb0=1
@@ -322,9 +322,17 @@ for istrat in range(-1,0):
 
       # Stratiform index
         if istrat != -1:
-          varfil_main = Dataset(datdir+'strat.nc')
-          strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          # varfil_main = Dataset(datdir+'strat.nc')
+          # strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          # varfil_main.close()
+          # Test out strat/conv classification mods
+          varfil_main = Dataset(main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/v2/strat_origit1.nc') # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          strat1 = varfil_main.variables['strat'][:,:,:,:]
           varfil_main.close()
+          varfil_main = Dataset(main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+'post/d02/v2/strat.nc') # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          strat2 = varfil_main.variables['strat'][:,:,:,:]
+          varfil_main.close()
+          strat=strat1
 
       # Three-dimensional variables
     
@@ -354,8 +362,11 @@ for istrat in range(-1,0):
           varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
           var = varfil.variables['W'][t0:t1,:,:,:] # m/s
           varfil.close()
-          vmf_copy=np.copy(var)
-          var *= rho
+          print(t0,t1)
+          print(datdir)
+          sys.exit()
+          # vmf_copy=np.copy(var)
+          # var *= rho
         # Humidity
         elif iplot == 'rh':
           var = relh(qv,pres[np.newaxis,:,np.newaxis,np.newaxis]*1e2,tmpk,ice=1) # %
@@ -490,9 +501,9 @@ for istrat in range(-1,0):
               
               plt.xlim(np.min(bin_axis), np.max(bin_axis))
               
-              ax2 = ax.twinx()
+              # ax2 = ax.twinx()
               # plt.ylim()
-              plt.plot(bin_axis,var_freq_int[ktest,:])
+              # plt.plot(bin_axis,var_freq_int[ktest,:])
 
               cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticks, format=ticker.LogFormatterMathtext())
               cbar.ax.set_ylabel('%')
