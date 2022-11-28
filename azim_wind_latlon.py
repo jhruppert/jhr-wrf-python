@@ -23,6 +23,7 @@
 
 from netCDF4 import Dataset
 import numpy as np
+import sys
 
 def azim_wind_latlon(track_file, u, v, lon, lat, t0, t1):
 
@@ -32,16 +33,35 @@ def azim_wind_latlon(track_file, u, v, lon, lat, t0, t1):
     # Input dimensions
     nt,nz,nx1,nx2 = u.shape
 
+    # Function to account for crossing of the Intl Date Line
+    def dateline_lon_shift(lon_in, reverse):
+        if reverse == 0:
+            lon_offset = np.zeros(lon_in.shape)
+            lon_offset[np.where(lon_in < 0)] += 360
+        else:
+            lon_offset = np.zeros(lon_in.shape)
+            lon_offset[np.where(lon_in > 180)] -= 360
+        # return lon_in + lon_offset
+        return lon_offset
+    
     # Read TC track
     ncfile = Dataset(track_file)
     clon = ncfile.variables['clon'][:] # deg
     clat = ncfile.variables['clat'][:] # deg
     ncfile.close()
 
+    # Check for crossing Date Line
+    if (lon.min() < 0) and (lon.max() > 0):
+        lon_offset = dateline_lon_shift(lon, reverse=0)
+        clon_offset = dateline_lon_shift(clon, reverse=0)
+    else:
+        lon_offset = 0
+        clon_offset = 0
+
     # Center grid on track
-    lon4d = np.repeat(lon[np.newaxis,np.newaxis,:,:], nt, axis=0)
+    lon4d = np.repeat((lon+lon_offset)[np.newaxis,np.newaxis,:,:], nt, axis=0)
     lat4d = np.repeat(lat[np.newaxis,np.newaxis,:,:], nt, axis=0)
-    lon4d -= clon[t0:t1,np.newaxis,np.newaxis,np.newaxis]
+    lon4d -= (clon+clon_offset)[t0:t1,np.newaxis,np.newaxis,np.newaxis]
     lat4d -= clat[t0:t1,np.newaxis,np.newaxis,np.newaxis]
 
     # Get radius and azimuth
@@ -54,7 +74,7 @@ def azim_wind_latlon(track_file, u, v, lon, lat, t0, t1):
     # Assume hourly time steps
     dt = 3600. # s/time step
     mpsec = deg2x/dt # m / deg / (s / time step)
-    u_track = np.gradient(clon) * np.cos(clat*np.pi/180) * mpsec # deg / time step --> m / s
+    u_track = np.gradient(clon+clon_offset) * np.cos(clat*np.pi/180) * mpsec # deg / time step --> m / s
     v_track = np.gradient(clat) * mpsec # deg / time step --> m / s
     # print('U = ',u_track)
     # print('V = ',v_track)
