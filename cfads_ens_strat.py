@@ -47,18 +47,23 @@ iplot = 'vmf'
 iplot = 'lh'
 # options: vmf, thv, the
 
+# ivar_all = ['thv','vmf','lh','rh']
 ivar_all = ['thv','vmf','lh','rh']
 nvar=np.size(ivar_all)
 
 
-for ivar in range(nvar):
+# for ivar in range(nvar):
+for ivar in range(1):
 
   iplot = ivar_all[ivar]
+  print("Variable: ",iplot)
 
   # Calculate anomaly as deviation from xy-mean
   do_prm_xy = 0
   # Calculate anomaly as time-increment
   do_prm_inc = 0
+  if iplot == 'thv':
+      do_prm_inc = 1
 
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
@@ -72,7 +77,8 @@ for ivar in range(nvar):
 
     # Time selection
     # ntall=[1,3,6,12,24,36]
-    ntall=[1,3,6,12]
+    # ntall=[1,3,6,12]
+    ntall=[1,6,12]
 
 
     # #### Storm selection
@@ -84,6 +90,7 @@ for ivar in range(nvar):
     for istorm in range(2):
 
       storm=storm_all[istorm]
+      print("Storm: ",storm)
 
       # Tests to compare
       if storm == 'haiyan':
@@ -129,6 +136,7 @@ for ivar in range(nvar):
 
         nt = ntall[knt]
         hr_tag = str(np.char.zfill(str(nt), 2))
+        print("Hour sample: ",hr_tag)
 
 
         # #### Directories
