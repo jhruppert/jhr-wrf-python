@@ -26,6 +26,7 @@ from mask_tc_track import mask_tc_track
 
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
+nmem = 5
 # nmem = 1
 enstag = str(nmem)
 # Starting member to read
@@ -41,19 +42,32 @@ rmax = 8 # radius (deg) limit for masking around TC center
 
 # Fill variable
 iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
-# iplot = 'qrad'
 iplot = 'vmf'
-# iplot = 'rh'
 iplot = 'lh'
-# options: vmf, thv, the
 
-# ivar_all = ['thv','vmf','lh','rh']
-ivar_all = ['thv','vmf','lh','rh']
+ivar_all = ['thv','vmf','lh','rh','qrad']
+ivar_all = ['qrad','lh']
 nvar=np.size(ivar_all)
 
+# #### Time selection
 
-# for ivar in range(nvar):
-for ivar in range(1):
+# ntall=[1,3,6,12,24,36]
+# ntall=[1,3,6,12]
+ntall=[1,6,12]
+ntall=[1]
+
+# #### Storm selection
+
+# storm = 'haiyan'
+# storm = 'maria'
+storm_all=['haiyan','maria']
+storm_all=['haiyan']
+storm_all=['maria']
+nstorm=np.size(storm_all)
+
+
+for ivar in range(nvar):
+# for ivar in range(1):
 
   iplot = ivar_all[ivar]
   print("Variable: ",iplot)
@@ -62,32 +76,24 @@ for ivar in range(1):
   do_prm_xy = 0
   # Calculate anomaly as time-increment
   do_prm_inc = 0
-  if iplot == 'thv':
+  # if (iplot == 'thv') or (iplot == 'qrad'):
+  if (iplot == 'thv'):
       do_prm_inc = 1
+  # Should be off for VMF
+  if iplot == 'vmf':
+      do_prm_xy=0
 
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
-  for istrat in range(-1,3):
+  # for istrat in range(-1,3):
   # for istrat in range(-1,0):
-  # for istrat in range(2,3):
+  for istrat in range(2,3):
 
     print("Strat = ",istrat)
     # continue
 
 
-    # Time selection
-    # ntall=[1,3,6,12,24,36]
-    # ntall=[1,3,6,12]
-    ntall=[1,6,12]
-
-
-    # #### Storm selection
-
-    storm = 'haiyan'
-    # storm = 'maria'
-    storm_all=['haiyan','maria']
-
-    for istorm in range(2):
+    for istorm in range(nstorm):
 
       storm=storm_all[istorm]
       print("Storm: ",storm)
@@ -99,12 +105,6 @@ for ivar in range(1):
         # tests = ['ctl','ncrf36h']
         tests = ['ctl','ncrf48h']
       # tests = ['crfon','ncrf']
-
-      ## AUTO ###################
-
-      # Should be off for VMF
-      if iplot == 'vmf':
-        do_prm_xy=0
 
       # Shift starting-read time step for CRFON comparison
       t0_test=0
@@ -237,10 +237,10 @@ for ivar in range(1):
             # units_var='m s$^{-1}$'
 
             # For mean var
-            scale_mn=1e3
-            units_mn='$10^{-3}$ '+units_var
-            xrange_mn=(-100,100)
-            xrange_mn2=(-4,4)
+            scale_mn=1e2
+            units_mn='$10^{-2}$ '+units_var
+            xrange_mn=(-20,20)
+            xrange_mn2=(-10,10)
 
         elif iplot == 'rh':
 
