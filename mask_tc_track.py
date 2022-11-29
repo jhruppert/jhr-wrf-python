@@ -14,22 +14,43 @@
 #       returns a masked array of identical shape to var.
 # 
 # James Ruppert  
-# jruppert@ou.edu  
+# jruppert@ou.edu
 # September 2022
 
 from netCDF4 import Dataset
 import numpy as np
 
-def mask_tc_track(track_file, rmax, var, lon, lat, t0, t1):
+def mask_tc_track(track_file, rmax, var, lon_tmp, lat, t0, t1):
 
     # Input dimensions
     nt,nz,nx1,nx2 = var.shape
 
     # Read TC track
     ncfile = Dataset(track_file)
-    clon = ncfile.variables['clon'][t0:t1] # deg
+    clon_tmp = ncfile.variables['clon'][t0:t1] # deg
     clat = ncfile.variables['clat'][t0:t1] # deg
     ncfile.close()
+
+    # Function to account for crossing of the Intl Date Line
+    def dateline_lon_shift(lon_in, reverse):
+        if reverse == 0:
+            lon_offset = np.zeros(lon_in.shape)
+            lon_offset[np.where(lon_in < 0)] += 360
+        else:
+            lon_offset = np.zeros(lon_in.shape)
+            lon_offset[np.where(lon_in > 180)] -= 360
+        # return lon_in + lon_offset
+        return lon_offset
+
+    # Check for crossing Date Line
+    if (lon_tmp.min() < 0) and (lon_tmp.max() > 0):
+        lon_offset = dateline_lon_shift(lon_tmp, reverse=0)
+        clon_offset = dateline_lon_shift(clon_tmp, reverse=0)
+    else:
+        lon_offset = 0
+        clon_offset = 0
+    lon = np.copy(lon_tmp) + lon_offset
+    clon = np.copy(clon_tmp) + clon_offset
 
     # Calculate radius from center as array(time,x,y)
     lon3d = np.repeat(lon[np.newaxis,:,:], nt, axis=0)

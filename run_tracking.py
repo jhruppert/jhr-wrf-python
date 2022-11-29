@@ -102,8 +102,12 @@ for imemb in range(nmem):
         # return lon_in + lon_offset
         return lon_offset
 
+    if (lon.min() < 0) and (lon.max() > 0):
+        lon_offset = dateline_lon_shift(lon, reverse=0)
+    else:
+        lon_offset = 0
+
     # Run tracking
-    lon_offset = dateline_lon_shift(lon, reverse=0)
     track, f_masked = object_track(var, lon + lon_offset, lat)
     
     clon=track[0,:]

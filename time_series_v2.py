@@ -41,6 +41,7 @@ memb0=1
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
+rmax = 8 # radius (deg) limit for masking around TC center
 
 # #### Directories
 

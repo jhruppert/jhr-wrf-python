@@ -46,7 +46,7 @@ iplot = 'vmf'
 iplot = 'lh'
 
 ivar_all = ['thv','vmf','lh','rh','qrad']
-ivar_all = ['qrad','lh']
+ivar_all = ['vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -62,7 +62,7 @@ ntall=[1]
 # storm = 'maria'
 storm_all=['haiyan','maria']
 storm_all=['haiyan']
-storm_all=['maria']
+# storm_all=['maria']
 nstorm=np.size(storm_all)
 
 
