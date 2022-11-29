@@ -30,14 +30,15 @@ def mask_tc_track(track_file, rmax, var, lon_tmp, lat, t0, t1):
     clon_tmp = ncfile.variables['clon'][t0:t1] # deg
     clat = ncfile.variables['clat'][t0:t1] # deg
     ncfile.close()
+    clon_tmp = np.ma.masked_invalid(clon_tmp, copy=True)
 
     # Function to account for crossing of the Intl Date Line
     def dateline_lon_shift(lon_in, reverse):
         if reverse == 0:
-            lon_offset = np.zeros(lon_in.shape)
+            lon_offset = np.ma.zeros(lon_in.shape)
             lon_offset[np.where(lon_in < 0)] += 360
         else:
-            lon_offset = np.zeros(lon_in.shape)
+            lon_offset = np.ma.zeros(lon_in.shape)
             lon_offset[np.where(lon_in > 180)] -= 360
         # return lon_in + lon_offset
         return lon_offset
@@ -49,8 +50,8 @@ def mask_tc_track(track_file, rmax, var, lon_tmp, lat, t0, t1):
     else:
         lon_offset = 0
         clon_offset = 0
-    lon = np.copy(lon_tmp) + lon_offset
-    clon = np.copy(clon_tmp) + clon_offset
+    lon = np.ma.copy(lon_tmp) + lon_offset
+    clon = np.ma.copy(clon_tmp) + clon_offset
 
     # Calculate radius from center as array(time,x,y)
     lon3d = np.repeat(lon[np.newaxis,:,:], nt, axis=0)
@@ -58,9 +59,11 @@ def mask_tc_track(track_file, rmax, var, lon_tmp, lat, t0, t1):
     lon3d -= clon[:,np.newaxis,np.newaxis]
     lat3d -= clat[:,np.newaxis,np.newaxis]
     radius3d = np.sqrt( lon3d**2 + lat3d**2 )
-    
+    radius3d = np.ma.masked_invalid(radius3d, copy=True)
+
     # Add vertical dimension to match shape of var
     radius4d = np.repeat(radius3d[:,np.newaxis,:,:], nz, axis=1)
+    radius4d = np.ma.masked_invalid(radius4d, copy=True)
 
     # Apply mask
     var_mask = np.ma.masked_where(radius4d > rmax, var, copy=True)

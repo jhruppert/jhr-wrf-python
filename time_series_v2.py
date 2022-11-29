@@ -34,7 +34,7 @@ elif storm == 'maria':
 
 # How many members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-# nmem = 2
+nmem = 2
 # nmem = 1
 # Starting member to read
 memb0=1
@@ -202,6 +202,9 @@ for imemb in range(nmem):
 
     t0_test2=0
     t1_test2=nt
+
+    # Mask out where TC track is undefined
+
 
     # Mask out around TC center
     strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test2, t1_test2)

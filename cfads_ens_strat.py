@@ -26,7 +26,7 @@ from mask_tc_track import mask_tc_track
 
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
-nmem = 5
+# nmem = 5
 # nmem = 1
 enstag = str(nmem)
 # Starting member to read
@@ -46,7 +46,8 @@ iplot = 'vmf'
 iplot = 'lh'
 
 ivar_all = ['thv','vmf','lh','rh','qrad']
-ivar_all = ['vmf']
+ivar_all = ['vmf','lh','thv','rh']
+ivar_all = ['lh','thv']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -61,7 +62,7 @@ ntall=[1]
 # storm = 'haiyan'
 # storm = 'maria'
 storm_all=['haiyan','maria']
-storm_all=['haiyan']
+# storm_all=['haiyan']
 # storm_all=['maria']
 nstorm=np.size(storm_all)
 
