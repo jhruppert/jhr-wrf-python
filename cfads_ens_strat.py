@@ -240,7 +240,7 @@ for ivar in range(nvar):
             scale_mn=1e2
             units_mn='$10^{-2}$ '+units_var
             xrange_mn=(-20,20)
-            xrange_mn2=(-10,10)
+            xrange_mn2=(-5,5)
 
         elif iplot == 'rh':
 

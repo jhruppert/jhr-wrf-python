@@ -23,7 +23,7 @@ import sys
 # #### Variable selection
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # Tests to read and compare
 itest = 'ctl'
@@ -43,7 +43,8 @@ var_track = 'rvor' # variable
 # #### Directories
 
 figdir = "/home/jamesrup/figures/tc/ens/tracks/"
-main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+# main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
 nums=np.arange(memb0,nmem+memb0,1)
 nums=nums.astype(str)

@@ -17,6 +17,7 @@ import matplotlib.colors as colors
 from matplotlib import ticker, cm
 import cartopy
 import subprocess
+from mask_tc_track import mask_tc_track
 import sys
 
 
@@ -34,9 +35,11 @@ elif storm == 'maria':
 # How many members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
 # nmem = 1
-
 # Starting member to read
 memb0=1
+
+# Strat/Conv index subset
+istrat=2
 
 # TC tracking
 ptrack='600' # tracking pressure level
@@ -46,7 +49,7 @@ rmax = 8 # radius (deg) limit for masking around TC center
 # #### Directories
 
 figdir = "/home/jamesrup/figures/tc/ens/tracks/"
-main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
 nums=np.arange(memb0,nmem+memb0,1)
 nums=nums.astype(str)
@@ -54,9 +57,23 @@ nustr = np.char.zfill(nums, 2)
 memb_all=np.char.add('memb_',nustr)
 
 
+# Strat/Conv index subset
+if istrat == -1:
+    fig_extra=''
+else:
+    if istrat == 0:
+        strattag='Nonrain'
+    elif istrat == 1:
+        strattag='Conv'
+    elif istrat == 2:
+        strattag='Strat'
+    elif istrat == 3:
+        strattag='Anv'
+    fig_extra='_'+strattag.lower()
+
 ##### Get dimensions
 
-datdir = main+storm+'/'+memb_all[0]+'/'+itest+'/'
+datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
 varfil_main = Dataset(datdir+'post/d02/T.nc')
 nz = varfil_main.dimensions['level'].size
 nx1 = varfil_main.dimensions['lat'].size
@@ -76,27 +93,6 @@ lon1d=lon[0,:]
 lat1d=lat[:,0]
 
 
-# Function to account for crossing of the Intl Date Line
-def dateline_lon_shift(lon_in, reverse):
-    if reverse == 0:
-        lon_offset = np.zeros(lon_in.shape)
-        lon_offset[np.where(lon_in < 0)] += 360
-    else:
-        lon_offset = np.zeros(lon_in.shape)
-        lon_offset[np.where(lon_in > 180)] -= 360
-    # return lon_in + lon_offset
-    return lon_offset
-
-# Account for crossing of Date Line
-if storm == 'haiyan':
-    offset = 180
-else:
-    offset = 0
-lon_offset = dateline_lon_shift(lon, reverse=0)
-lon_offset_plt = lon + lon_offset
-lon_offset_plt -= offset
-
-
 # Create figure with all tracks
 
 # ### Plotting routines ##############################################
@@ -107,19 +103,14 @@ font = {'family' : 'sans-serif',
 
 matplotlib.rc('font', **font)
 
-# select plotting area
-plt_area=[lon1d[0], lon1d[-1], lat1d[0], lat1d[-1]] # W,E,S,N
-
 
 # ### Combined plot ##############################################
 
 # create figure
-fig = plt.figure(figsize=(20,10))
-proj = cartopy.crs.PlateCarree(central_longitude=offset)
-# box_proj = ccrs.PlateCarree(central_longitude=0)
-ax = fig.add_subplot(111,projection=proj)
-# ax.set_title(ptrack + '-hPa RVor, Ens Memb '+str(imemb+1), fontsize=20)
-ax.set_title(storm.capitalize()+' ('+ptrack + '-hPa RVor, 10Memb)', fontsize=20)
+fig = plt.figure(figsize=(14,5))
+ax = fig.add_subplot(111)
+
+ax.set_title(storm.capitalize()+': '+strattag.capitalize(), fontsize=20)
 
 ax.set_prop_cycle(color=[
     '#1f77b4', '#1f77b4', '#aec7e8', '#aec7e8', '#ff7f0e', '#ff7f0e', '#ffbb78', '#ffbb78', '#2ca02c', '#2ca02c', '#98df8a', '#98df8a',
@@ -133,90 +124,36 @@ for imemb in range(nmem):
 
     print('Running imemb: ',memb_all[imemb])
 
-    datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
+    # First test
+
+    itest = tests[0]
+
+    datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
     track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
-    print(track_file)
 
-    # Read track
-    ncfile = Dataset(track_file)
-    clon = ncfile.variables['clon'][:] # deg
-    clat = ncfile.variables['clat'][:] # deg
-    ncfile.close()
-    nt = clon.shape[0]
+    # Read variable
+    varfil_main = Dataset(datdir+'strat.nc')
+    strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+    varfil_main.close()
+    nt = strat.shape[0]
+    print(nt)
+    sys.exit()
 
-    clon_shift = clon
-    if storm == 'haiyan':
-        clon_offset = dateline_lon_shift(clon, reverse=0)
-        clon_shift += clon_offset
-    clon_shift -= offset
+    var_ls = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
 
-    # storm track
+    # Plot variable
     plt.plot(clon_shift, clat, linewidth=2, label=nustr[imemb])
     skip=24
     itim=np.arange(0,nt,skip)
     plt.plot(clon_shift[itim], clat[itim], "s")
+    
+    # Second test
 
-# add map features
-ax.add_feature(cartopy.feature.LAND,facecolor="lightgray") #land color
-# ax.add_feature(cartopy.feature.OCEAN) #ocean color
-ax.add_feature(cartopy.feature.COASTLINE)
-# ax.add_feature(cartopy.feature.STATES)
-ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
-
-ax.set_extent(plt_area)
 
 plt.legend(loc="upper right")
 
 # plt.show()
 # plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
-plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'.png',dpi=200, facecolor='white', \
+plt.savefig(figdir+'tser_'+storm+'_'+fig_extra+'.png',dpi=200, facecolor='white', \
             bbox_inches='tight', pad_inches=0.2)
 plt.close()
-
-
-# ### Single member plots ##############################################
-
-for imemb in range(nmem):
-
-    print('Running imemb: ',memb_all[imemb])
-
-    datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
-    track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
-    print(track_file)
-
-    # Read track
-    ncfile = Dataset(track_file)
-    clon = ncfile.variables['clon'][:] # deg
-    clat = ncfile.variables['clat'][:] # deg
-    ncfile.close()
-    nt = clon.shape[0]
-
-    clon_shift = clon
-    if storm == 'haiyan':
-        clon_offset = dateline_lon_shift(clon, reverse=0)
-        clon_shift += clon_offset
-    clon_shift -= offset
-
-    fig = plt.figure(figsize=(20,10))
-    ax = fig.add_subplot(111,projection=proj)
-    ax.set_title(ptrack + '-hPa RVor, Ens Memb '+str(imemb+1), fontsize=20)
-
-    # storm track
-    plt.plot(clon_shift, clat, linewidth=2, label=nustr[imemb])#, color='k')
-    skip=24
-    itim=np.arange(0,nt,skip)
-    plt.plot(clon_shift[itim], clat[itim], "s", color='r')
-
-    # add map features
-    ax.add_feature(cartopy.feature.LAND,facecolor="lightgray") #land color
-    # ax.add_feature(cartopy.feature.OCEAN) #ocean color
-    ax.add_feature(cartopy.feature.COASTLINE)
-    # ax.add_feature(cartopy.feature.STATES)
-    ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
-
-    ax.set_extent(plt_area)
-
-    # plt.show()
-    plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
-                bbox_inches='tight', pad_inches=0.2)
-    plt.close()
