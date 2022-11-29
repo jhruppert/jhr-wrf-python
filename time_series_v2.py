@@ -24,9 +24,12 @@ import sys
 # #### Variable selection
 
 storms=['haiyan','maria']
+storms=['maria']
 # storm = 'haiyan'
 # storm = 'maria'
-for istorm in range(2):
+nstorm = np.size(storms)
+
+for istorm in range(nstorm):
 
     storm = storms[istorm]
 
@@ -34,7 +37,8 @@ for istorm in range(2):
     if storm == 'haiyan':
         tests = ['ctl','ncrf36h']
     elif storm == 'maria':
-        tests = ['ctl','ncrf48h']
+        tests = ['ctl','ncrf36h']
+#        tests = ['ctl','ncrf48h']
 
     # How many members
     nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -242,6 +246,6 @@ for istorm in range(2):
 
     # plt.show()
     # plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
-    plt.savefig(figdir+'tser_'+storm+fig_extra+'.png',dpi=200, facecolor='white', \
+    plt.savefig(figdir+'tser_'+storm+fig_extra+'_'+tests[1]+'.png',dpi=200, facecolor='white', \
                 bbox_inches='tight', pad_inches=0.2)
     plt.close()
