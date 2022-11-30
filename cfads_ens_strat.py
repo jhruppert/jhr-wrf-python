@@ -47,7 +47,8 @@ iplot = 'lh'
 
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['vmf','lh','thv','rh']
-ivar_all = ['lh','thv']
+ivar_all = ['thv','vmf','rh']
+# ivar_all = ['qrad']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -62,7 +63,7 @@ ntall=[1]
 # storm = 'haiyan'
 # storm = 'maria'
 storm_all=['haiyan','maria']
-# storm_all=['haiyan']
+storm_all=['haiyan']
 # storm_all=['maria']
 nstorm=np.size(storm_all)
 
@@ -88,7 +89,8 @@ for ivar in range(nvar):
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
   # for istrat in range(-1,3):
   # for istrat in range(-1,0):
-  for istrat in range(2,3):
+  # for istrat in range(2,3):
+  for istrat in range(0,1):
 
     print("Strat = ",istrat)
     # continue

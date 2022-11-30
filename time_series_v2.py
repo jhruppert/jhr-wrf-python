@@ -24,7 +24,7 @@ import sys
 # #### Variable selection
 
 storms=['haiyan','maria']
-storms=['maria']
+#storms=['maria']
 # storm = 'haiyan'
 # storm = 'maria'
 nstorm = np.size(storms)
@@ -37,8 +37,8 @@ for istorm in range(nstorm):
     if storm == 'haiyan':
         tests = ['ctl','ncrf36h']
     elif storm == 'maria':
-        tests = ['ctl','ncrf36h']
-#        tests = ['ctl','ncrf48h']
+#        tests = ['ctl','ncrf36h']
+        tests = ['ctl','ncrf48h']
 
     # How many members
     nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -48,7 +48,8 @@ for istorm in range(nstorm):
     memb0=1
 
     # Strat/Conv index subset
-    istrat=2
+    istrat=1 # Convective
+#    istrat=2 # Stratiform
 
     # TC tracking
     ptrack='600' # tracking pressure level
