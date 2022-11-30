@@ -46,9 +46,8 @@ iplot = 'vmf'
 iplot = 'lh'
 
 ivar_all = ['thv','vmf','lh','rh','qrad']
-ivar_all = ['vmf','lh','thv','rh']
-ivar_all = ['thv','vmf','rh']
-# ivar_all = ['qrad']
+ivar_all = ['thv','vmf','lh','rh']
+ivar_all = ['thv']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -64,7 +63,7 @@ ntall=[1]
 # storm = 'maria'
 storm_all=['haiyan','maria']
 storm_all=['haiyan']
-# storm_all=['maria']
+storm_all=['maria']
 nstorm=np.size(storm_all)
 
 
@@ -80,17 +79,16 @@ for ivar in range(nvar):
   do_prm_inc = 0
   # if (iplot == 'thv') or (iplot == 'qrad'):
   if (iplot == 'thv'):
-      do_prm_inc = 1
+      do_prm_xy = 1
   # Should be off for VMF
   if iplot == 'vmf':
       do_prm_xy=0
 
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
+  # for istrat in range(-1,4):
+  for istrat in range(1,2):
   # for istrat in range(-1,3):
-  # for istrat in range(-1,0):
-  # for istrat in range(2,3):
-  for istrat in range(0,1):
 
     print("Strat = ",istrat)
     # continue
@@ -448,8 +446,9 @@ for ivar in range(nvar):
 
             # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
             if do_prm_xy == 1:
-              radius_ls=12
-              var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
+              # radius_ls=12
+              # var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
+              var_ls = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
               var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
               var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
 

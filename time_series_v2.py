@@ -50,6 +50,7 @@ for istorm in range(nstorm):
     # Strat/Conv index subset
     istrat=1 # Convective
 #    istrat=2 # Stratiform
+    istrat=4 # Convective/Stratiform fraction
 
     # TC tracking
     ptrack='600' # tracking pressure level
@@ -79,6 +80,8 @@ for istorm in range(nstorm):
             strattag='Strat'
         elif istrat == 3:
             strattag='Anv'
+        elif istrat == 4:
+            strattag='frac'
         fig_extra='_'+strattag.lower()
 
     def get_tshift(itest):
@@ -180,9 +183,16 @@ for istorm in range(nstorm):
         count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
 
         # Mask out based on strat/conv
-        strat = np.ma.masked_where((strat != istrat), strat, copy=True)
-        count_strat = np.ma.MaskedArray.count(strat, axis=(1,2,3))
-        frac_strat = count_strat / count_total
+        if istrat == 4:
+            strat_ind = np.ma.masked_where((strat != 2), strat)
+            conv_ind = np.ma.masked_where((strat != 1), strat)
+            count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
+            count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
+            frac_strat = count_conv / count_strat
+        else:
+            strat = np.ma.masked_where((strat != istrat), strat, copy=True)
+            count_strat = np.ma.MaskedArray.count(strat, axis=(1,2,3))
+            frac_strat = count_strat / count_total
 
         # Plot variable
         plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
@@ -220,9 +230,16 @@ for istorm in range(nstorm):
         count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
 
         # Mask out based on strat/conv
-        strat = np.ma.masked_where((strat != istrat), strat, copy=True)
-        count_strat = np.ma.MaskedArray.count(strat, axis=(1,2,3))
-        frac_strat = count_strat / count_total
+        if istrat == 4:
+            strat_ind = np.ma.masked_where((strat != 2), strat)
+            conv_ind = np.ma.masked_where((strat != 1), strat)
+            count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
+            count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
+            frac_strat = count_conv / count_strat
+        else:
+            strat = np.ma.masked_where((strat != istrat), strat, copy=True)
+            count_strat = np.ma.MaskedArray.count(strat, axis=(1,2,3))
+            frac_strat = count_strat / count_total
 
         # Plot variable
         plt.plot(range(t0_test2+tshift2,t1_test2+tshift2), frac_strat, linewidth=1,
