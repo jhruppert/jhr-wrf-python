@@ -17,9 +17,9 @@
 #   lat = longitude points (deg) as lat = lat(y,x)
 #   sens_test = True or False, for if this case is a sensitivity test and
 #       should have its tracking initiated on the basis of another simulation
-#   test_basis = set this to set the basis test (e.g., 'ctl') in the case of
-#       sens_test = True
-#  
+#   basis = [lon, lat] the x,y location from which to begin tracking forward in
+#       time, which is only used in the case of sens_test = True
+# 
 # Returns: numpy array[itrack,2] where itrack corresponds to (potentially)
 #   multiple identified tracks and the second dimension is (lon,lat).
 # 
@@ -31,7 +31,7 @@ import numpy as np
 from scipy import ndimage
 import sys
 
-def object_track(f, lon, lat, sens_test, test_basis):
+def object_track(f, lon, lat, sens_test, basis):
 
     shape=np.shape(f)
     nt,ny,nx = shape
@@ -76,10 +76,6 @@ def object_track(f, lon, lat, sens_test, test_basis):
     f_masked = np.ma.array(f_sigma)
     f_masked = np.ma.masked_where(np.abs(f_masked) < 3, f_masked, copy=False)
 
-    # Mask out first time step
-    # f_masked[0,:,:] = np.nan
-    # f_masked = np.ma.masked_invalid(f_masked, copy=False)
-
     # Mask out data within 0.5*r_max from boundaries
     f_masked = np.ma.masked_where(lon3d <= lon[0,0]   +0.5*r_max, f_masked, copy=False)
     f_masked = np.ma.masked_where(lon3d >= lon[0,nx-1]-0.5*r_max, f_masked, copy=False)
@@ -88,23 +84,42 @@ def object_track(f, lon, lat, sens_test, test_basis):
 
     #############################################
 
-    # MASK BEYOND SPECIFIED RADIUS STARTING FROM ALL-TIME MAX
+    if sens_test:
 
-    # Locate the all-time maximum value
-    fmax = np.max(f_masked)
-    mloc=np.where(f_masked == fmax)
-    itmax = mloc[0][0]
-    xmax=mloc[2][0]
-    ymax=mloc[1][0]
+        # Assuming a sensitivity test restarted from another simulation
+        print('Assuming sensitivity test; using basis to initialize track')
 
-    radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
+        # Therefore, using that restart time step as the basis from which
+        # to track forward in time.
 
-    # Mask surrounding points
-    for it in range(itmax-1,np.minimum(itmax+1,nt-1)+1):
+        radius = np.sqrt( (lon-basis[0])**2 + (lat-basis[1])**2 )
+        itmax = 0
+
+    else:
+    
+        # Assuming a cold start; will identify all-time-max object magnitude
+        # and track forward and backward from there.
+        print('Assuming cold start and using no basis')
+
+        # Mask out first time step
+        f_masked.mask[0,:,:] = True
+
+        # Locate the all-time maximum value
+        fmax = np.max(f_masked)
+        mloc=np.where(f_masked == fmax)
+        itmax = mloc[0][0]
+        xmax=mloc[2][0]
+        ymax=mloc[1][0]
+
+        radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
+
+    # Mask beyond specified radius at surrounding time steps
+    for it in range( np.maximum(itmax-1,0) , np.minimum(itmax+1,nt-1)+1 ):
+
         f_masked[it,:,:] = np.ma.masked_where(radius > r_max, f_masked[it,:,:], copy=False)
 
     # Iterate downward from itmax
-    for it in range(itmax-1,0,-1):
+    for it in range( np.maximum(itmax-1,0), 0, -1):
 
         fmax = np.max(f_masked[it,:,:])
         mloc = np.where(f_masked[it,:,:] == fmax)

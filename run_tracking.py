@@ -15,12 +15,12 @@ from object_track import object_track
 
 # Choices
 ptrack  = 600 # tracking pressure level
-#istorm  = 'haiyan'
-istorm  = 'maria'
+istorm  = 'haiyan'
+# istorm  = 'maria'
 # imemb   = 'memb_01'
-#itest   = 'ctl'
+# itest   = 'ctl'
 itest   = 'ncrf36h'
-itest   = 'ncrf48h'
+# itest   = 'ncrf48h'
 # itest   = 'crfon60h'
 
 var_tag = 'rvor'
@@ -29,28 +29,36 @@ var_tag = 'rvor'
 
 print('Tracking at:',ptrack,'hPa')
 
-# For initializing tracks in sensitivity tests
-if itest != 'ctl':
-    i_senstest=False
-else:
-    i_senstest=True
-
-if 'ncrf' in itest:
-    test_basis='ctl'
-elif 'crfon60h' == itest:
-    test_basis='ncrf36h'
-elif 'crfon72h' == itest:
-    test_basis='ncrf48h'
-else:
-    test_basis=''
-
 # Ens members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
+# nmem=1
 memb0=1
 nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
 memb_all=np.char.add('memb_',nustr)
 
+
+# For initializing tracks in sensitivity tests
+if itest == 'ctl':
+    i_senstest=False
+else:
+    i_senstest=True
+
+# Sensitivity tests basis and time step from that basis
+if itest == 'ncrf36h':
+    test_basis='ctl'
+    it_basis=36
+if itest == 'ncrf48h':
+    test_basis='ctl'
+    it_basis=48
+elif itest == 'crfon60h':
+    test_basis='ncrf36h'
+    it_basis=24
+elif itest == 'crfon72h':
+    test_basis='ncrf48h'
+    it_basis=24
+else:
+    test_basis=''
 
 #top = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 top = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -124,8 +132,19 @@ for imemb in range(nmem):
     else:
         lon_offset = 0
 
+    # Set basis starting point for tracking for sensitivity tests
+    if i_senstest:
+        track_file = main+'../'+test_basis+'/track_'+var_tag+'_'+str(round(pres[ikread]))+'hPa.nc'
+        ncfile = Dataset(track_file)
+        clon = ncfile.variables['clon'][it_basis] # deg
+        clat = ncfile.variables['clat'][it_basis] # deg
+        ncfile.close()
+        basis = [clon, clat]
+    else:
+        basis=0
+
     # Run tracking
-    track, f_masked = object_track(var, lon + lon_offset, lat, sens_test=i_senstest, test_basis=test_basis)
+    track, f_masked = object_track(var, lon + lon_offset, lat, i_senstest, basis)
     
     clon=track[0,:]
     clon_offset = dateline_lon_shift(clon, reverse=1)
