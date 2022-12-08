@@ -18,6 +18,7 @@ from matplotlib import ticker, cm
 import subprocess
 from mask_tc_track import mask_tc_track
 import sys
+import pandas as pd
 
 
 # #### Variable selection
@@ -47,14 +48,17 @@ for istorm in range(nstorm):
     memb0=1
 
     # Strat/Conv index subset
-    istrat=1 # Convective
-#    istrat=2 # Stratiform
-    istrat=4 # Convective/Stratiform fraction
+#     istrat=1 # Convective
+# #    istrat=2 # Stratiform
+#     istrat=4 # Convective/Stratiform fraction
+#     istrat_all=[1,2,4]
+#     nstrat=np.size(istrat_all)
+
 
     # TC tracking
     ptrack='600' # tracking pressure level
     var_track = 'rvor' # variable
-    rmax = 8 # radius (deg) limit for masking around TC center
+    rmax = 6 # radius (deg) limit for masking around TC center
 
     # #### Directories
 
@@ -68,20 +72,20 @@ for istorm in range(nstorm):
 
 
     # Strat/Conv index subset
-    if istrat == -1:
-        fig_extra=''
-    else:
-        if istrat == 0:
-            strattag='Nonrain'
-        elif istrat == 1:
-            strattag='Conv'
-        elif istrat == 2:
-            strattag='Strat'
-        elif istrat == 3:
-            strattag='Anv'
-        elif istrat == 4:
-            strattag='frac'
-        fig_extra='_'+strattag.lower()
+    # if istrat == -1:
+    #     fig_extra=''
+    # else:
+    #     if istrat == 0:
+    #         strattag='Nonrain'
+    #     elif istrat == 1:
+    #         strattag='Conv'
+    #     elif istrat == 2:
+    #         strattag='Strat'
+    #     elif istrat == 3:
+    #         strattag='Anv'
+    #     elif istrat == 4:
+    #         strattag='frac'
+    #     fig_extra='_'+strattag.lower()
 
     def get_tshift(itest):
         if itest == 'ctl':
@@ -115,46 +119,6 @@ for istorm in range(nstorm):
     lat1d=lat[:,0]
 
 
-    # Create figure with all tracks
-
-    # ### Plotting routines ##############################################
-
-    font = {'family' : 'sans-serif',
-            'weight' : 'normal',
-            'size'   : 16}
-
-    matplotlib.rc('font', **font)
-
-
-    # ### Combined plot ##############################################
-
-    # create figure
-    fig = plt.figure(figsize=(14,5))
-    ax = fig.add_subplot(111)
-
-    ax.set_title(storm.capitalize()+': '+strattag.capitalize(), fontsize=20)
-    ax.set_ylabel('Fraction')
-    ax.set_xlabel('Time [hours]')
-
-    # ax.set_prop_cycle(color=[
-    #     '#1f77b4', '#1f77b4', 
-    #     '#aec7e8', '#aec7e8', 
-    #     '#ff7f0e', '#ff7f0e', 
-    #     '#ffbb78', '#ffbb78', 
-    #     '#2ca02c', '#2ca02c', 
-    #     '#98df8a', '#98df8a',
-    #     '#d62728', '#d62728', 
-    #     '#ff9896', '#ff9896', 
-    #     '#9467bd', '#9467bd', 
-    #     '#c5b0d5', '#c5b0d5',
-    #     '#000000', '#000000'])#,
-    #     # '#e377c2', '#f7b6d2', '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d',
-    #     # '#17becf', '#9edae5'])#,
-    #     # marker=["s"]*20)
-
-    color_t1 = 'red'
-    color_t2 = 'blue'
-
     for imemb in range(nmem):
 
         print('Running imemb: ',memb_all[imemb])
@@ -182,17 +146,14 @@ for istorm in range(nstorm):
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
         count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
 
-        # Mask out based on strat/conv
-        if istrat == 4:
-            strat_ind = np.ma.masked_where((strat != 2), strat)
-            conv_ind = np.ma.masked_where((strat != 1), strat)
-            count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
-            count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
-            frac_strat = count_conv / count_strat
-        else:
-            strat = np.ma.masked_where((strat != istrat), strat, copy=True)
-            count_strat = np.ma.MaskedArray.count(strat, axis=(1,2,3))
-            frac_strat = count_strat / count_total
+        # Count strat/conv cells
+        strat_ind = np.ma.masked_where((strat != 2), strat)
+        conv_ind = np.ma.masked_where((strat != 1), strat)
+        count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
+        count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
+
+        frac_strat = count_strat / count_total
+        frac_conv = count_conv / count_total
 
         # Plot variable
         # plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
@@ -200,8 +161,10 @@ for istorm in range(nstorm):
 
         if imemb == 0:
             frac_strat_all_t1 = np.reshape(frac_strat, (nt,1))
+            frac_conv_all_t1 = np.reshape(frac_conv, (nt,1))
         else:
             frac_strat_all_t1 = np.append(frac_strat_all_t1, np.reshape(frac_strat, (nt,1)), axis=1)
+            frac_conv_all_t1 = np.append(frac_conv_all_t1, np.reshape(frac_conv, (nt,1)), axis=1)
 
 
         # Second test
@@ -229,54 +192,114 @@ for istorm in range(nstorm):
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test2, t1_test2)
         count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
 
-        # Mask out based on strat/conv
-        if istrat == 4:
-            strat_ind = np.ma.masked_where((strat != 2), strat)
-            conv_ind = np.ma.masked_where((strat != 1), strat)
-            count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
-            count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
-            frac_strat = count_conv / count_strat
-        else:
-            strat = np.ma.masked_where((strat != istrat), strat, copy=True)
-            count_strat = np.ma.MaskedArray.count(strat, axis=(1,2,3))
-            frac_strat = count_strat / count_total
+        # Count strat/conv cells
+        strat_ind = np.ma.masked_where((strat != 2), strat)
+        conv_ind = np.ma.masked_where((strat != 1), strat)
+        count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
+        count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
+
+        frac_strat = count_strat / count_total
+        frac_conv = count_conv / count_total
 
         # Plot variable
-        # plt.plot(range(t0_test2+tshift2,t1_test2+tshift2), frac_strat, linewidth=1,
-        #     label=nustr[imemb], color=color_t2, linestyle='--')
+        # plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
+        #     label=nustr[imemb], color=color_t1, linestyle='solid')
 
         if imemb == 0:
             frac_strat_all_t2 = np.reshape(frac_strat, (nt,1))
+            frac_conv_all_t2 = np.reshape(frac_conv, (nt,1))
         else:
             frac_strat_all_t2 = np.append(frac_strat_all_t2, np.reshape(frac_strat, (nt,1)), axis=1)
+            frac_conv_all_t2 = np.append(frac_conv_all_t2, np.reshape(frac_conv, (nt,1)), axis=1)
 
 
-    # Plot means
 
-    frac_mean_t1 = np.mean(frac_strat_all_t1, axis=1)
-    frac_std_t1 = np.std(frac_strat_all_t1, axis=1)
-    mean_pstd_t1 = frac_mean_t1 + frac_std_t1
-    mean_mstd_t1 = frac_mean_t1 - frac_std_t1
+    # ### Plotting routines ##############################################
 
-    plt.plot(range(t0_test1 + tshift1, t1_test1 + tshift1), frac_mean_t1, 
-        linewidth=2, label=itest.upper(), color=color_t1, linestyle='solid')
-    plt.fill_between(range(t0_test1 + tshift1, t1_test1 + tshift1), mean_pstd_t1, mean_mstd_t1, alpha=0.2,
-        color=color_t1)
+    # Create figure with all tracks
 
-    frac_mean_t2 = np.mean(frac_strat_all_t2, axis=1)
-    frac_std_t2 = np.std(frac_strat_all_t2, axis=1)
-    mean_pstd_t2 = frac_mean_t2 + frac_std_t2
-    mean_mstd_t2 = frac_mean_t2 - frac_std_t2
+    for iplot in range(3):
 
-    plt.plot(range(t0_test2 + tshift2, t1_test2 + tshift2), frac_mean_t2, 
-        linewidth=2, label=nustr[imemb], color=color_t2, linestyle='--')
-    plt.fill_between(range(t0_test2 + tshift2, t1_test2 + tshift2), mean_pstd_t2, mean_mstd_t2, alpha=0.2,
-        color=color_t2)
+        if iplot == 0:
+            fig_extra='strat'
+            strattag='Stratiform'
+            pvar1 = frac_strat_all_t1
+            pvar2 = frac_strat_all_t2
+        elif iplot == 1:
+            fig_extra='conv'
+            strattag='Convective'
+            pvar1 = frac_conv_all_t1
+            pvar2 = frac_conv_all_t2
+        elif iplot == 1:
+            fig_extra='ratio'
+            strattag='Stratiform/Convective'
+            pvar1 = frac_strat_all_t1 / frac_conv_all_t1
+            pvar2 = frac_strat_all_t2 / frac_conv_all_t2
 
-    # plt.legend(loc="upper right")
+        pvar_pd1 = pd.DataFrame(pvar1)
+        pvar1_smooth = pvar_pd1.rolling(window=3, center=True, closed='both', axis=0).mean()
+        pvar_pd2 = pd.DataFrame(pvar2)
+        pvar2_smooth = pvar_pd2.rolling(window=3, center=True, closed='both', axis=0).mean()
 
-    # plt.show()
-    # plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
-    plt.savefig(figdir+'tser_'+storm+fig_extra+'_'+tests[1]+'.png',dpi=200, facecolor='white', \
-                bbox_inches='tight', pad_inches=0.2)
-    plt.close()
+        font = {'family' : 'sans-serif',
+                'weight' : 'normal',
+                'size'   : 16}
+
+        matplotlib.rc('font', **font)
+
+
+        # ### Combined plot: STRAT ##############################################
+
+        # create figure
+        fig = plt.figure(figsize=(14,5))
+        ax = fig.add_subplot(111)
+
+        ax.set_title(storm.capitalize()+': '+strattag, fontsize=20)
+        ax.set_ylabel('Fraction')
+        ax.set_xlabel('Time [hours]')
+
+        # ax.set_prop_cycle(color=[
+        #     '#1f77b4', '#1f77b4', 
+        #     '#aec7e8', '#aec7e8', 
+        #     '#ff7f0e', '#ff7f0e', 
+        #     '#ffbb78', '#ffbb78', 
+        #     '#2ca02c', '#2ca02c', 
+        #     '#98df8a', '#98df8a',
+        #     '#d62728', '#d62728', 
+        #     '#ff9896', '#ff9896', 
+        #     '#9467bd', '#9467bd', 
+        #     '#c5b0d5', '#c5b0d5',
+        #     '#000000', '#000000'])#,
+        #     # '#e377c2', '#f7b6d2', '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d',
+        #     # '#17becf', '#9edae5'])#,
+        #     # marker=["s"]*20)
+
+        color_t1 = 'red'
+        color_t2 = 'blue'
+
+        # Plot means
+
+        frac_mean_t1 = np.nanmean(pvar1_smooth, axis=1)
+        frac_std_t1 = np.nanstd(pvar1_smooth, axis=1)
+
+        plt.plot(range(t0_test1 + tshift1, t1_test1 + tshift1), frac_mean_t1, 
+            linewidth=2, label=tests[0].upper(), color=color_t1, linestyle='solid')
+        plt.fill_between(range(t0_test1 + tshift1, t1_test1 + tshift1), frac_mean_t1 + frac_std_t1,
+            frac_mean_t1 - frac_std_t1, alpha=0.2, color=color_t1)
+
+
+        frac_mean_t2 = np.nanmean(pvar2_smooth, axis=1)
+        frac_std_t2 = np.nanstd(pvar2_smooth, axis=1)
+
+        plt.plot(range(t0_test2 + tshift2, t1_test2 + tshift2), frac_mean_t2, 
+            linewidth=2, label=tests[1].upper(), color=color_t2, linestyle='--')
+        plt.fill_between(range(t0_test2 + tshift2, t1_test2 + tshift2), frac_mean_t2 + frac_std_t2,
+            frac_mean_t2 - frac_std_t2, alpha=0.2, color=color_t2)
+
+        # plt.legend(loc="upper right")
+
+        # plt.show()
+        # plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
+        plt.savefig(figdir+'tser_'+storm+fig_extra+'_'+tests[1]+'.png',dpi=200, facecolor='white', \
+                    bbox_inches='tight', pad_inches=0.2)
+        plt.close()
