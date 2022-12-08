@@ -23,11 +23,16 @@ import sys
 # #### Variable selection
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # Tests to read and compare
-itest = 'ctl'
+# itest = 'ctl'
 # itest = 'ncrf'
+if storm == 'haiyan':
+    tests = ['ctl','ncrf36h']
+elif storm == 'maria':
+#        tests = ['ctl','ncrf36h']
+    tests = ['ctl','ncrf48h']
 
 # How many members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -54,6 +59,7 @@ memb_all=np.char.add('memb_',nustr)
 
 ##### Get dimensions
 
+itest=tests[0]
 datdir = main+storm+'/'+memb_all[0]+'/'+itest+'/'
 varfil_main = Dataset(datdir+'post/d02/T.nc')
 nz = varfil_main.dimensions['level'].size
@@ -111,99 +117,107 @@ plt_area=[lon1d[0], lon1d[-1], lat1d[0], lat1d[-1]] # W,E,S,N
 
 # ### Combined plot ##############################################
 
-# create figure
-fig = plt.figure(figsize=(20,10))
-proj = cartopy.crs.PlateCarree(central_longitude=offset)
-# box_proj = ccrs.PlateCarree(central_longitude=0)
-ax = fig.add_subplot(111,projection=proj)
-# ax.set_title(ptrack + '-hPa RVor, Ens Memb '+str(imemb+1), fontsize=20)
-ax.set_title(storm.capitalize()+' ('+ptrack + '-hPa RVor, 10Memb)', fontsize=20)
+for ktest in range(2):
 
-ax.set_prop_cycle(color=[
-    '#1f77b4', '#1f77b4', '#aec7e8', '#aec7e8', '#ff7f0e', '#ff7f0e', '#ffbb78', '#ffbb78', '#2ca02c', '#2ca02c', '#98df8a', '#98df8a',
-    '#d62728', '#d62728', '#ff9896', '#ff9896', '#9467bd', '#9467bd', '#c5b0d5', '#c5b0d5'])#,
-    # '#e377c2', '#f7b6d2', '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d',
-    # '#17becf', '#9edae5'])#,
-    # marker=["s"]*20)
+    itest = tests[ktest]
+
+    # create figure
+    fig = plt.figure(figsize=(20,10))
+    proj = cartopy.crs.PlateCarree(central_longitude=offset)
+    # box_proj = ccrs.PlateCarree(central_longitude=0)
+    ax = fig.add_subplot(111,projection=proj)
+    # ax.set_title(ptrack + '-hPa RVor, Ens Memb '+str(imemb+1), fontsize=20)
+    ax.set_title(storm.capitalize()+', '+itest.capitalize()+' ('+ptrack + '-hPa RVor, 10Memb)', fontsize=20)
+
+    ax.set_prop_cycle(color=[
+        '#1f77b4', '#1f77b4', '#aec7e8', '#aec7e8', '#ff7f0e', '#ff7f0e', '#ffbb78', '#ffbb78', '#2ca02c', '#2ca02c', '#98df8a', '#98df8a',
+        '#d62728', '#d62728', '#ff9896', '#ff9896', '#9467bd', '#9467bd', '#c5b0d5', '#c5b0d5'])#,
+        # '#e377c2', '#f7b6d2', '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d',
+        # '#17becf', '#9edae5'])#,
+        # marker=["s"]*20)
 
 
-for imemb in range(nmem):
+    for imemb in range(nmem):
 
-    print('Running imemb: ',memb_all[imemb])
+        print('Running imemb: ',memb_all[imemb])
 
-    datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
-    track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
-    print(track_file)
+        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
+        track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+        print(track_file)
 
-    # Read track
-    ncfile = Dataset(track_file)
-    clon = ncfile.variables['clon'][:] # deg
-    clat = ncfile.variables['clat'][:] # deg
-    ncfile.close()
-    nt = clon.shape[0]
+        # Read track
+        ncfile = Dataset(track_file)
+        clon = ncfile.variables['clon'][:] # deg
+        clat = ncfile.variables['clat'][:] # deg
+        ncfile.close()
+        nt = clon.shape[0]
 
-    clon_shift = clon
-    if storm == 'haiyan':
-        clon_offset = dateline_lon_shift(clon, reverse=0)
-        clon_shift += clon_offset
-    clon_shift -= offset
+        clon_shift = clon
+        if storm == 'haiyan':
+            clon_offset = dateline_lon_shift(clon, reverse=0)
+            clon_shift += clon_offset
+        clon_shift -= offset
 
-    # storm track
-    plt.plot(clon_shift, clat, linewidth=2, label=nustr[imemb])
-    skip=24
-    itim=np.arange(0,nt,skip)
-    plt.plot(clon_shift[itim], clat[itim], "s")
+        # storm track
+        plt.plot(clon_shift, clat, linewidth=2, label=nustr[imemb])
+        skip=24
+        itim=np.arange(0,nt,skip)
+        plt.plot(clon_shift[itim], clat[itim], "s")
 
-# add map features
-ax.add_feature(cartopy.feature.LAND,facecolor="lightgray") #land color
-# ax.add_feature(cartopy.feature.OCEAN) #ocean color
-ax.add_feature(cartopy.feature.COASTLINE)
-# ax.add_feature(cartopy.feature.STATES)
-ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
+    # add map features
+    ax.add_feature(cartopy.feature.LAND,facecolor="lightgray") #land color
+    # ax.add_feature(cartopy.feature.OCEAN) #ocean color
+    ax.add_feature(cartopy.feature.COASTLINE)
+    # ax.add_feature(cartopy.feature.STATES)
+    ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
 
-ax.set_extent(plt_area)
+    ax.set_extent(plt_area)
 
-plt.legend(loc="upper right")
+    plt.legend(loc="upper right")
 
-# plt.show()
-# plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
-plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'.png',dpi=200, facecolor='white', \
-            bbox_inches='tight', pad_inches=0.2)
-plt.close()
+    # plt.show()
+    # plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
+    plt.savefig(figdir+storm+'_'+itest+'_track_'+var_track+'_'+ptrack+'.png',dpi=200, facecolor='white', \
+                bbox_inches='tight', pad_inches=0.2)
+    plt.close()
 
 
 # ### Single member plots ##############################################
 
 for imemb in range(nmem):
 
-    print('Running imemb: ',memb_all[imemb])
-
-    datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
-    track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
-    print(track_file)
-
-    # Read track
-    ncfile = Dataset(track_file)
-    clon = ncfile.variables['clon'][:] # deg
-    clat = ncfile.variables['clat'][:] # deg
-    ncfile.close()
-    nt = clon.shape[0]
-
-    clon_shift = clon
-    if storm == 'haiyan':
-        clon_offset = dateline_lon_shift(clon, reverse=0)
-        clon_shift += clon_offset
-    clon_shift -= offset
-
     fig = plt.figure(figsize=(20,10))
     ax = fig.add_subplot(111,projection=proj)
     ax.set_title(ptrack + '-hPa RVor, Ens Memb '+str(imemb+1), fontsize=20)
 
-    # storm track
-    plt.plot(clon_shift, clat, linewidth=2, label=nustr[imemb])#, color='k')
-    skip=24
-    itim=np.arange(0,nt,skip)
-    plt.plot(clon_shift[itim], clat[itim], "s", color='r')
+    print('Running imemb: ',memb_all[imemb])
+
+    for ktest in range(2):
+
+        itest = tests[ktest]
+
+        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
+        track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+        print(track_file)
+
+        # Read track
+        ncfile = Dataset(track_file)
+        clon = ncfile.variables['clon'][:] # deg
+        clat = ncfile.variables['clat'][:] # deg
+        ncfile.close()
+        nt = clon.shape[0]
+
+        clon_shift = clon
+        if storm == 'haiyan':
+            clon_offset = dateline_lon_shift(clon, reverse=0)
+            clon_shift += clon_offset
+        clon_shift -= offset
+
+        # storm track
+        plt.plot(clon_shift, clat, linewidth=2, label=nustr[imemb])#, color='k')
+        skip=24
+        itim=np.arange(0,nt,skip)
+        plt.plot(clon_shift[itim], clat[itim], "s", color='r')
 
     # add map features
     ax.add_feature(cartopy.feature.LAND,facecolor="lightgray") #land color

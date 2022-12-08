@@ -15,6 +15,10 @@
 #   f   = input variable assumed to be in form f = f(t,y,x)
 #   lon = longitude points (deg) as lon = lon(y,x)
 #   lat = longitude points (deg) as lat = lat(y,x)
+#   sens_test = True or False, for if this case is a sensitivity test and
+#       should have its tracking initiated on the basis of another simulation
+#   test_basis = set this to set the basis test (e.g., 'ctl') in the case of
+#       sens_test = True
 #  
 # Returns: numpy array[itrack,2] where itrack corresponds to (potentially)
 #   multiple identified tracks and the second dimension is (lon,lat).
@@ -27,7 +31,7 @@ import numpy as np
 from scipy import ndimage
 import sys
 
-def object_track(f, lon, lat):
+def object_track(f, lon, lat, sens_test, test_basis):
 
     shape=np.shape(f)
     nt,ny,nx = shape

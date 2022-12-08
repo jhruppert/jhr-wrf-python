@@ -21,11 +21,28 @@ istorm  = 'maria'
 #itest   = 'ctl'
 itest   = 'ncrf36h'
 itest   = 'ncrf48h'
+# itest   = 'crfon60h'
+
 var_tag = 'rvor'
 
 # ------------------------------------------
 
 print('Tracking at:',ptrack,'hPa')
+
+# For initializing tracks in sensitivity tests
+if itest != 'ctl':
+    i_senstest=False
+else:
+    i_senstest=True
+
+if 'ncrf' in itest:
+    test_basis='ctl'
+elif 'crfon60h' == itest:
+    test_basis='ncrf36h'
+elif 'crfon72h' == itest:
+    test_basis='ncrf48h'
+else:
+    test_basis=''
 
 # Ens members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -108,7 +125,7 @@ for imemb in range(nmem):
         lon_offset = 0
 
     # Run tracking
-    track, f_masked = object_track(var, lon + lon_offset, lat)
+    track, f_masked = object_track(var, lon + lon_offset, lat, sens_test=i_senstest, test_basis=test_basis)
     
     clon=track[0,:]
     clon_offset = dateline_lon_shift(clon, reverse=1)

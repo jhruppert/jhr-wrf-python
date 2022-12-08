@@ -230,7 +230,7 @@ for istorm in range(nstorm):
             strattag='Convective'
             pvar1 = frac_conv_all_t1
             pvar2 = frac_conv_all_t2
-        elif iplot == 1:
+        elif iplot == 2:
             fig_extra='ratio'
             strattag='Convective/Stratiform'
             pvar1 = frac_conv_all_t1 / frac_strat_all_t1
