@@ -87,7 +87,7 @@ for ivar in range(nvar):
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
   # for istrat in range(-1,4):
-  for istrat in range(1,2):
+  for istrat in range(2,3):
   # for istrat in range(-1,3):
 
     print("Strat = ",istrat)
