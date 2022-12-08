@@ -13,9 +13,8 @@ import numpy as np
 import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
+# import matplotlib.colors as colors
 from matplotlib import ticker, cm
-import cartopy
 import subprocess
 from mask_tc_track import mask_tc_track
 import sys
@@ -160,6 +159,7 @@ for istorm in range(nstorm):
 
         print('Running imemb: ',memb_all[imemb])
 
+
         # First test
 
         itest = tests[0]
@@ -195,8 +195,8 @@ for istorm in range(nstorm):
             frac_strat = count_strat / count_total
 
         # Plot variable
-        plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
-            label=nustr[imemb], color=color_t1, linestyle='solid')
+        # plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
+        #     label=nustr[imemb], color=color_t1, linestyle='solid')
 
         if imemb == 0:
             frac_strat_all_t1 = np.reshape(frac_strat, (nt,1))
@@ -242,23 +242,36 @@ for istorm in range(nstorm):
             frac_strat = count_strat / count_total
 
         # Plot variable
-        plt.plot(range(t0_test2+tshift2,t1_test2+tshift2), frac_strat, linewidth=1,
-            label=nustr[imemb], color=color_t2, linestyle='--')
+        # plt.plot(range(t0_test2+tshift2,t1_test2+tshift2), frac_strat, linewidth=1,
+        #     label=nustr[imemb], color=color_t2, linestyle='--')
 
         if imemb == 0:
             frac_strat_all_t2 = np.reshape(frac_strat, (nt,1))
         else:
             frac_strat_all_t2 = np.append(frac_strat_all_t2, np.reshape(frac_strat, (nt,1)), axis=1)
 
+
     # Plot means
 
     frac_mean_t1 = np.mean(frac_strat_all_t1, axis=1)
+    frac_std_t1 = np.std(frac_strat_all_t1, axis=1)
+    mean_pstd_t1 = frac_mean_t1 + frac_std_t1
+    mean_mstd_t1 = frac_mean_t1 - frac_std_t1
+
     plt.plot(range(t0_test1 + tshift1, t1_test1 + tshift1), frac_mean_t1, 
-        linewidth=2, label=nustr[imemb], color=color_t1, linestyle='solid')
+        linewidth=2, label=itest.upper(), color=color_t1, linestyle='solid')
+    plt.fill_between(range(t0_test1 + tshift1, t1_test1 + tshift1), mean_pstd_t1, mean_mstd_t1, alpha=0.2,
+        color=color_t1)
 
     frac_mean_t2 = np.mean(frac_strat_all_t2, axis=1)
+    frac_std_t2 = np.std(frac_strat_all_t2, axis=1)
+    mean_pstd_t2 = frac_mean_t2 + frac_std_t2
+    mean_mstd_t2 = frac_mean_t2 - frac_std_t2
+
     plt.plot(range(t0_test2 + tshift2, t1_test2 + tshift2), frac_mean_t2, 
         linewidth=2, label=nustr[imemb], color=color_t2, linestyle='--')
+    plt.fill_between(range(t0_test2 + tshift2, t1_test2 + tshift2), mean_pstd_t2, mean_mstd_t2, alpha=0.2,
+        color=color_t2)
 
     # plt.legend(loc="upper right")
 
