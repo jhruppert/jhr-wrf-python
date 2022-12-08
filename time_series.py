@@ -232,9 +232,9 @@ for istorm in range(nstorm):
             pvar2 = frac_conv_all_t2
         elif iplot == 1:
             fig_extra='ratio'
-            strattag='Stratiform/Convective'
-            pvar1 = frac_strat_all_t1 / frac_conv_all_t1
-            pvar2 = frac_strat_all_t2 / frac_conv_all_t2
+            strattag='Convective/Stratiform'
+            pvar1 = frac_conv_all_t1 / frac_strat_all_t1
+            pvar2 = frac_conv_all_t2 / frac_strat_all_t2
 
         pvar_pd1 = pd.DataFrame(pvar1)
         pvar1_smooth = pvar_pd1.rolling(window=3, center=True, closed='both', axis=0).mean()
@@ -300,6 +300,6 @@ for istorm in range(nstorm):
 
         # plt.show()
         # plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
-        plt.savefig(figdir+'tser_'+storm+fig_extra+'_'+tests[1]+'.png',dpi=200, facecolor='white', \
+        plt.savefig(figdir+'tser_'+storm+'_'+fig_extra+'_'+tests[1]+'.png',dpi=200, facecolor='white', \
                     bbox_inches='tight', pad_inches=0.2)
         plt.close()
