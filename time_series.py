@@ -25,10 +25,11 @@ import pandas as pd
 
 storms=['haiyan','maria']
 #storms=['maria']
+storms=['haiyan']
 # storm = 'haiyan'
 # storm = 'maria'
-nstorm = np.size(storms)
 
+nstorm = np.size(storms)
 for istorm in range(nstorm):
 
     storm = storms[istorm]
