@@ -252,12 +252,15 @@ for istorm in range(nstorm):
         # ### Combined plot: STRAT ##############################################
 
         # create figure
-        fig = plt.figure(figsize=(14,5))
+        fig = plt.figure(figsize=(9,5))
         ax = fig.add_subplot(111)
+
+        t_range=[30,80]
 
         ax.set_title(storm.capitalize()+': '+strattag, fontsize=20)
         ax.set_ylabel('Fraction')
         ax.set_xlabel('Time [hours]')
+        plt.xlim(t_range)
 
         # ax.set_prop_cycle(color=[
         #     '#1f77b4', '#1f77b4', 
