@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Notebook to genereate CFADS from TC output
+# ### Notebook to genereate histograms comparing tests across TC ens simulations
+# Based on script cfads_ens_strat.py
 # 
 # Assumes output is in a single netcdf file on pressure levels.
 # 
