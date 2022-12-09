@@ -48,7 +48,7 @@ else:
 if itest == 'ncrf36h':
     test_basis='ctl'
     it_basis=36
-if itest == 'ncrf48h':
+elif itest == 'ncrf48h':
     test_basis='ctl'
     it_basis=48
 elif itest == 'crfon60h':
