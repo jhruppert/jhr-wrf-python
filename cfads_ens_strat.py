@@ -26,6 +26,7 @@ from mask_tc_track import mask_tc_track
 
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
+nmem=9
 # nmem = 5
 # nmem = 1
 enstag = str(nmem)
@@ -41,13 +42,13 @@ rmax = 8 # radius (deg) limit for masking around TC center
 # #### Variable selection
 
 # Fill variable
-iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
-iplot = 'vmf'
-iplot = 'lh'
+# iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
+# iplot = 'vmf'
+# iplot = 'lh'
 
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
-# ivar_all = ['thv']
+ivar_all = ['vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -55,14 +56,14 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12,24,36]
 # ntall=[1,3,6,12]
 ntall=[1,6,12]
-ntall=[1]
+ntall=[3]
 
 # #### Storm selection
 
 # storm = 'haiyan'
 # storm = 'maria'
 storm_all=['haiyan','maria']
-# storm_all=['haiyan']
+storm_all=['haiyan']
 # storm_all=['maria']
 nstorm=np.size(storm_all)
 

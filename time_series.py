@@ -42,7 +42,7 @@ for istorm in range(nstorm):
         tests = ['ctl','ncrf48h']
 
     # How many members
-    nmem = 10 # number of ensemble members (1-5 have NCRF)
+    nmem = 10 # number of ensemble members
     # nmem = 2
     # nmem = 1
     # Starting member to read
