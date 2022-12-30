@@ -26,7 +26,6 @@ from mask_tc_track import mask_tc_track
 
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
-nmem=9
 # nmem = 5
 # nmem = 1
 enstag = str(nmem)
@@ -48,15 +47,16 @@ rmax = 8 # radius (deg) limit for masking around TC center
 
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
-ivar_all = ['vmf']
+# ivar_all = ['qrad']
 nvar=np.size(ivar_all)
 
 # #### Time selection
 
 # ntall=[1,3,6,12,24,36]
 # ntall=[1,3,6,12]
-ntall=[1,6,12]
-ntall=[3]
+# ntall=[1,6,12]
+ntall=[1,2,3]
+# ntall=[1]
 
 # #### Storm selection
 
@@ -87,8 +87,8 @@ for ivar in range(nvar):
 
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
-  # for istrat in range(-1,4):
-  for istrat in range(2,3):
+  for istrat in range(-1,4):
+  # for istrat in range(2,3):
   # for istrat in range(-1,3):
 
     print("Strat = ",istrat)
@@ -378,7 +378,14 @@ for ivar in range(nvar):
         
             # Localize to TC track
             # track_file = datdir+'../../../track_'+var_track+'_'+ptrack+'hPa.nc'
-            track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
+            # track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
+            # Localize to TC track
+            # NOTE: Using copied tracking from CTL for NCRF tests
+            # track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
+            trackfil_ex=''
+            if 'ncrf' in itest:
+                trackfil_ex='_ctlcopy'
+            track_file = datdir+'../../track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
 
           # Two-dimensional variables
 

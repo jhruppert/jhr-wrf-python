@@ -7,6 +7,7 @@
 # jruppert@ou.edu  
 # 11/27/22
 
+# NOTE: Using copied tracking from CTL for NCRF tests
 
 from netCDF4 import Dataset
 import numpy as np
@@ -174,7 +175,13 @@ for istorm in range(nstorm):
         tshift2 = get_tshift(itest)
 
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
-        track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+        # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+        # Localize to TC track
+        # NOTE: Using copied tracking from CTL for NCRF tests
+        trackfil_ex=''
+        if 'ncrf' in itest:
+            trackfil_ex='_ctlcopy'
+        track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
 
         # Read variable
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
