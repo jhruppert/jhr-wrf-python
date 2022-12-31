@@ -119,8 +119,9 @@ def density_dry(T, pres):
 
 ## Equivalent potential temperature ##############################################
 
-# ; BASED ON (34) OF BRYAN & FRITSCH 2002, OR (2.31) OF MARKOWSKI AND RICHARDSON,
-# ; which is the "wet equivalent potential temperature" (BF02).
+# ; BASED ON (34) OF BRYAN & FRITSCH 2002, OR (2.31) OF MARKOWSKI AND RICHARDSON
+# ; (2002), which is the "wet equivalent potential temperature" (BF02) or simply
+# ; "equiv pot temp" (MR02).
 # ;
 # ; INPUTS:
 #     T - temp [K]
@@ -132,14 +133,11 @@ def density_dry(T, pres):
 # ; 
 # ;   EQUIVALENT OTENTIAL TEMPERATURE (K)
 # ; 
-# ; OPTIONS:
-# ; 
-# ;   /REVERSE: if this is set, tmpc is assumed to be theta (in K), and temperature is instead returned (in C).
-# ; 
 # ; James Ruppert, jruppert@ou.edu
 # ; 8/4/14
 # ; Converted to python, June 2022
-def theta_equiv(T, rv, pres):
+# 
+def theta_equiv(T, rv, rtot, pres):
     
     if np.max(pres) < 1e4:
         pres*=1e2 # Convert to Pa
@@ -149,8 +147,6 @@ def theta_equiv(T, rv, pres):
     else:
         T0=0.
     T+=T0
-    
-    rtot=0 # don't presently have this available
     
   # ;CONSTANTS
     R=287.    # J/K/kg
@@ -168,7 +164,8 @@ def theta_equiv(T, rv, pres):
     p_d = pres-e
 
   # ;CALCULATE THETA-E
-    th_e = T * (1e5/p_d)**(R/(cp+cpl*rtot)) * np.exp( lv*rv / ((cp+cpl*rtot)*T) )
+    c_term = cp + cpl*rtot
+    th_e = T * (1e5/p_d)**(R/c_term) * np.exp( lv*rv / (c_term*T) )
 
     return th_e
 
