@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Notebook to plot TC tracks
+# ### Notebook to plot time series of conv/stratiform classification indices
 # 
 # James Ruppert  
 # jruppert@ou.edu  
