@@ -49,12 +49,13 @@ figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
 # hr_tag = str(np.char.zfill(str(nt), 2))
 
 # Tests to read and compare
-# tests = ['crfon','ncrf']
 if storm == 'haiyan':
     tests = ['ctl','ncrf36h']
+    tests = [tests[1],'crfon60h']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
+    tests = [tests[1],'crfon72h']
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -65,9 +66,9 @@ memb0=1
 
 # Shift starting-read time step for CRFON comparison
 t0_test=0
-if tests[0] == 'crfon':
+if 'crfon' in tests[1]:
     t0_test=24
-    memb0=5 # for CRFFON test
+    # memb0=5 # for CRFFON test
 
 # TC tracking
 ptrack='600' # tracking pressure level
@@ -216,6 +217,8 @@ for ktest in range(ntest):
         t0=t0_test
     elif test_str == 'crfon':
         t0=0
+    print(t0)
+    continue
 
     t0+=1 # add one time step since NCRF(t=0) = CTL
     t1 = t0+nt
