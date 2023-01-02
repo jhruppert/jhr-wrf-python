@@ -22,22 +22,13 @@ from mask_tc_track import mask_tc_track
 
 # #### Main settings
 
-
-# Index variable (2D; independent var)
-ivar_select = 'th_e'
-# options (requiring 3D info): th_e
-
 # Fill variable (3D; dependent var)
 fillvar_select = 'vmf'
 # options: avor, lwcrf, tprm, dbz, rh, vmf
 
-# Contour variable (3D; dependent var)
-contvar_select = 'w'
-
 # Mask out all points except [stratiform/nonrain/etc], or switch off
-# istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
-# istrat=-1
 nstrat=4 # istrat = -1, 0, 1, 2
+         # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 
 # Number of sample time steps
 nt=12
@@ -47,8 +38,8 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 # #### Additional settings and directories
 
 
-storm = 'haiyan'
-# storm = 'maria'
+# storm = 'haiyan'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -181,12 +172,11 @@ def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mea
 # Variable settings
 
 # Theta-e
-if ivar_select == 'th_e':
-    fmin=315; fmax=365 # K
-    step=1
-    bins=np.arange(fmin,fmax+step,step)
-    xlabel=r'$\theta_e$ [K]'
-    log_x='linear'
+fmin=315; fmax=365 # K
+step=1
+bins=np.arange(fmin,fmax+step,step)
+xlabel=r'$\theta_e$ [K]'
+log_x='linear'
 
 nbins = np.size(bins)
 
