@@ -39,7 +39,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -307,4 +307,3 @@ for ktest in range(ntest):
 
             # Write out to netCDF file
             write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
-            sys.exit()
