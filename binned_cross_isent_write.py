@@ -38,8 +38,8 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 # #### Additional settings and directories
 
 
-# storm = 'haiyan'
-storm = 'maria'
+storm = 'haiyan'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -146,22 +146,22 @@ def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mea
     levs = ncfile.createVariable('pres', np.float64, ('nz',))
     levs.units = 'hPa'
     levs.long_name = 'pressure'
-    levs = pres
+    levs[:] = pres
 
     binsv = ncfile.createVariable('bins', np.float64, ('nbins',))
     binsv.units = 'K'
     binsv.long_name = 'bin_axis'
-    binsv = bin_axis
+    binsv[:] = bin_axis
 
     vmf_binned = ncfile.createVariable('vmf', np.float64, ('nt','nz','nbins',))
     vmf_binned.units = 'kg/s/K'
     vmf_binned.long_name = 'vertical mass flux summed over x,y'
-    vmf_binned = var_binned
+    vmf_binned[:,:,:] = var_binned
 
     th_e = ncfile.createVariable('th_e', np.float64, ('nt','nz',))
     th_e.units = 'K'
     th_e.long_name = 'equiv potential temperature averaged over x,y'
-    th_e = ivar_mean
+    th_e[:,:] = ivar_mean
 
     ncfile.close()
 
@@ -307,3 +307,4 @@ for ktest in range(ntest):
 
             # Write out to netCDF file
             write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
+            sys.exit()
