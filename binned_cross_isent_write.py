@@ -9,8 +9,6 @@
 # jruppert@ou.edu  
 # 4/23/22
 
-# In[8]:
-
 
 # NOTE: Using copied tracking from CTL for NCRF tests
 
@@ -23,8 +21,6 @@ from mask_tc_track import mask_tc_track
 
 
 # #### Main settings
-
-# In[9]:
 
 
 # Index variable (2D; independent var)
@@ -39,8 +35,9 @@ fillvar_select = 'vmf'
 contvar_select = 'w'
 
 # Mask out all points except [stratiform/nonrain/etc], or switch off
-istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
+# istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # istrat=-1
+nstrat=4 # istrat = -1, 0, 1, 2
 
 # Number of sample time steps
 nt=12
@@ -48,8 +45,6 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 # #### Additional settings and directories
-
-# In[10]:
 
 
 storm = 'haiyan'
@@ -88,28 +83,6 @@ ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
 rmax = 8 # radius (deg) limit for masking around TC center
 
-nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
-nustr = np.char.zfill(nums, 2)
-memb_all=np.char.add('memb_',nustr)
-
-# Strat/Conv index subset
-if istrat == -1:
-    fig_extra=''
-    strattag=''
-else:
-    if istrat == 0:
-        strattag='Nonrain'
-    elif istrat == 1:
-        strattag='Conv'
-    elif istrat == 2:
-        strattag='Strat'
-    elif istrat == 3:
-        strattag='Anv'
-    fig_extra='_'+strattag.lower()
-
-
-# In[11]:
-
 
 nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
@@ -143,8 +116,6 @@ varfil_main.close()
 
 # #### NetCDF variable read functions
 
-# In[12]:
-
 
 def var_read_3d(datdir,varname,t0,t1):
     varfil_main = Dataset(datdir+varname+'.nc')
@@ -158,9 +129,48 @@ def var_read_2d(datdir,varname,t0,t1):
     return var
 
 
-# #### Index aka Bin variable
+# #### NetCDF variable write function
 
-# In[13]:
+def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,istrat):
+
+    # Strat/Conv index subset
+    if istrat == -1:
+        strattag='all'
+    elif istrat == 0:
+        strattag='nonrain'
+    elif istrat == 1:
+        strattag='conv'
+    elif istrat == 2:
+        strattag='strat'
+    elif istrat == 3:
+        strattag='anv'
+
+    file_out = datdir+'isent_vmf_'+strattag+'_'+hr_tag+'hr.nc'
+    ncfile = Dataset(file_out,mode='w')
+
+    time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
+    nz_dim = ncfile.createDimension('nz', nz)
+    bin_dim = ncfile.createDimension('nbins', nbins-1)
+
+    levs = ncfile.createVariable('pres', np.float64, ('nz',))
+    levs.units = 'hPa'
+    levs.long_name = 'pressure'
+    levs[:] = pres
+
+    binsv = ncfile.createVariable('bins', np.float64, ('nbins',))
+    binsv.units = 'K'
+    binsv.long_name = 'bin_axis'
+    binsv[:] = bin_axis
+
+    vmf_binned = ncfile.createVariable('vmf', np.float64, ('nt','nz','nbins',))
+    vmf_binned.units = 'kg/s/K'
+    vmf_binned.long_name = 'vertical mass flux summed over x,y'
+    vmf_binned[:] = var_binned
+
+    ncfile.close()
+
+
+# #### Index aka Bin variable
 
 
 # Variable settings
@@ -180,8 +190,6 @@ bin_axis = (bins[np.arange(nbins-1)]+bins[np.arange(nbins-1)+1])/2
 
 
 # #### Main loops and compositing
-
-# In[7]:
 
 
 # Main read loops for 3D (dependent) variables
@@ -241,9 +249,9 @@ for ktest in range(ntest):
         # Required variables
 
         # Stratiform index
-        if istrat != -1:
-            varname = 'strat'
-            strat = var_read_2d(datdir,varname,t0,t1) # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        # if istrat != -1:
+        varname = 'strat'
+        strat = var_read_2d(datdir,varname,t0,t1) # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
 
         # Index AKA Bin variable ("ivar")
 
@@ -277,53 +285,28 @@ for ktest in range(ntest):
         var_mn_copy = np.repeat(np.repeat(var_mn[:,:,np.newaxis,np.newaxis], nx1, axis=2), nx2, axis=3)
         var -= var_mn_copy
 
-        # Mask out based on strat/conv
-        if istrat != -1:
-            var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-            # cvar = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), cvar, copy=True)
-            ivar = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), ivar, copy=True)
+        for istrat in range(-1,nstrat-1):
 
-        # Save ens member
-        # var_all[ktest,imemb,:,:,:,:]  = var
-        # ivar_all[ktest,imemb,:,:,:,:]  = ivar
-        # cvar_all[ktest,imemb,:,:,:,:] = cvar
-        # strat_all[ktest,imemb,:,:,:]  = strat[:,0,:,:]
+            # Mask out based on strat/conv
+            if istrat != -1:
+                var_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
+                ivar_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), ivar, copy=True)
+            else:
+                var_tmp = np.copy(var)
+                ivar_tmp = np.copy(ivar)
 
-        # Replace masked elements with zeros or NaNs
-        var  = np.ma.filled(var, fill_value=0)
-        ivar = np.ma.filled(ivar, fill_value=np.nan)
+            # Replace masked elements with zeros or NaNs
+            var_tmp  = np.ma.filled(var_tmp, fill_value=0)
+            ivar_tmp = np.ma.filled(ivar_tmp, fill_value=np.nan)
 
-        var_binned=np.zeros((nt,nz,nbins-1))
+            var_binned=np.zeros((nt,nz,nbins-1))
 
-        # Bin the variables from (x,y) --> (bin)
-        for it in range(nt):
-            for ik in range(nz):
-                for ibin in range(nbins-1):
-                    indices = ((ivar[it,ik,:,:] >= bins[ibin]) & (ivar[it,ik,:,:] < bins[ibin+1])).nonzero()
-                    var_binned[it,ik,ibin] = np.sum(var[it,ik,indices[0],indices[1]], dtype=np.float64)
+            # Bin the variables from (x,y) --> (bin)
+            for it in range(nt):
+                for ik in range(nz):
+                    for ibin in range(nbins-1):
+                        indices = ((ivar_tmp[it,ik,:,:] >= bins[ibin]) & (ivar_tmp[it,ik,:,:] < bins[ibin+1])).nonzero()
+                        var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
 
-
-        # Write out to netCDF file
-        file_out = datdir+'isent_vmf_'+hr_tag+'hr.nc'
-        ncfile = Dataset(file_out,mode='w')
-
-        time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
-        nz_dim = ncfile.createDimension('nz', nz)
-        bin_dim = ncfile.createDimension('nbins', nbins-1)
-
-        levs = ncfile.createVariable('pres', np.float64, ('nz',))
-        levs.units = 'hPa'
-        levs.long_name = 'pressure'
-        levs[:] = pres
-
-        binsv = ncfile.createVariable('bins', np.float64, ('nbins',))
-        binsv.units = 'K'
-        binsv.long_name = 'bin_axis'
-        binsv[:] = bin_axis
-
-        vmf_binned = ncfile.createVariable('vmf', np.float64, ('nt','nz','nbins',))
-        vmf_binned.units = 'kg/s/K'
-        vmf_binned.long_name = 'vertical mass flux summed over x,y'
-        vmf_binned[:] = var_binned
-
-        ncfile.close()
+            # Write out to netCDF file
+            write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,istrat)
