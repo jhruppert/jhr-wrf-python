@@ -131,7 +131,7 @@ def var_read_2d(datdir,varname,t0,t1):
 
 # #### NetCDF variable write function
 
-def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,istrat):
+def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat):
 
     # Strat/Conv index subset
     if istrat == -1:
@@ -146,7 +146,7 @@ def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,istrat):
         strattag='anv'
 
     file_out = datdir+'isent_vmf_'+strattag+'_'+hr_tag+'hr.nc'
-    ncfile = Dataset(file_out,mode='w')
+    ncfile = Dataset(file_out,mode='w', clobber=True)
 
     time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
     nz_dim = ncfile.createDimension('nz', nz)
@@ -155,17 +155,22 @@ def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,istrat):
     levs = ncfile.createVariable('pres', np.float64, ('nz',))
     levs.units = 'hPa'
     levs.long_name = 'pressure'
-    levs[:] = pres
+    levs = pres
 
     binsv = ncfile.createVariable('bins', np.float64, ('nbins',))
     binsv.units = 'K'
     binsv.long_name = 'bin_axis'
-    binsv[:] = bin_axis
+    binsv = bin_axis
 
     vmf_binned = ncfile.createVariable('vmf', np.float64, ('nt','nz','nbins',))
     vmf_binned.units = 'kg/s/K'
     vmf_binned.long_name = 'vertical mass flux summed over x,y'
-    vmf_binned[:] = var_binned
+    vmf_binned = var_binned
+
+    th_e = ncfile.createVariable('th_e', np.float64, ('nt','nz',))
+    th_e.units = 'K'
+    th_e.long_name = 'equiv potential temperature averaged over x,y'
+    th_e = ivar_mean
 
     ncfile.close()
 
@@ -295,6 +300,8 @@ for ktest in range(ntest):
                 var_tmp = np.copy(var)
                 ivar_tmp = np.copy(ivar)
 
+            ivar_mean = np.mean(ivar, axis=(2,3))
+
             # Replace masked elements with zeros or NaNs
             var_tmp  = np.ma.filled(var_tmp, fill_value=0)
             ivar_tmp = np.ma.filled(ivar_tmp, fill_value=np.nan)
@@ -309,4 +316,4 @@ for ktest in range(ntest):
                         var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
 
             # Write out to netCDF file
-            write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,istrat)
+            write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
