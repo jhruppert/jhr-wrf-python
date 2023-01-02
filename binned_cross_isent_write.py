@@ -44,7 +44,6 @@ istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 
 # Number of sample time steps
 nt=12
-nt=2
 hr_tag = str(np.char.zfill(str(nt), 2))
 
 
@@ -266,23 +265,33 @@ for ktest in range(ntest):
 
         ### Process and save variable ##############################################
 
-        # Mask out based on strat/conv
-        if istrat != -1:
-            var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-            # cvar = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), cvar, copy=True)
-            ivar = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), ivar, copy=True)
-
         # Localize to TC track
         var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
         # cvar = mask_tc_track(track_file, rmax, cvar, lon, lat, t0, t1)
         ivar = mask_tc_track(track_file, rmax, ivar, lon, lat, t0, t1)
         # strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
 
+        # **BEFORE MASKING FOR CLASSIFICATION**
+        # Subtract area-average VMF
+        var_mn = np.ma.mean(var,axis=(2,3))
+        var_mn_copy = np.repeat(np.repeat(var_mn[:,:,np.newaxis,np.newaxis], nx1, axis=2), nx2, axis=3)
+        var -= var_mn_copy
+
+        # Mask out based on strat/conv
+        if istrat != -1:
+            var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
+            # cvar = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), cvar, copy=True)
+            ivar = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), ivar, copy=True)
+
         # Save ens member
         # var_all[ktest,imemb,:,:,:,:]  = var
         # ivar_all[ktest,imemb,:,:,:,:]  = ivar
         # cvar_all[ktest,imemb,:,:,:,:] = cvar
         # strat_all[ktest,imemb,:,:,:]  = strat[:,0,:,:]
+
+        # Replace masked elements with zeros or NaNs
+        var  = np.ma.filled(var, fill_value=0)
+        ivar = np.ma.filled(ivar, fill_value=np.nan)
 
         var_binned=np.zeros((nt,nz,nbins-1))
 
@@ -298,7 +307,7 @@ for ktest in range(ntest):
         file_out = datdir+'isent_vmf_'+hr_tag+'hr.nc'
         ncfile = Dataset(file_out,mode='w')
 
-        time_dim = ncfile.createDimension('time', nt) # unlimited axis (can be appended to).
+        time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
         nz_dim = ncfile.createDimension('nz', nz)
         bin_dim = ncfile.createDimension('nbins', nbins-1)
 
@@ -318,5 +327,3 @@ for ktest in range(ntest):
         vmf_binned[:] = var_binned
 
         ncfile.close()
-        sys.exit()
-
