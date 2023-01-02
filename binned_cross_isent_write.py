@@ -44,9 +44,8 @@ istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 
 # Number of sample time steps
 nt=12
+nt=2
 hr_tag = str(np.char.zfill(str(nt), 2))
-print(hr_tag)
-sys.exit()
 
 
 # #### Additional settings and directories
@@ -285,36 +284,39 @@ for ktest in range(ntest):
         # cvar_all[ktest,imemb,:,:,:,:] = cvar
         # strat_all[ktest,imemb,:,:,:]  = strat[:,0,:,:]
 
-        var_binned=np.ma.zeros((nt,nz,nbins-1))
+        var_binned=np.zeros((nt,nz,nbins-1))
 
         # Bin the variables from (x,y) --> (bin)
         for it in range(nt):
             for ik in range(nz):
                 for ibin in range(nbins-1):
                     indices = ((ivar[it,ik,:,:] >= bins[ibin]) & (ivar[it,ik,:,:] < bins[ibin+1])).nonzero()
-                    # if indices[0].shape[0] > 3:
                     var_binned[it,ik,ibin] = np.sum(var[it,ik,indices[0],indices[1]], dtype=np.float64)
-                    # else:
-                        # var_binned[ktest,imemb,it,ik,ibin] = np.nan
-                    print(indices[0].shape[0])
-                    sys.exit()
 
 
         # Write out to netCDF file
-        file_out = datdir+'isent_'+nt+'.nc'
+        file_out = datdir+'isent_vmf_'+hr_tag+'hr.nc'
         ncfile = Dataset(file_out,mode='w')
 
         time_dim = ncfile.createDimension('time', nt) # unlimited axis (can be appended to).
+        nz_dim = ncfile.createDimension('nz', nz)
+        bin_dim = ncfile.createDimension('nbins', nbins-1)
 
-        clat = ncfile.createVariable('clat', np.float64, ('time',))
-        clat.units = 'degrees_north'
-        clat.long_name = 'clat'
-        clat[:] = track[1,:]
+        levs = ncfile.createVariable('pres', np.float64, ('nz',))
+        levs.units = 'hPa'
+        levs.long_name = 'pressure'
+        levs[:] = pres
 
-        clon = ncfile.createVariable('clon', np.float64, ('time',))
-        clon.units = 'degrees_east'
-        clon.long_name = 'clon'
-        clon[:] = track[0,:] + clon_offset
+        binsv = ncfile.createVariable('bins', np.float64, ('nbins',))
+        binsv.units = 'K'
+        binsv.long_name = 'bin_axis'
+        binsv[:] = bin_axis
+
+        vmf_binned = ncfile.createVariable('vmf', np.float64, ('nt','nz','nbins',))
+        vmf_binned.units = 'kg/s/K'
+        vmf_binned.long_name = 'vertical mass flux summed over x,y'
+        vmf_binned[:] = var_binned
 
         ncfile.close()
+        sys.exit()
 
