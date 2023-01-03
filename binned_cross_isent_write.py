@@ -39,7 +39,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -51,11 +51,11 @@ figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
 # Tests to read and compare
 if storm == 'haiyan':
     tests = ['ctl','ncrf36h']
-    tests = [tests[1],'crfon60h']
+    # tests = [tests[1],'crfon60h']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
-    tests = [tests[1],'crfon72h']
+    # tests = [tests[1],'crfon72h']
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -217,8 +217,6 @@ for ktest in range(ntest):
         t0=t0_test
     elif test_str == 'crfon':
         t0=0
-    print(t0)
-    continue
 
     t0+=1 # add one time step since NCRF(t=0) = CTL
     t1 = t0+nt
@@ -260,7 +258,7 @@ for ktest in range(ntest):
         varname = 'QVAPOR'
         qv = var_read_3d(datdir3d,varname,t0,t1) # kg/kg
         ivar = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-        
+
         # Three-dimensional dependent variables ("var")
 
         # Vertical mass flux
