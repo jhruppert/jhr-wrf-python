@@ -38,7 +38,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 # #### Additional settings and directories
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -189,14 +189,7 @@ bin_axis = (bins[np.arange(nbins-1)]+bins[np.arange(nbins-1)+1])/2
 
 # Main read loops for 3D (dependent) variables
 
-# Arrays to save variables
 ntest=2
-# var_all = np.ma.zeros((ntest,nmem,nt,nz,nx1,nx2))
-# ivar_all = np.ma.zeros((ntest,nmem,nt,nz,nx1,nx2))
-# cvar_all = np.ma.zeros((ntest,nmem,nt,nz,nx1,nx2))
-# strat_all = np.ma.zeros((ntest,nmem,nt,nx1,nx2))
-
-# var_binned=np.ma.zeros((ntest,nmem,nt,nz,nbins-1))
 
 for ktest in range(ntest):
 
@@ -262,38 +255,37 @@ for ktest in range(ntest):
         # Vertical mass flux
         # if fillvar_select == 'vmf':
         varname='W'
-        var = var_read_3d(datdir3d,varname,t0,t1) # m/s
-        var *= density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+        w = var_read_3d(datdir3d,varname,t0,t1) # m/s
+        rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+        # Subtract area-average W
+        w_mn = np.mean(w,axis=(2,3))
+        w_mn_copy = np.repeat(np.repeat(w_mn[:,:,np.newaxis,np.newaxis], nx1, axis=2), nx2, axis=3)
+        w -= w_mn_copy
+        var = rho * w
 
         ### Process and save variable ##############################################
 
         # Localize to TC track
-        var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+        # var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
         # cvar = mask_tc_track(track_file, rmax, cvar, lon, lat, t0, t1)
         ivar = mask_tc_track(track_file, rmax, ivar, lon, lat, t0, t1)
         # strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
 
-        # **BEFORE MASKING FOR CLASSIFICATION**
-        # Subtract area-average VMF
-        var_mn = np.ma.mean(var,axis=(2,3))
-        var_mn_copy = np.repeat(np.repeat(var_mn[:,:,np.newaxis,np.newaxis], nx1, axis=2), nx2, axis=3)
-        var -= var_mn_copy
-
         for istrat in range(-1,nstrat-1):
 
-            # Mask out based on strat/conv
-            if istrat != -1:
-                var_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-                ivar_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), ivar, copy=True)
-            else:
-                var_tmp = np.copy(var)
-                ivar_tmp = np.copy(ivar)
+            var_tmp = np.copy(var)
+            ivar_tmp = np.copy(ivar)
 
-            ivar_mean = np.mean(ivar, axis=(2,3))
+            # Mask out based on strat/conv
+            if istrat > -1:
+                # var_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var_tmp, copy=True)
+                ivar_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), ivar_tmp, copy=True)
+
+            ivar_mean = np.mean(ivar_tmp, axis=(2,3))
 
             # Replace masked elements with zeros or NaNs
-            var_tmp  = np.ma.filled(var_tmp, fill_value=0)
-            ivar_tmp = np.ma.filled(ivar_tmp, fill_value=np.nan)
+            # var_tmp  = np.ma.filled(var_tmp, fill_value=0)
+            # ivar_tmp = np.ma.filled(ivar_tmp, fill_value=np.nan)
 
             var_binned=np.zeros((nt,nz,nbins-1))
 
