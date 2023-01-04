@@ -39,7 +39,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -199,7 +199,8 @@ ntest=2
 
 # var_binned=np.ma.zeros((ntest,nmem,nt,nz,nbins-1))
 
-for ktest in range(ntest):
+# for ktest in range(ntest):
+for ktest in range(1,2,1):
 
     test_str=tests[ktest]
 
@@ -215,7 +216,7 @@ for ktest in range(ntest):
         t0=t0_test
     elif test_str == 'ncrf48h':
         t0=t0_test
-    elif test_str == 'crfon':
+    elif 'crfon' in test_str:
         t0=0
 
     t0+=1 # add one time step since NCRF(t=0) = CTL
@@ -240,7 +241,6 @@ for ktest in range(ntest):
         if 'crf' in test_str:
             trackfil_ex='_ctlcopy'
         track_file = datdir+'../../track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
-
 
         # Required variables
 
