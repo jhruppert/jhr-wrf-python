@@ -37,9 +37,8 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 # #### Additional settings and directories
 
-
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -199,8 +198,7 @@ ntest=2
 
 # var_binned=np.ma.zeros((ntest,nmem,nt,nz,nbins-1))
 
-# for ktest in range(ntest):
-for ktest in range(1,2,1):
+for ktest in range(ntest):
 
     test_str=tests[ktest]
 
