@@ -40,7 +40,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -138,7 +138,7 @@ def write_isenvmf_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,i
     elif istrat == 3:
         strattag='anv'
 
-    file_out = datdir+'isent_vmf_'+strattag+'_'+hr_tag+'_'+ex_tag+'hr.nc'
+    file_out = datdir+'isent_vmf_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'.nc'
     ncfile = Dataset(file_out,mode='w', clobber=True)
 
     time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
@@ -310,4 +310,3 @@ for ktest in range(ntest):
             # Write out to netCDF file
             ex_tag='t0'+str(t0)
             write_isenvmf_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
-            sys.exit()
