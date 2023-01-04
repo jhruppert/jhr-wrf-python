@@ -124,7 +124,6 @@ for istorm in range(nstorm):
 
         print('Running imemb: ',memb_all[imemb])
 
-
         # First test
 
         itest = tests[0]
@@ -133,7 +132,7 @@ for istorm in range(nstorm):
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
         track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
 
-        # Read variable
+        # Read variables
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
         varfil_main = Dataset(datdir+'strat.nc')
         strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
