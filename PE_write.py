@@ -143,8 +143,10 @@ for ktest in range(ntest):
         w = var_read(datdir,varname) # m/s
         nt,nz,nx1,nx2 = w.shape
         # Mask for Up/Dn
-        wu = np.ma.masked_where((w < 0), w, copy=True)
-        wd = np.ma.masked_where((w > 0), w, copy=True)
+        wu = np.ma.masked_where((w <= 0), w, copy=True)
+        # wu = np.ma.filled(wu, fill_value=np.nan)
+        wd = np.ma.masked_where((w >= 0), w, copy=True)
+        # wd = np.ma.filled(wd, fill_value=np.nan)
 
         # Microphysics (MP) latent heating
         varname='H_DIABATIC'
@@ -158,6 +160,10 @@ for ktest in range(ntest):
         vmfu = np.sum(wu[:,0:iktop,:,:], axis=1) * cons # kg/m/s
         vmfd = np.sum(wd[:,0:iktop,:,:], axis=1) * cons # kg/m/s
         condh = np.sum(lh[:,0:iktop,:,:], axis=1) * cons # kg/*K/m2/s
+
+        # Fill masked points with nan
+        vmfu = np.ma.filled(vmfu, fill_value=np.nan)
+        vmfd = np.ma.filled(vmfd, fill_value=np.nan)
 
         # Convert from units of heat tendency to rain rate
         lv0=2.5e6 # J/kg
