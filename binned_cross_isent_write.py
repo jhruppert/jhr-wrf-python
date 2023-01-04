@@ -39,7 +39,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -51,11 +51,11 @@ figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
 # Tests to read and compare
 if storm == 'haiyan':
     tests = ['ctl','ncrf36h']
-    tests = [tests[1],'crfon60h']
+    # tests = [tests[1],'crfon60h']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
-    tests = [tests[1],'crfon72h']
+    # tests = [tests[1],'crfon72h']
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
