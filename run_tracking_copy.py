@@ -18,12 +18,14 @@ from object_track import object_track
 # Choices
 ptrack  = 600 # tracking pressure level
 istorm  = 'haiyan'
-istorm  = 'maria'
-# imemb   = 'memb_01'
 # itest   = 'ctl'
 itest   = 'ncrf36h'
-itest   = 'ncrf48h'
 # itest   = 'crfon60h'
+
+# itest   = 'ctl'
+istorm  = 'maria'
+itest   = 'ncrf48h'
+# itest   = 'crfon72h'
 
 var_tag = 'rvor'
 
@@ -54,11 +56,13 @@ elif itest == 'ncrf48h':
     test_basis='ctl'
     it_basis=48
 elif itest == 'crfon60h':
-    test_basis='ncrf36h'
-    it_basis=24
+    # Haiyan
+    test_basis='ctl'
+    it_basis=24+36
 elif itest == 'crfon72h':
-    test_basis='ncrf48h'
-    it_basis=24
+    # Maria
+    test_basis='ctl'
+    it_basis=24+48
 else:
     test_basis=''
 

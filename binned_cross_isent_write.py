@@ -32,6 +32,7 @@ nstrat=4 # istrat = -1, 0, 1, 2
 
 # Number of sample time steps
 nt=12
+nt=2
 hr_tag = str(np.char.zfill(str(nt), 2))
 
 
@@ -39,7 +40,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -51,15 +52,15 @@ figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
 # Tests to read and compare
 if storm == 'haiyan':
     tests = ['ctl','ncrf36h']
-    # tests = [tests[1],'crfon60h']
+    tests = [tests[1],'crfon60h']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
-    # tests = [tests[1],'crfon72h']
+    tests = [tests[1],'crfon72h']
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-# nmem = 2
+nmem = 2
 enstag = str(nmem)
 # Starting member to read
 memb0=1
@@ -67,7 +68,7 @@ memb0=1
 # Shift starting-read time step for CRFON comparison
 t0_test=0
 if 'crfon' in tests[1]:
-    t0_test=24
+    t0_test=24 # CRFON is restarted at t=24 in NCRF
     # memb0=5 # for CRFFON test
 
 # TC tracking
@@ -123,7 +124,7 @@ def var_read_2d(datdir,varname,t0,t1):
 
 # #### NetCDF variable write function
 
-def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat):
+def write_isenvmf_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat):
 
     # Strat/Conv index subset
     if istrat == -1:
@@ -137,7 +138,7 @@ def write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mea
     elif istrat == 3:
         strattag='anv'
 
-    file_out = datdir+'isent_vmf_'+strattag+'_'+hr_tag+'hr.nc'
+    file_out = datdir+'isent_vmf_'+strattag+'_'+hr_tag+'_'+ex_tag+'hr.nc'
     ncfile = Dataset(file_out,mode='w', clobber=True)
 
     time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
@@ -307,4 +308,6 @@ for ktest in range(ntest):
                         var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
 
             # Write out to netCDF file
-            write_isenvmf_nc(datdir,hr_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
+            ex_tag='t0'+str(t0)
+            write_isenvmf_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
+            sys.exit()
