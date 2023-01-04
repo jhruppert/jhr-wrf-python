@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Notebook to plot time series of conv/stratiform classification indices
+# ### Notebook to plot time series of precipitation efficiency quantified in different ways.
 # 
 # James Ruppert  
 # jruppert@ou.edu  
-# 11/27/22
+# 1/4/23
 
 # NOTE: Using copied tracking from CTL for NCRF tests
 
@@ -44,8 +44,7 @@ for istorm in range(nstorm):
 
     # How many members
     nmem = 10 # number of ensemble members
-    # nmem = 2
-    # nmem = 1
+    nmem = 1
     # Starting member to read
     memb0=1
 
