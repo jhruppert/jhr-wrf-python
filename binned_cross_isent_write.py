@@ -32,7 +32,6 @@ nstrat=4 # istrat = -1, 0, 1, 2
 
 # Number of sample time steps
 nt=12
-nt=2
 hr_tag = str(np.char.zfill(str(nt), 2))
 
 
@@ -40,7 +39,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -60,7 +59,7 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-nmem = 2
+# nmem = 2
 enstag = str(nmem)
 # Starting member to read
 memb0=1
