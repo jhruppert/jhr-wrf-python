@@ -153,7 +153,7 @@ for ktest in range(ntest):
         # Vertically integrate
         g = 9.81
         dp = (pres[0]-pres[1])*1e2
-        cons = g/dp
+        cons = dp/g
         iktop = np.where(pres == 100)[0][0]+1 # Integrate up to 100 hPa
         vmfu = np.sum(wu[:,0:iktop,:,:], axis=1) * cons # kg/m/s
         vmfd = np.sum(wd[:,0:iktop,:,:], axis=1) * cons # kg/m/s
