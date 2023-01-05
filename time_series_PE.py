@@ -14,8 +14,6 @@ import numpy as np
 import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
-# import matplotlib.colors as colors
-from matplotlib import ticker, cm
 import subprocess
 from mask_tc_track import mask_tc_track
 import sys
@@ -36,6 +34,11 @@ nmem = 10 # number of ensemble members
 # Starting member to read
 memb0=1
 
+nums=np.arange(memb0,nmem+memb0,1)
+nums=nums.astype(str)
+nustr = np.char.zfill(nums, 2)
+memb_all=np.char.add('memb_',nustr)
+
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
@@ -50,19 +53,11 @@ nrain=4 # np.size(istrat_all)
     # 2 = strat points
     # 3 = rainfall rate threshold
 
+# #### Directories
 
-def get_strattag(istrat):
-    # Strat/Conv index subset
-    if istrat == -1:
-        strattag='all'
-    elif istrat == 0:
-        strattag='nonrain'
-    elif istrat == 1:
-        strattag='conv'
-    elif istrat == 2:
-        strattag='strat'
-    elif istrat == 3:
-        strattag='anv'
+figdir = "/home/jamesrup/figures/tc/ens/"
+main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
+
 
 def get_tshift(itest):
     if itest == 'ctl':
@@ -87,26 +82,8 @@ for istorm in range(nstorm):
 #        tests = ['ctl','ncrf36h']
         tests = ['ctl','ncrf48h']
 
-    # #### Directories
-
-    figdir = "/home/jamesrup/figures/tc/ens/"
-    main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
-
-    nums=np.arange(memb0,nmem+memb0,1)
-    nums=nums.astype(str)
-    nustr = np.char.zfill(nums, 2)
-    memb_all=np.char.add('memb_',nustr)
-
-    ##### Get dimensions
-
+    # Get Lat/Lon
     datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
-    varfil_main = Dataset(datdir+'post/d02/T.nc')
-    nz = varfil_main.dimensions['level'].size
-    nx1 = varfil_main.dimensions['lat'].size
-    nx2 = varfil_main.dimensions['lon'].size#-xmin-1
-    pres = varfil_main.variables['pres'][:] # hPa
-    varfil_main.close()
-
     process = subprocess.Popen(['ls '+datdir+'/wrfout_d02_*'],shell=True,
         stdout=subprocess.PIPE,universal_newlines=True)
     output = process.stdout.readline()
@@ -118,46 +95,54 @@ for istorm in range(nstorm):
     lon1d=lon[0,:]
     lat1d=lat[:,0]
 
+    for itest in range(ntest):
 
-    mf_ratio = np.zeros((ntest,nmem,nrain,nt))
-    pw_mf = np.zeros((ntest,nmem,nrain,nt))
-    pe_mp = np.zeros((ntest,nmem,nrain,nt))
+        ##### Get dimensions
+        datdir = main+storm+'/'+memb_all[0]+'/'+tests[itest]+'/'
+        varfil_main = Dataset(datdir+'post/d02/T.nc')
+        nt = varfil_main.dimensions['time'].size
+        varfil_main.close()
 
-    for imemb in range(nmem):
+        if itest == 0:
+            mf_ratio_t0 = np.zeros((nmem,nrain,nt))
+            pe_mf_t0 = np.zeros((nmem,nrain,nt))
+            pe_mp_t0 = np.zeros((nmem,nrain,nt))
+        elif itest == 1:
+            mf_ratio_t1 = np.zeros((nmem,nrain,nt))
+            pe_mf_t1 = np.zeros((nmem,nrain,nt))
+            pe_mp_t1 = np.zeros((nmem,nrain,nt))
 
-        print('Running imemb: ',memb_all[imemb])
 
-        for itest in range(ntest):
+        # for imemb in range(nmem):
+        for imemb in range(1):
 
-            itest = tests[itest]
-            tshift1 = get_tshift(itest)
+            print('Running imemb: ',memb_all[imemb])
 
-            datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
+            datdir = main+storm+'/'+memb_all[imemb]+'/'+tests[itest]+'/'
             # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
             # Localize to TC track
             # NOTE: Using copied tracking from CTL for NCRF tests
             trackfil_ex=''
-            if 'ncrf' in itest:
+            if 'ncrf' in tests[itest]:
                 trackfil_ex='_ctlcopy'
             track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
 
             # Read variables
 
             # Strat
-            datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
+            datdir = main+storm+'/'+memb_all[imemb]+'/'+tests[itest]+'/post/d02/'
             varfil_main = Dataset(datdir+'strat.nc')
             strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
             varfil_main.close()
-            nt = strat.shape[0]
 
             # Rain
-            datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
+            datdir = main+storm+'/'+memb_all[imemb]+'/'+tests[itest]+'/post/d02/'
             varfil_main = Dataset(datdir+'rainrate.nc')
             rain = varfil_main.variables['rainrate'][:,:,:,:] # mm/d
             varfil_main.close()
 
             # PE variables
-            datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
+            datdir = main+storm+'/'+memb_all[imemb]+'/'+tests[itest]+'/post/d02/'
             varfil_main = Dataset(datdir+'precip_eff_vars.nc')
             vmfu = varfil_main.variables['vmfu'][:,:,:,:] # kg/m/s
             vmfd = varfil_main.variables['vmfd'][:,:,:,:] # kg/m/s
@@ -170,6 +155,8 @@ for istorm in range(nstorm):
             # Mask out around TC center
             rain = mask_tc_track(track_file, rmax, rain, lon, lat, t0_test1, t1_test1)
             strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
+            strat = np.ma.filled(strat, fill_value=np.nan)
+            rain = np.ma.filled(rain, fill_value=np.nan)
 
             # Average across raining points
             for it in range(nt):
@@ -194,39 +181,64 @@ for istorm in range(nstorm):
                     condh_avg = np.mean(condh[it,0,irain[0],irain[1]])
                     rain_avg = np.mean(rain[it,0,irain[0],irain[1]])
 
-                    mf_ratio[itest,imemb,krain,it] = vmfd_avg / vmfu_avg
-                    pw_mf[itest,imemb,krain,it] = 1 - mf_ratio
-                    pe_mp[itest,imemb,krain,it] = rain_avg / condh_avg
+                    mf_ratio = vmfd_avg / vmfu_avg
+                    pe_mp = rain_avg / condh_avg
+                    
+                    if itest == 0:
+                        mf_ratio_t0[imemb,krain,it] = mf_ratio
+                        pe_mf_t0[imemb,krain,it] = 1 - mf_ratio
+                        pe_mp_t0[imemb,krain,it] = pe_mp
+                    elif itest == 1:
+                        mf_ratio_t1[imemb,krain,it] = mf_ratio
+                        pe_mf_t1[imemb,krain,it] = 1 - mf_ratio
+                        pe_mp_t1[imemb,krain,it] = pe_mp
 
-        sys.exit()
 
+    # Average across members
+    mf_ratio_t0 = np.mean(mf_ratio_t0, axis=0)
+    pe_mf_t0 = np.mean(pe_mf_t0, axis=0)
+    pe_mp_t0 = np.mean(pe_mp_t0, axis=0)
+    mf_ratio_t1 = np.mean(mf_ratio_t1, axis=0)
+    pe_mf_t1 = np.mean(pe_mf_t1, axis=0)
+    pe_mp_t1 = np.mean(pe_mp_t1, axis=0)
 
     # ### Plotting routines ##############################################
 
     # Create figure with all tracks
 
-    for iplot in range(3):
+    # for iplot in range(3):
+    for krain in range(nrain):
 
-        if iplot == 0:
-            fig_extra='strat'
-            strattag='Stratiform'
-            pvar1 = frac_strat_all_t1
-            pvar2 = frac_strat_all_t2
-        elif iplot == 1:
+        # conv+strat points
+        if krain == 0:
+            fig_extra='CS'
+            raintag='Conv|Strat'
+        # conv points
+        elif krain == 1:
             fig_extra='conv'
-            strattag='Convective'
-            pvar1 = frac_conv_all_t1
-            pvar2 = frac_conv_all_t2
-        elif iplot == 2:
-            fig_extra='ratio'
-            strattag='Convective/Stratiform'
-            pvar1 = frac_conv_all_t1 / frac_strat_all_t1
-            pvar2 = frac_conv_all_t2 / frac_strat_all_t2
+            raintag='Convective'
+        # strat points
+        elif krain == 2:
+            fig_extra='strat'
+            raintag='Stratiform'
+        # rainfall rate threshold
+        elif krain == 3:
+            fig_extra='rainthresh'
+            raintag='Rainfall threshold'
 
-        pvar_pd1 = pd.DataFrame(pvar1)
-        pvar1_smooth = pvar_pd1.rolling(window=3, center=True, closed='both', axis=0).mean()
-        pvar_pd2 = pd.DataFrame(pvar2)
-        pvar2_smooth = pvar_pd2.rolling(window=3, center=True, closed='both', axis=0).mean()
+        mf1 = mf_ratio_t0[krain,:]
+        mf2 = mf_ratio_t1[krain,:]
+
+        pe_mf1 = pe_mf_t0[krain,:]
+        pe_mf2 = pe_mf_t1[krain,:]
+
+        pe_mp1 = pe_mp_t0[krain,:]
+        pe_mp2 = pe_mp_t1[krain,:]
+
+        # pvar_pd1 = pd.DataFrame(pvar1)
+        # pvar1_smooth = pvar_pd1.rolling(window=3, center=True, closed='both', axis=0).mean()
+        # pvar_pd2 = pd.DataFrame(pvar2)
+        # pvar2_smooth = pvar_pd2.rolling(window=3, center=True, closed='both', axis=0).mean()
 
         font = {'family' : 'sans-serif',
                 'weight' : 'normal',
@@ -234,19 +246,18 @@ for istorm in range(nstorm):
 
         matplotlib.rc('font', **font)
 
-
         # ### Combined plot: STRAT ##############################################
 
         # create figure
         fig = plt.figure(figsize=(9,5))
         ax = fig.add_subplot(111)
 
-        t_range=[30,80]
-
-        ax.set_title(storm.capitalize()+': '+strattag, fontsize=20)
+        ax.set_title(storm.capitalize()+': '+raintag, fontsize=20)
         ax.set_ylabel('Fraction')
         ax.set_xlabel('Time [hours]')
-        plt.xlim(t_range)
+
+        t_range=[30,80]
+        # plt.xlim(t_range)
 
         # ax.set_prop_cycle(color=[
         #     '#1f77b4', '#1f77b4', 
@@ -293,3 +304,5 @@ for istorm in range(nstorm):
         plt.savefig(figdir+'tser_'+storm+'_'+fig_extra+'_'+tests[1]+'.png',dpi=200, facecolor='white', \
                     bbox_inches='tight', pad_inches=0.2)
         plt.close()
+
+    sys.exit()
