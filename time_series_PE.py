@@ -235,10 +235,10 @@ for istorm in range(nstorm):
         pe_mp1 = pe_mp_t0[krain,:]
         pe_mp2 = pe_mp_t1[krain,:]
 
-        # pvar_pd1 = pd.DataFrame(pvar1)
-        # pvar1_smooth = pvar_pd1.rolling(window=3, center=True, closed='both', axis=0).mean()
-        # pvar_pd2 = pd.DataFrame(pvar2)
-        # pvar2_smooth = pvar_pd2.rolling(window=3, center=True, closed='both', axis=0).mean()
+        pvar_pd1 = pd.DataFrame(pvar1)
+        pvar1_smooth = pvar_pd1.rolling(window=3, center=True, closed='both', axis=0).mean()
+        pvar_pd2 = pd.DataFrame(pvar2)
+        pvar2_smooth = pvar_pd2.rolling(window=3, center=True, closed='both', axis=0).mean()
 
         font = {'family' : 'sans-serif',
                 'weight' : 'normal',
