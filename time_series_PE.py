@@ -26,9 +26,48 @@ import pandas as pd
 
 storms=['haiyan','maria']
 storms=['maria']
-# storms=['haiyan']
+storms=['haiyan']
 # storm = 'haiyan'
 # storm = 'maria'
+
+# How many members
+nmem = 10 # number of ensemble members
+# nmem = 1
+# Starting member to read
+memb0=1
+
+# TC tracking
+ptrack='600' # tracking pressure level
+var_track = 'rvor' # variable
+rmax = 6 # radius (deg) limit for masking around TC center
+
+# Strat/Conv index subset
+istrat_all=[0,1,2] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
+nstrat=np.size(istrat_all)
+
+
+def get_strattag(istrat):
+    # Strat/Conv index subset
+    if istrat == -1:
+        strattag='all'
+    elif istrat == 0:
+        strattag='nonrain'
+    elif istrat == 1:
+        strattag='conv'
+    elif istrat == 2:
+        strattag='strat'
+    elif istrat == 3:
+        strattag='anv'
+
+def get_tshift(itest):
+    if itest == 'ctl':
+        tshift=0
+    elif itest == 'ncrf36h':
+        tshift=36
+    elif itest == 'ncrf48h':
+        tshift=48
+    return tshift
+
 
 nstorm = np.size(storms)
 for istorm in range(nstorm):
@@ -42,25 +81,6 @@ for istorm in range(nstorm):
 #        tests = ['ctl','ncrf36h']
         tests = ['ctl','ncrf48h']
 
-    # How many members
-    nmem = 10 # number of ensemble members
-    nmem = 1
-    # Starting member to read
-    memb0=1
-
-    # Strat/Conv index subset
-#     istrat=1 # Convective
-# #    istrat=2 # Stratiform
-#     istrat=4 # Convective/Stratiform fraction
-#     istrat_all=[1,2,4]
-#     nstrat=np.size(istrat_all)
-
-
-    # TC tracking
-    ptrack='600' # tracking pressure level
-    var_track = 'rvor' # variable
-    rmax = 6 # radius (deg) limit for masking around TC center
-
     # #### Directories
 
     figdir = "/home/jamesrup/figures/tc/ens/"
@@ -70,33 +90,6 @@ for istorm in range(nstorm):
     nums=nums.astype(str)
     nustr = np.char.zfill(nums, 2)
     memb_all=np.char.add('memb_',nustr)
-
-
-    # Strat/Conv index subset
-    # if istrat == -1:
-    #     fig_extra=''
-    # else:
-    #     if istrat == 0:
-    #         strattag='Nonrain'
-    #     elif istrat == 1:
-    #         strattag='Conv'
-    #     elif istrat == 2:
-    #         strattag='Strat'
-    #     elif istrat == 3:
-    #         strattag='Anv'
-    #     elif istrat == 4:
-    #         strattag='frac'
-    #     fig_extra='_'+strattag.lower()
-
-    def get_tshift(itest):
-        if itest == 'ctl':
-            tshift=0
-        elif itest == 'ncrf36h':
-            tshift=36
-        elif itest == 'ncrf48h':
-            tshift=48
-        return tshift
-
 
     ##### Get dimensions
 
@@ -130,27 +123,58 @@ for istorm in range(nstorm):
         tshift1 = get_tshift(itest)
 
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
-        track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+        # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+        # Localize to TC track
+        # NOTE: Using copied tracking from CTL for NCRF tests
+        trackfil_ex=''
+        if 'ncrf' in itest:
+            trackfil_ex='_ctlcopy'
+        track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
 
         # Read variables
+
+        # Strat
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
         varfil_main = Dataset(datdir+'strat.nc')
         strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
         varfil_main.close()
         nt = strat.shape[0]
 
+        # Rain
+        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
+        varfil_main = Dataset(datdir+'rainrate.nc')
+        rain = varfil_main.variables['rainrate'][:,:,:,:] # mm/d
+        varfil_main.close()
+
+        # PE variables
+        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
+        varfil_main = Dataset(datdir+'precip_eff_vars.nc')
+        vmfu = varfil_main.variables['vmfu'][:,:,:,:] # kg/m/s
+        vmfd = varfil_main.variables['vmfd'][:,:,:,:] # kg/m/s
+        condh = varfil_main.variables['condh'][:,:,:,:] # mm/d
+        varfil_main.close()
+
         t0_test1=0
         t1_test1=nt
 
         # Mask out around TC center
+        rain = mask_tc_track(track_file, rmax, rain, lon, lat, t0_test1, t1_test1)
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
-        count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
 
-        # Count strat/conv cells
+        # Average across raining points
+        vmfu_avg = np.zeros(nstrat,nt)
+        vmfd_avg = np.zeros(nt)
+        rain_thresh = 1.
+        for it in range(nt):
+            irain = (rain[it,:,:,:] >= rain_thresh).nonzero()
+            vmfu_avg[it] = 
+
+        irain = (ivar_tmp[it,ik,:,:] >= bins[ibin]).nonzero()
+
+        indices = ((ivar_tmp[it,ik,:,:] >= bins[ibin]) & (ivar_tmp[it,ik,:,:] < bins[ibin+1])).nonzero()
+        var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
+
         strat_ind = np.ma.masked_where((strat != 2), strat)
-        conv_ind = np.ma.masked_where((strat != 1), strat)
-        count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
-        count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
 
         frac_strat = count_strat / count_total
         frac_conv = count_conv / count_total
@@ -218,6 +242,7 @@ for istorm in range(nstorm):
             frac_strat_all_t2 = np.append(frac_strat_all_t2, np.reshape(frac_strat, (nt,1)), axis=1)
             frac_conv_all_t2 = np.append(frac_conv_all_t2, np.reshape(frac_conv, (nt,1)), axis=1)
 
+        sys.exit()
 
 
     # ### Plotting routines ##############################################
