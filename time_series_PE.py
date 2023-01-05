@@ -42,8 +42,13 @@ var_track = 'rvor' # variable
 rmax = 6 # radius (deg) limit for masking around TC center
 
 # Strat/Conv index subset
-istrat_all=[0,1,2] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
-nstrat=np.size(istrat_all)
+# istrat_all=[0,1,2] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
+nrain=4 # np.size(istrat_all)
+    # irain = 
+    # 0 = conv+strat points
+    # 1 = conv points
+    # 2 = strat points
+    # 3 = rainfall rate threshold
 
 
 def get_strattag(istrat):
@@ -75,6 +80,7 @@ for istorm in range(nstorm):
     storm = storms[istorm]
 
     # Tests to read and compare
+    ntest=2
     if storm == 'haiyan':
         tests = ['ctl','ncrf36h']
     elif storm == 'maria':
@@ -113,134 +119,84 @@ for istorm in range(nstorm):
     lat1d=lat[:,0]
 
 
+    mf_ratio = np.zeros((ntest,nmem,nrain,nt))
+    pw_mf = np.zeros((ntest,nmem,nrain,nt))
+    pe_mp = np.zeros((ntest,nmem,nrain,nt))
+
     for imemb in range(nmem):
 
         print('Running imemb: ',memb_all[imemb])
 
-        # First test
+        for itest in range(ntest):
 
-        itest = tests[0]
-        tshift1 = get_tshift(itest)
+            itest = tests[itest]
+            tshift1 = get_tshift(itest)
 
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
-        # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
-        # Localize to TC track
-        # NOTE: Using copied tracking from CTL for NCRF tests
-        trackfil_ex=''
-        if 'ncrf' in itest:
-            trackfil_ex='_ctlcopy'
-        track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
+            datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
+            # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+            # Localize to TC track
+            # NOTE: Using copied tracking from CTL for NCRF tests
+            trackfil_ex=''
+            if 'ncrf' in itest:
+                trackfil_ex='_ctlcopy'
+            track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
 
-        # Read variables
+            # Read variables
 
-        # Strat
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
-        varfil_main = Dataset(datdir+'strat.nc')
-        strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
-        varfil_main.close()
-        nt = strat.shape[0]
+            # Strat
+            datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
+            varfil_main = Dataset(datdir+'strat.nc')
+            strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+            varfil_main.close()
+            nt = strat.shape[0]
 
-        # Rain
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
-        varfil_main = Dataset(datdir+'rainrate.nc')
-        rain = varfil_main.variables['rainrate'][:,:,:,:] # mm/d
-        varfil_main.close()
+            # Rain
+            datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
+            varfil_main = Dataset(datdir+'rainrate.nc')
+            rain = varfil_main.variables['rainrate'][:,:,:,:] # mm/d
+            varfil_main.close()
 
-        # PE variables
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
-        varfil_main = Dataset(datdir+'precip_eff_vars.nc')
-        vmfu = varfil_main.variables['vmfu'][:,:,:,:] # kg/m/s
-        vmfd = varfil_main.variables['vmfd'][:,:,:,:] # kg/m/s
-        condh = varfil_main.variables['condh'][:,:,:,:] # mm/d
-        varfil_main.close()
+            # PE variables
+            datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
+            varfil_main = Dataset(datdir+'precip_eff_vars.nc')
+            vmfu = varfil_main.variables['vmfu'][:,:,:,:] # kg/m/s
+            vmfd = varfil_main.variables['vmfd'][:,:,:,:] # kg/m/s
+            condh = varfil_main.variables['condh'][:,:,:,:] # mm/d
+            varfil_main.close()
 
-        t0_test1=0
-        t1_test1=nt
+            t0_test1=0
+            t1_test1=nt
 
-        # Mask out around TC center
-        rain = mask_tc_track(track_file, rmax, rain, lon, lat, t0_test1, t1_test1)
-        strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
+            # Mask out around TC center
+            rain = mask_tc_track(track_file, rmax, rain, lon, lat, t0_test1, t1_test1)
+            strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
 
-        # Average across raining points
-        vmfu_avg = np.zeros(nstrat,nt)
-        vmfd_avg = np.zeros(nt)
-        rain_thresh = 1.
-        for it in range(nt):
-            irain = (rain[it,:,:,:] >= rain_thresh).nonzero()
-            vmfu_avg[it] = 
+            # Average across raining points
+            for it in range(nt):
+                for krain in range(nrain):
 
-        irain = (ivar_tmp[it,ik,:,:] >= bins[ibin]).nonzero()
+                    # conv+strat points
+                    if krain == 0:
+                        irain = (np.logical_or((strat[it,0,:,:] == 1) , (strat[it,0,:,:] == 2))).nonzero()
+                    # conv points
+                    elif krain == 1:
+                        irain = (strat[it,0,:,:] == 1).nonzero()
+                    # strat points
+                    elif krain == 2:
+                        irain = (strat[it,0,:,:] == 2).nonzero()
+                    # rainfall rate threshold
+                    elif krain == 3:
+                        rain_thresh = 1. # mm/d
+                        irain = (rain[it,0,:,:] >= rain_thresh).nonzero()
 
-        indices = ((ivar_tmp[it,ik,:,:] >= bins[ibin]) & (ivar_tmp[it,ik,:,:] < bins[ibin+1])).nonzero()
-        var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
+                    vmfu_avg = np.mean(vmfu[it,0,irain[0],irain[1]])
+                    vmfd_avg = np.mean(vmfd[it,0,irain[0],irain[1]])
+                    condh_avg = np.mean(condh[it,0,irain[0],irain[1]])
+                    rain_avg = np.mean(rain[it,0,irain[0],irain[1]])
 
-        strat_ind = np.ma.masked_where((strat != 2), strat)
-
-        frac_strat = count_strat / count_total
-        frac_conv = count_conv / count_total
-
-        # Plot variable
-        # plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
-        #     label=nustr[imemb], color=color_t1, linestyle='solid')
-
-        if imemb == 0:
-            frac_strat_all_t1 = np.reshape(frac_strat, (nt,1))
-            frac_conv_all_t1 = np.reshape(frac_conv, (nt,1))
-        else:
-            frac_strat_all_t1 = np.append(frac_strat_all_t1, np.reshape(frac_strat, (nt,1)), axis=1)
-            frac_conv_all_t1 = np.append(frac_conv_all_t1, np.reshape(frac_conv, (nt,1)), axis=1)
-
-
-        # Second test
-
-        itest = tests[1]
-        tshift2 = get_tshift(itest)
-
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
-        # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
-        # Localize to TC track
-        # NOTE: Using copied tracking from CTL for NCRF tests
-        trackfil_ex=''
-        if 'ncrf' in itest:
-            trackfil_ex='_ctlcopy'
-        track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
-
-        # Read variable
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
-        varfil_main = Dataset(datdir+'strat.nc')
-        strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
-        varfil_main.close()
-        nt = strat.shape[0]
-
-        t0_test2=0
-        t1_test2=nt
-
-        # Mask out where TC track is undefined
-
-
-        # Mask out around TC center
-        strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test2, t1_test2)
-        count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
-
-        # Count strat/conv cells
-        strat_ind = np.ma.masked_where((strat != 2), strat)
-        conv_ind = np.ma.masked_where((strat != 1), strat)
-        count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
-        count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
-
-        frac_strat = count_strat / count_total
-        frac_conv = count_conv / count_total
-
-        # Plot variable
-        # plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
-        #     label=nustr[imemb], color=color_t1, linestyle='solid')
-
-        if imemb == 0:
-            frac_strat_all_t2 = np.reshape(frac_strat, (nt,1))
-            frac_conv_all_t2 = np.reshape(frac_conv, (nt,1))
-        else:
-            frac_strat_all_t2 = np.append(frac_strat_all_t2, np.reshape(frac_strat, (nt,1)), axis=1)
-            frac_conv_all_t2 = np.append(frac_conv_all_t2, np.reshape(frac_conv, (nt,1)), axis=1)
+                    mf_ratio[itest,imemb,krain,it] = vmfd_avg / vmfu_avg
+                    pw_mf[itest,imemb,krain,it] = 1 - mf_ratio
+                    pe_mp[itest,imemb,krain,it] = rain_avg / condh_avg
 
         sys.exit()
 
