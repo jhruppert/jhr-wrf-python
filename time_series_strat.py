@@ -264,7 +264,7 @@ for istorm in range(nstorm):
 
         t_range=[30,80]
 
-        ax.set_title(storm.capitalize()+': '+strattag, fontsize=20)
+        ax.set_title(storm.capitalize()+': '+strattag)#, fontsize=20)
         ax.set_ylabel('Fraction')
         ax.set_xlabel('Time [hours]')
         plt.xlim(t_range)

@@ -293,7 +293,7 @@ for ktest in range(ntest):
             for it in range(nt):
                 for ik in range(nz):
                     for ibin in range(nbins-1):
-                        indices = ((ivar_tmp[it,ik,:,:] >= bins[ibin]) & (ivar_tmp[it,ik,:,:] < bins[ibin+1])).nonzero()
+                        indices = (np.logical_and(ivar_tmp[it,ik,:,:] >= bins[ibin]), (ivar_tmp[it,ik,:,:] < bins[ibin+1])).nonzero()
                         var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
 
             # Write out to netCDF file
