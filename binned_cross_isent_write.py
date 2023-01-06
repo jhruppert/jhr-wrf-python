@@ -28,7 +28,7 @@ fillvar_select = 'vmf'
 
 # Mask out all points except [stratiform/nonrain/etc], or switch off
 nstrat=5 # istrat = -1, 0, 1, 2, 3
-         # 0-non-raining, 1-conv, 2-strat, 3-conv+strat, (-1 for off)
+         # -1-all, 0-non-raining, 1-conv, 2-strat, 3-conv+strat
 
 # Number of sample time steps
 nt=12
@@ -59,7 +59,7 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-# nmem = 1
+# nmem = 2
 enstag = str(nmem)
 
 # Shift starting-read time step for CRFON comparison
@@ -283,7 +283,7 @@ for ktest in range(ntest):
                 # var_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var_tmp, copy=True)
                 ivar_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), ivar_tmp, copy=True)
             elif istrat == 3:
-                ivar_tmp = np.ma.masked_where(((np.repeat(strat,nz,axis=1) != 1) | (np.repeat(strat,nz,axis=1) != 2)),
+                ivar_tmp = np.ma.masked_where(((np.repeat(strat,nz,axis=1) == 0) | (np.repeat(strat,nz,axis=1) == 3)),
                     ivar_tmp, copy=True)
 
             ivar_mean = np.mean(ivar_tmp, axis=(2,3))
