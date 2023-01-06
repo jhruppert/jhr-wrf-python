@@ -32,6 +32,7 @@ nstrat=4 # istrat = -1, 0, 1, 2
 
 # Number of sample time steps
 nt=12
+nt=6
 hr_tag = str(np.char.zfill(str(nt), 2))
 
 
@@ -58,7 +59,7 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-# nmem = 2
+nmem = 4
 enstag = str(nmem)
 # Starting member to read
 memb0=1
@@ -236,7 +237,6 @@ for ktest in range(ntest):
         # Required variables
 
         # Stratiform index
-        # if istrat != -1:
         varname = 'strat'
         strat = var_read_2d(datdir,varname,t0,t1) # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
 
@@ -256,22 +256,24 @@ for ktest in range(ntest):
         # if fillvar_select == 'vmf':
         varname='W'
         w = var_read_3d(datdir3d,varname,t0,t1) # m/s
-        rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
         # Subtract area-average W
-        w_mn = np.mean(w,axis=(2,3))
-        w_mn_copy = np.repeat(np.repeat(w_mn[:,:,np.newaxis,np.newaxis], nx1, axis=2), nx2, axis=3)
-        w -= w_mn_copy
+        # w_mn = np.mean(w,axis=(2,3))
+        # w_mn_copy = np.repeat(np.repeat(w_mn[:,:,np.newaxis,np.newaxis], nx1, axis=2), nx2, axis=3)
+        # w -= w_mn_copy
+        rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
         var = rho * w
 
         ### Process and save variable ##############################################
 
         # Localize to TC track
         # var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-        # cvar = mask_tc_track(track_file, rmax, cvar, lon, lat, t0, t1)
         ivar = mask_tc_track(track_file, rmax, ivar, lon, lat, t0, t1)
-        # strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
 
-        for istrat in range(-1,nstrat-1):
+        # Normalization factor: equal for all classes
+        # ncell = np.ma.MaskedArray.count(ivar[0,0,:,:])
+
+        # for istrat in range(-1,nstrat-1):
+        for istrat in range(2,3):
 
             var_tmp = np.copy(var)
             ivar_tmp = np.copy(ivar)
@@ -293,8 +295,13 @@ for ktest in range(ntest):
             for it in range(nt):
                 for ik in range(nz):
                     for ibin in range(nbins-1):
-                        indices = (np.logical_and(ivar_tmp[it,ik,:,:] >= bins[ibin]), (ivar_tmp[it,ik,:,:] < bins[ibin+1])).nonzero()
+                        indices = (np.logical_and((ivar_tmp[it,ik,:,:] >= bins[ibin]), (ivar_tmp[it,ik,:,:] < bins[ibin+1]))).nonzero()
+                    # Total across cells
                         var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
+                    # Total divided by n-all-cells
+                        # var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64) / ncell
+                    # Mean across ID'd cells
+                        # var_binned[it,ik,ibin] = np.mean(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
 
             # Write out to netCDF file
             ex_tag='t0'+str(t0)
