@@ -27,19 +27,19 @@ fillvar_select = 'vmf'
 # options: avor, lwcrf, tprm, dbz, rh, vmf
 
 # Mask out all points except [stratiform/nonrain/etc], or switch off
-nstrat=4 # istrat = -1, 0, 1, 2
-         # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
+nstrat=5 # istrat = -1, 0, 1, 2, 3
+         # 0-non-raining, 1-conv, 2-strat, 3-conv+strat, (-1 for off)
 
 # Number of sample time steps
 nt=12
-# nt=6
+# nt=2
 hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 # #### Additional settings and directories
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -59,10 +59,8 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-# nmem = 4
+# nmem = 1
 enstag = str(nmem)
-# Starting member to read
-memb0=1
 
 # Shift starting-read time step for CRFON comparison
 t0_test=0
@@ -76,6 +74,8 @@ var_track = 'rvor' # variable
 rmax = 8 # radius (deg) limit for masking around TC center
 
 
+# Starting member to read
+memb0=1
 nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
 memb_all=np.char.add('memb_',nustr)
@@ -135,7 +135,7 @@ def write_isenvmf_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,i
     elif istrat == 2:
         strattag='strat'
     elif istrat == 3:
-        strattag='anv'
+        strattag='stratconv'
 
     file_out = datdir+'isent_vmf_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'.nc'
     ncfile = Dataset(file_out,mode='w', clobber=True)
@@ -273,15 +273,18 @@ for ktest in range(ntest):
         # ncell = np.ma.MaskedArray.count(ivar[0,0,:,:])
 
         for istrat in range(-1,nstrat-1):
-        # for istrat in range(2,3):
+        # for istrat in range(nstrat-2,nstrat-1):
 
             var_tmp = np.copy(var)
             ivar_tmp = np.copy(ivar)
 
             # Mask out based on strat/conv
-            if istrat > -1:
+            if (istrat != -1) & (istrat != 3):
                 # var_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var_tmp, copy=True)
                 ivar_tmp = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), ivar_tmp, copy=True)
+            elif istrat == 3:
+                ivar_tmp = np.ma.masked_where(((np.repeat(strat,nz,axis=1) != 1) | (np.repeat(strat,nz,axis=1) != 2)),
+                    ivar_tmp, copy=True)
 
             ivar_mean = np.mean(ivar_tmp, axis=(2,3))
 
