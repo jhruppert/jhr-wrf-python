@@ -32,14 +32,14 @@ nstrat=4 # istrat = -1, 0, 1, 2
 
 # Number of sample time steps
 nt=12
-nt=6
+# nt=6
 hr_tag = str(np.char.zfill(str(nt), 2))
 
 
 # #### Additional settings and directories
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -59,7 +59,7 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-nmem = 4
+# nmem = 4
 enstag = str(nmem)
 # Starting member to read
 memb0=1
@@ -272,8 +272,8 @@ for ktest in range(ntest):
         # Normalization factor: equal for all classes
         # ncell = np.ma.MaskedArray.count(ivar[0,0,:,:])
 
-        # for istrat in range(-1,nstrat-1):
-        for istrat in range(2,3):
+        for istrat in range(-1,nstrat-1):
+        # for istrat in range(2,3):
 
             var_tmp = np.copy(var)
             ivar_tmp = np.copy(ivar)
