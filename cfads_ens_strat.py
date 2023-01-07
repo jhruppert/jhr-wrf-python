@@ -30,7 +30,6 @@ nmem = 10 # number of ensemble members (1-10 have NCRF)
 # nmem = 1
 enstag = str(nmem)
 # Starting member to read
-memb0=1
 
 # TC tracking
 ptrack='600' # tracking pressure level
@@ -47,7 +46,7 @@ rmax = 8 # radius (deg) limit for masking around TC center
 
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
-# ivar_all = ['qrad']
+ivar_all = ['vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -56,14 +55,14 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3]
-# ntall=[1]
+# ntall=[3]
 
 # #### Storm selection
 
 # storm = 'haiyan'
 # storm = 'maria'
 storm_all=['haiyan','maria']
-storm_all=['haiyan']
+# storm_all=['haiyan']
 # storm_all=['maria']
 nstorm=np.size(storm_all)
 
@@ -87,13 +86,12 @@ for ivar in range(nvar):
 
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
-  for istrat in range(-1,4):
-  # for istrat in range(2,3):
+  # for istrat in range(-1,4):
+  for istrat in range(3,4):
   # for istrat in range(-1,3):
 
     print("Strat = ",istrat)
     # continue
-
 
     for istorm in range(nstorm):
 
@@ -110,9 +108,6 @@ for ivar in range(nvar):
 
       # Shift starting-read time step for CRFON comparison
       t0_test=0
-      if tests[0] == 'crfon':
-        t0_test=24
-        memb0=5 # for CRFFON test
 
       # Strat/Conv index subset
       if istrat == -1:
@@ -125,9 +120,10 @@ for ivar in range(nvar):
         elif istrat == 2:
           strattag='Strat'
         elif istrat == 3:
-          strattag='Anv'
+          # strattag='Anv'
+          strattag='CS'
         fig_extra='_'+strattag.lower()
-        print(strattag)
+        print("Strat tag: ",strattag)
 
       # #### Time selection
       i_nt=np.shape(ntall)[0]
@@ -147,6 +143,7 @@ for ivar in range(nvar):
         # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
         main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
+        memb0=1
         nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
         nustr = np.char.zfill(nums, 2)
         memb_all=np.char.add('memb_',nustr)
@@ -242,7 +239,7 @@ for ivar in range(nvar):
             scale_mn=1e2
             units_mn='$10^{-2}$ '+units_var
             xrange_mn=(-20,20)
-            xrange_mn2=(-5,5)
+            xrange_mn2=(-1,1)
 
         elif iplot == 'rh':
 
@@ -461,9 +458,11 @@ for ivar in range(nvar):
               var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
 
             # Mask out based on strat/conv
-            if istrat != -1:
+            if istrat != -1 & istrat != 3:
               var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
               # vmf_copy = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), vmf_copy, copy=True)
+            elif istrat == 3:
+              var = np.ma.masked_where(((np.repeat(strat,nz,axis=1) == 0) & (np.repeat(strat,nz,axis=1) == 3)), var, copy=True)
 
             # Localize to TC track
             var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
@@ -474,7 +473,7 @@ for ivar in range(nvar):
             # var_copy[imemb,:,:,:,:] = vmf_copy
 
         #### Calculate basic mean
-          var_mn[ktest,:]=np.ma.mean(var_all,axis=(0,1,3,4))
+          var_mn[ktest,:]=np.ma.mean(var_all)
 
         # Calculate var' as time-increment: var[t] - var[t-1]
           if do_prm_inc == 1:

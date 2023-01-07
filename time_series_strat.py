@@ -26,7 +26,7 @@ import pandas as pd
 
 storms=['haiyan','maria']
 storms=['maria']
-# storms=['haiyan']
+storms=['haiyan']
 # storm = 'haiyan'
 # storm = 'maria'
 
@@ -64,7 +64,7 @@ for istorm in range(nstorm):
 
     # #### Directories
 
-    figdir = "/home/jamesrup/figures/tc/ens/"
+    figdir = "/home/jamesrup/figures/tc/ens/strat_class/"
     main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
     nums=np.arange(memb0,nmem+memb0,1)
@@ -124,7 +124,6 @@ for istorm in range(nstorm):
     for imemb in range(nmem):
 
         print('Running imemb: ',memb_all[imemb])
-
 
         # First test
 
@@ -251,7 +250,7 @@ for istorm in range(nstorm):
 
         font = {'family' : 'sans-serif',
                 'weight' : 'normal',
-                'size'   : 16}
+                'size'   : 14}
 
         matplotlib.rc('font', **font)
 
