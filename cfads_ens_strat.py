@@ -27,26 +27,15 @@ from mask_tc_track import mask_tc_track
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
 # nmem = 5
-# nmem = 1
+# nmem = 2
 enstag = str(nmem)
-# Starting member to read
-
-# TC tracking
-ptrack='600' # tracking pressure level
-var_track = 'rvor' # variable
-rmax = 8 # radius (deg) limit for masking around TC center
-
 
 # #### Variable selection
 
 # Fill variable
-# iplot = 'thv'#'the'#'vmf'#'rh'#'qrad'#
-# iplot = 'vmf'
-# iplot = 'lh'
-
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
-ivar_all = ['vmf']
+# ivar_all = ['lh','rh']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -54,7 +43,7 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12,24,36]
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
-ntall=[1,2,3]
+ntall=[1,2,3,6]
 # ntall=[3]
 
 # #### Storm selection
@@ -65,6 +54,11 @@ storm_all=['haiyan','maria']
 # storm_all=['haiyan']
 # storm_all=['maria']
 nstorm=np.size(storm_all)
+
+# TC tracking
+ptrack='600' # tracking pressure level
+var_track = 'rvor' # variable
+rmax = 8 # radius (deg) limit for masking around TC center
 
 
 for ivar in range(nvar):
@@ -87,11 +81,8 @@ for ivar in range(nvar):
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
   # for istrat in range(-1,4):
-  for istrat in range(3,4):
+  for istrat in range(1,3):
   # for istrat in range(-1,3):
-
-    print("Strat = ",istrat)
-    # continue
 
     for istorm in range(nstorm):
 
