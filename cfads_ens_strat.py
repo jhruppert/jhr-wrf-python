@@ -36,6 +36,7 @@ enstag = str(nmem)
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
+# ivar_all = ['vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -50,8 +51,8 @@ ntall=[1,2,3,6]
 
 # storm = 'haiyan'
 # storm = 'maria'
-storm_all=['haiyan','maria']
-# storm_all=['haiyan']
+# storm_all=['haiyan','maria']
+storm_all=['haiyan']
 # storm_all=['maria']
 nstorm=np.size(storm_all)
 
@@ -464,7 +465,7 @@ for ivar in range(nvar):
             # var_copy[imemb,:,:,:,:] = vmf_copy
 
         #### Calculate basic mean
-          var_mn[ktest,:]=np.ma.mean(var_all)
+          var_mn[ktest,:]=np.ma.mean(var_all, axis=(0,1,3,4))
 
         # Calculate var' as time-increment: var[t] - var[t-1]
           if do_prm_inc == 1:
