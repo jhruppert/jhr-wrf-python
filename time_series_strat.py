@@ -25,8 +25,8 @@ import pandas as pd
 # #### Variable selection
 
 storms=['haiyan','maria']
-storms=['maria']
-storms=['haiyan']
+# storms=['maria']
+# storms=['haiyan']
 # storm = 'haiyan'
 # storm = 'maria'
 
