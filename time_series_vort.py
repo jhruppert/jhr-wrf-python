@@ -118,8 +118,11 @@ for istorm in range(nstorm):
 
     mlvort_t0 = np.zeros((nmem,nt[0]))
     vmax_t0 = np.zeros((nmem,nt[0]))
+    satfrac_t0 = np.zeros((nmem,nt[0]))
+
     mlvort_t1 = np.zeros((nmem,nt[1]))
     vmax_t1 = np.zeros((nmem,nt[1]))
+    satfrac_t1 = np.zeros((nmem,nt[0]))
 
     for itest in range(ntest):
 
@@ -160,12 +163,20 @@ for istorm in range(nstorm):
             shape_sav=vort.shape
             vort = np.reshape(vort, (shape_sav[0],1,shape_sav[1],shape_sav[2]))
 
+            # Saturation fraction
+            varfil_main = Dataset(datdir+'satfrac.nc')
+            pw = varfil_main.variables['pw'][:,:,:,:] # mm
+            pws = varfil_main.variables['pw_sat'][:,:,:,:] # mm
+            varfil_main.close()
+            satfrac = pw/pws
+
             # Mask out around TC center
             t0_test=0
             t1_test=nt[itest]
             rmax = 2 # radius (deg) limit for masking around TC center
             vort = mask_tc_track(track_file, rmax, vort, lon, lat, t0_test, t1_test)
             wsp = mask_tc_track(track_file, rmax, wsp, lon, lat, t0_test, t1_test)
+            satfraci = mask_tc_track(track_file, rmax, satfrac, lon, lat, t0_test, t1_test)
 
             # Average / take max
             vortmax = np.mean(vort, axis=(2,3))
@@ -176,12 +187,18 @@ for istorm in range(nstorm):
             vmax = np.reshape(vmax,nt[itest])
             vmax = np.ma.filled(vmax, fill_value=np.nan)
 
+            satfrac = np.mean(satfraci, axis=(2,3))
+            satfrac = np.reshape(satfrac,nt[itest])
+            satfrac = np.ma.filled(satfrac, fill_value=np.nan)
+
             if itest == 0:
                 mlvort_t0[imemb,:] = vortmax
                 vmax_t0[imemb,:] = np.reshape(vmax,nt[itest])
+                satfrac_t0[imemb,:] = np.reshape(satfrac,nt[itest])
             elif itest == 1:
                 mlvort_t1[imemb,:] = np.reshape(vortmax,nt[itest])
                 vmax_t1[imemb,:] = np.reshape(vmax,nt[itest])
+                satfrac_t1[imemb,:] = np.reshape(satfrac,nt[itest])
 
 
     # ### Plotting routines ##############################################
@@ -192,7 +209,7 @@ for istorm in range(nstorm):
 
     matplotlib.rc('font', **font)
 
-    nvar=2
+    nvar=3
     for ivar in range(nvar):
 
         if ivar == 0:
@@ -207,6 +224,12 @@ for istorm in range(nstorm):
             title_tag = 'Max 10m Wind'
             figtag = 'vmax'
             ylabel = 'm/s'
+        elif ivar == 2:
+            var0 = satfrac_t0
+            var1 = satfrac_t1
+            title_tag = 'Saturation fraction'
+            figtag = 'satfrac'
+            ylabel = '%'
 
         var0 = pd.DataFrame(var0)
         # var0_sm = var0.rolling(window=3, center=True, closed='both', axis=1).mean()
