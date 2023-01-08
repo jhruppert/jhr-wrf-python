@@ -45,7 +45,7 @@ for istorm in range(nstorm):
 
     # How many members
     nmem = 10 # number of ensemble members
-    nmem = 3
+    nmem = 2
     # Starting member to read
 
     # Strat/Conv index subset
@@ -209,9 +209,10 @@ for istorm in range(nstorm):
             ylabel = 'm/s'
 
         var0 = pd.DataFrame(var0)
-        var0.rolling(window=3, center=True, closed='both', axis=0).mean()
+        # var0_sm = var0.rolling(window=3, center=True, closed='both', axis=1).mean()
+        var0_smooth = var0.rolling(window=3, center=True, closed='both', axis=1).mean()
         var1 = pd.DataFrame(var1)
-        var1.rolling(window=3, center=True, closed='both', axis=0).mean()
+        var1.rolling(window=3, center=True, closed='both', axis=1).mean()
 
         # create figure
         fig = plt.figure(figsize=(9,5))
