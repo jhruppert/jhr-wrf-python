@@ -170,6 +170,32 @@ def theta_equiv(T, rv, rtot, pres):
     return th_e
 
 
+## Mixing ratio from vapor pressure ######################################################
+
+# ; PURPOSE:
+# ;       Convert vapor pressure (e; Pa) to mixing ratio (kg/kg).
+# ; INPUTS:
+# ;       e: Float or FltArr(n) vapor pressure (Pa)
+# ;       p: Float or FltArr(n) ambient pressure (Pa)
+# ; OUTPUTS:
+# ;       rv: mixing ratio (kg/kg)
+# ;                                      Mw*e              e
+# ;  W (mixing ratio) = m_h2o/m_dry = -------- = Mw/Md * ---
+# ;                                    Md*(p-e)           p-e
+#   James Ruppert
+#   8 Jan 2023
+#   jruppert@ou.edu
+
+def mixr_from_e(e,p):
+
+    Mw=18.0160 # molecular weight of water
+    Md=28.9660 # molecular weight of dry air
+
+    rv = Mw/Md * e / (p - e) # kg/kg
+
+    return(rv)
+
+
 ## Relative humidity (including for ice) ######################################################
 
 # ; PURPOSE:
