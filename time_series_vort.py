@@ -25,7 +25,7 @@ import pandas as pd
 # #### Variable selection
 
 storms=['haiyan','maria']
-storms=['maria']
+# storms=['maria']
 # storms=['haiyan']
 # storm = 'haiyan'
 # storm = 'maria'
@@ -45,7 +45,7 @@ for istorm in range(nstorm):
 
     # How many members
     nmem = 10 # number of ensemble members
-    nmem = 2
+    # nmem = 2
     # Starting member to read
 
     # Strat/Conv index subset
@@ -122,9 +122,10 @@ for istorm in range(nstorm):
 
     mlvort_t1 = np.zeros((nmem,nt[1]))
     vmax_t1 = np.zeros((nmem,nt[1]))
-    satfrac_t1 = np.zeros((nmem,nt[0]))
+    satfrac_t1 = np.zeros((nmem,nt[1]))
 
     for itest in range(ntest):
+    # for itest in range(1):
 
         print('Running test: ',tests[itest])
 
@@ -135,6 +136,7 @@ for istorm in range(nstorm):
             # First test
 
             datdir = main+storm+'/'+memb_all[imemb]+'/'+tests[itest]+'/'
+
             # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
             # Localize to TC track
             # NOTE: Using copied tracking from CTL for NCRF tests
@@ -168,7 +170,7 @@ for istorm in range(nstorm):
             pw = varfil_main.variables['pw'][:,:,:,:] # mm
             pws = varfil_main.variables['pw_sat'][:,:,:,:] # mm
             varfil_main.close()
-            satfrac = pw/pws
+            satfraci = pw/pws
 
             # Mask out around TC center
             t0_test=0
@@ -176,16 +178,17 @@ for istorm in range(nstorm):
             rmax = 2 # radius (deg) limit for masking around TC center
             vort = mask_tc_track(track_file, rmax, vort, lon, lat, t0_test, t1_test)
             wsp = mask_tc_track(track_file, rmax, wsp, lon, lat, t0_test, t1_test)
-            satfraci = mask_tc_track(track_file, rmax, satfrac, lon, lat, t0_test, t1_test)
+            satfraci = mask_tc_track(track_file, rmax, satfraci, lon, lat, t0_test, t1_test)
 
             # Average / take max
+
             vortmax = np.mean(vort, axis=(2,3))
             vortmax = np.reshape(vortmax,nt[itest])
             vortmax = np.ma.filled(vortmax, fill_value=np.nan)
 
-            vmax = np.ma.MaskedArray.max(wsp, axis=(2,3))
-            vmax = np.reshape(vmax,nt[itest])
-            vmax = np.ma.filled(vmax, fill_value=np.nan)
+            wsp = np.ma.filled(wsp, fill_value=np.nan)
+            wspmax = np.nanmax(wsp, axis=(2,3))
+            wspmax = np.reshape(wspmax,nt[itest])
 
             satfrac = np.mean(satfraci, axis=(2,3))
             satfrac = np.reshape(satfrac,nt[itest])
@@ -193,12 +196,12 @@ for istorm in range(nstorm):
 
             if itest == 0:
                 mlvort_t0[imemb,:] = vortmax
-                vmax_t0[imemb,:] = np.reshape(vmax,nt[itest])
-                satfrac_t0[imemb,:] = np.reshape(satfrac,nt[itest])
+                vmax_t0[imemb,:] = wspmax
+                satfrac_t0[imemb,:] = satfrac
             elif itest == 1:
-                mlvort_t1[imemb,:] = np.reshape(vortmax,nt[itest])
-                vmax_t1[imemb,:] = np.reshape(vmax,nt[itest])
-                satfrac_t1[imemb,:] = np.reshape(satfrac,nt[itest])
+                mlvort_t1[imemb,:] = vortmax
+                vmax_t1[imemb,:] = wspmax
+                satfrac_t1[imemb,:] = satfrac
 
 
     # ### Plotting routines ##############################################
@@ -213,29 +216,31 @@ for istorm in range(nstorm):
     for ivar in range(nvar):
 
         if ivar == 0:
-            var0 = mlvort_t0
-            var1 = mlvort_t1
+            var0 = np.copy(mlvort_t0)
+            var1 = np.copy(mlvort_t1)
             title_tag = 'Midlevel Vorticity'
             figtag = 'mlvort'
             ylabel = '10$^{-5}$ /s'
         elif ivar == 1:
-            var0 = vmax_t0
-            var1 = vmax_t1
+            var0 = np.copy(vmax_t0)
+            var1 = np.copy(vmax_t1)
             title_tag = 'Max 10m Wind'
             figtag = 'vmax'
             ylabel = 'm/s'
         elif ivar == 2:
-            var0 = satfrac_t0
-            var1 = satfrac_t1
+            var0 = np.copy(satfrac_t0)
+            var1 = np.copy(satfrac_t1)
             title_tag = 'Saturation fraction'
             figtag = 'satfrac'
             ylabel = '%'
 
         var0 = pd.DataFrame(var0)
-        # var0_sm = var0.rolling(window=3, center=True, closed='both', axis=1).mean()
-        var0_smooth = var0.rolling(window=3, center=True, closed='both', axis=1).mean()
+        var0 = var0.rolling(window=3, center=True, closed='both', axis=1).mean()
+        var0 = np.copy(var0)
+
         var1 = pd.DataFrame(var1)
-        var1.rolling(window=3, center=True, closed='both', axis=1).mean()
+        var1 = var1.rolling(window=3, center=True, closed='both', axis=1).mean()
+        var1 = np.copy(var1)
 
         # create figure
         fig = plt.figure(figsize=(9,5))
@@ -282,5 +287,5 @@ for istorm in range(nstorm):
 
         plt.savefig(figdir+'tser_'+storm+'_'+figtag+'.png',dpi=200, facecolor='white', \
                     bbox_inches='tight', pad_inches=0.2)
-        plt.show()
+        # plt.show()
         plt.close()
