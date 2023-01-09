@@ -29,7 +29,7 @@ import pandas as pd
 # #### Variable selection
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # How many members
 nmem = 10 # number of ensemble members
@@ -38,7 +38,8 @@ nmem = 10 # number of ensemble members
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
-rmax = 6 # radius (deg) limit for masking around TC center
+# rmax = 6 # radius (deg) limit for masking around TC center
+rmax = 3 # radius (deg) limit for masking around TC center
 
 # Strat/Conv index subset
 # istrat_all=[0,1,2] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
@@ -304,27 +305,28 @@ for krain in range(nrain):
     # for ivar in range(0,1):
 
         if ivar == 0:
-            var0 = mf0
-            var1 = mf1
+            var0 = np.copy(mf0)
+            var1 = np.copy(mf1)
             title_tag = 'MF Ratio (dn/up)'
             figtag = 'mffrac'
         elif ivar == 1:
-            var0 = pe_mf0
-            var1 = pe_mf1
+            var0 = np.copy(pe_mf0)
+            var1 = np.copy(pe_mf1)
             title_tag = 'PE (MF)'
             figtag = 'pemf'
         elif ivar == 2:
-            var0 = pe_mp0
-            var1 = pe_mp1
+            var0 = np.copy(pe_mp0)
+            var1 = np.copy(pe_mp1)
             title_tag = 'PE (MP)'
             figtag = 'pemp'
 
-        # var0 = pd.DataFrame(var0)
-        # # var0 = 
-        # var0.rolling(window=3, center=True, closed='both', axis=0).mean()
-        # var1 = pd.DataFrame(var1)
-        # # var1 = 
-        # var1.rolling(window=3, center=True, closed='both', axis=0).mean()
+        var0 = pd.DataFrame(var0)
+        var0 = var0.rolling(window=3, center=True, closed='both', axis=1).mean()
+        var0 = np.copy(var0)
+
+        var1 = pd.DataFrame(var1)
+        var1 = var1.rolling(window=3, center=True, closed='both', axis=1).mean()
+        var1 = np.copy(var1)
 
         # create figure
         fig = plt.figure(figsize=(9,5))
@@ -348,6 +350,8 @@ for krain in range(nrain):
         tshift = get_tshift(tests[0])
         xdim = range(0+tshift, nt[0]+tshift)
 
+        # for imemb in range(nmem):
+        #     plt.plot(xdim, var0[imemb,:], linewidth=2, label=tests[0].upper(), color=color_t0, linestyle='solid')
         plt.plot(xdim, mean_t0, linewidth=2, label=tests[0].upper(), color=color_t0, linestyle='solid')
         plt.fill_between(xdim, mean_t0 + std_t0, mean_t0 - std_t0, alpha=0.2, color=color_t0)
 
@@ -359,13 +363,17 @@ for krain in range(nrain):
         tshift = get_tshift(tests[1])
         xdim = range(0+tshift, nt[1]+tshift)
 
+        # for imemb in range(nmem):
+        #     plt.plot(xdim, var1[imemb,:], linewidth=2, label=tests[0].upper(), color=color_t1, linestyle='solid')
         plt.plot(xdim, mean_t1, linewidth=2, label=tests[0].upper(), color=color_t1, linestyle='solid')
         plt.fill_between(xdim, mean_t1 + std_t1, mean_t1 - std_t1, alpha=0.2, color=color_t1)
+
         plt.grid()
 
         # plt.legend(loc="upper right")
 
-        plt.savefig(figdir+'tser_'+storm+'_'+figtag+'_'+fig_extra+'.png',dpi=200, facecolor='white',                     bbox_inches='tight', pad_inches=0.2)
+        rmax_str = str(rmax)
+        plt.savefig(figdir+'tser_'+storm+'_'+figtag+'_'+fig_extra+'_rmax'+rmax_str+'deg.png',dpi=200, facecolor='white', \
+                    bbox_inches='tight', pad_inches=0.2)
         # plt.show()
         plt.close()
-
