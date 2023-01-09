@@ -29,7 +29,7 @@ import pandas as pd
 # #### Variable selection
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # How many members
 nmem = 10 # number of ensemble members
@@ -39,7 +39,7 @@ nmem = 10 # number of ensemble members
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
 # rmax = 6 # radius (deg) limit for masking around TC center
-rmax = 3 # radius (deg) limit for masking around TC center
+rmax = 1 # radius (deg) limit for masking around TC center
 
 # Strat/Conv index subset
 # istrat_all=[0,1,2] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
@@ -185,13 +185,14 @@ for itest in range(ntest):
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
         strat = np.ma.filled(strat, fill_value=np.nan)
 
+        # IF CALCULATING RATIOS BEFORE AVERAGING
         # PE terms
-        mf_ratio = -1 * vmfd / vmfu
-        pe_mf = 1 - mf_ratio
-        pe_mp = rain / condh
-        mf_ratio = np.ma.masked_invalid(mf_ratio)
-        pe_mf = np.ma.masked_invalid(pe_mf)
-        pe_mp = np.ma.masked_invalid(pe_mp)
+        # mf_ratio = -1 * vmfd / vmfu
+        # pe_mf = 1 - mf_ratio
+        # pe_mp = rain / condh
+        # mf_ratio = np.ma.masked_invalid(mf_ratio)
+        # pe_mf = np.ma.masked_invalid(pe_mf)
+        # pe_mp = np.ma.masked_invalid(pe_mp)
 
         # Average across raining points
         for it in range(nt[itest]):
@@ -214,47 +215,49 @@ for itest in range(ntest):
                 # Simple mean across (unmasked) domain
                 # elif krain == 4:
 
-                # if krain < 4:
-                #     condh_avg = np.nanmean(condh[it,0,ind_rain[0],ind_rain[1]])
-                #     rain_avg = np.nanmean(rain[it,0,ind_rain[0],ind_rain[1]])
-                #     vmfu_avg = np.nanmean(vmfu[it,0,ind_rain[0],ind_rain[1]])
-                #     vmfd_avg = np.nanmean(vmfd[it,0,ind_rain[0],ind_rain[1]])
-                # else:
-                #     condh_avg = np.nanmean(condh[it,0,:,:])
-                #     rain_avg = np.nanmean(rain[it,0,:,:])
-                #     vmfu_avg = np.nanmean(vmfu[it,0,:,:])
-                #     vmfd_avg = np.nanmean(vmfd[it,0,:,:])
-
-                # mf_ratio = -1 * vmfd_avg / vmfu_avg
-                # pe_mf = 1 - mf_ratio
-                # pe_mp = rain_avg / condh_avg
-
-                # if itest == 0:
-                #     mf_ratio_t0[imemb,krain,it] = mf_ratio
-                #     pe_mf_t0[imemb,krain,it] = pe_mf
-                #     pe_mp_t0[imemb,krain,it] = pe_mp
-                # elif itest == 1:
-                #     mf_ratio_t1[imemb,krain,it] = mf_ratio
-                #     pe_mf_t1[imemb,krain,it] = pe_mf
-                #     pe_mp_t1[imemb,krain,it] = pe_mp
-
                 if krain < 4:
-                    mf_ratio_avg = np.mean(mf_ratio[it,0,ind_rain[0],ind_rain[1]])
-                    pe_mf_avg = np.mean(pe_mf[it,0,ind_rain[0],ind_rain[1]])
-                    pe_mp_avg = np.mean(pe_mp[it,0,ind_rain[0],ind_rain[1]])
+                    condh_avg = np.nanmean(condh[it,0,ind_rain[0],ind_rain[1]])
+                    rain_avg = np.nanmean(rain[it,0,ind_rain[0],ind_rain[1]])
+                    vmfu_avg = np.nanmean(vmfu[it,0,ind_rain[0],ind_rain[1]])
+                    vmfd_avg = np.nanmean(vmfd[it,0,ind_rain[0],ind_rain[1]])
                 else:
-                    mf_ratio_avg = np.mean(mf_ratio[it,0,:,:])
-                    pe_mf_avg = np.mean(pe_mf[it,0,:,:])
-                    pe_mp_avg = np.mean(pe_mp[it,0,:,:])
+                    condh_avg = np.nanmean(condh[it,0,:,:])
+                    rain_avg = np.nanmean(rain[it,0,:,:])
+                    vmfu_avg = np.nanmean(vmfu[it,0,:,:])
+                    vmfd_avg = np.nanmean(vmfd[it,0,:,:])
+
+                mf_ratio = -1 * vmfd_avg / vmfu_avg
+                pe_mf = 1 - mf_ratio
+                pe_mp = rain_avg / condh_avg
 
                 if itest == 0:
-                    mf_ratio_t0[imemb,krain,it] = mf_ratio_avg
-                    pe_mf_t0[imemb,krain,it] = pe_mf_avg
-                    pe_mp_t0[imemb,krain,it] = pe_mp_avg
+                    mf_ratio_t0[imemb,krain,it] = mf_ratio
+                    pe_mf_t0[imemb,krain,it] = pe_mf
+                    pe_mp_t0[imemb,krain,it] = pe_mp
                 elif itest == 1:
-                    mf_ratio_t1[imemb,krain,it] = mf_ratio_avg
-                    pe_mf_t1[imemb,krain,it] = pe_mf_avg
-                    pe_mp_t1[imemb,krain,it] = pe_mp_avg
+                    mf_ratio_t1[imemb,krain,it] = mf_ratio
+                    pe_mf_t1[imemb,krain,it] = pe_mf
+                    pe_mp_t1[imemb,krain,it] = pe_mp
+
+            # IF CALCULATING RATIOS BEFORE AVERAGING
+
+                # if krain < 4:
+                #     mf_ratio_avg = np.mean(mf_ratio[it,0,ind_rain[0],ind_rain[1]])
+                #     pe_mf_avg = np.mean(pe_mf[it,0,ind_rain[0],ind_rain[1]])
+                #     pe_mp_avg = np.mean(pe_mp[it,0,ind_rain[0],ind_rain[1]])
+                # else:
+                #     mf_ratio_avg = np.mean(mf_ratio[it,0,:,:])
+                #     pe_mf_avg = np.mean(pe_mf[it,0,:,:])
+                #     pe_mp_avg = np.mean(pe_mp[it,0,:,:])
+
+                # if itest == 0:
+                #     mf_ratio_t0[imemb,krain,it] = mf_ratio_avg
+                #     pe_mf_t0[imemb,krain,it] = pe_mf_avg
+                #     pe_mp_t0[imemb,krain,it] = pe_mp_avg
+                # elif itest == 1:
+                #     mf_ratio_t1[imemb,krain,it] = mf_ratio_avg
+                #     pe_mf_t1[imemb,krain,it] = pe_mf_avg
+                #     pe_mp_t1[imemb,krain,it] = pe_mp_avg
 
 
 # ---
@@ -373,7 +376,7 @@ for krain in range(nrain):
         # plt.legend(loc="upper right")
 
         rmax_str = str(rmax)
-        plt.savefig(figdir+'tser_'+storm+'_'+figtag+'_'+fig_extra+'_rmax'+rmax_str+'deg.png',dpi=200, facecolor='white', \
+        plt.savefig(figdir+rmax_str+'deg/'+'tser_'+storm+'_'+figtag+'_'+fig_extra+'_rmax'+rmax_str+'deg.png',dpi=200, facecolor='white', \
                     bbox_inches='tight', pad_inches=0.2)
         # plt.show()
         plt.close()
