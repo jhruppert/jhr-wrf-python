@@ -171,7 +171,6 @@ for ktest in range(ntest):
         rmax_avor = 1
         avor = mask_tc_track(track_file, rmax_avor, avor, lon, lat, t0, t1)
         avor_mn = np.mean(avor, axis=(2,3))
-        print(avor_mn.shape)
 
         # THV'
 
@@ -179,14 +178,12 @@ for ktest in range(ntest):
         rmax_alpha = 3
         thv_alpha = mask_tc_track(track_file, rmax_alpha, thv, lon, lat, t0, t1)
         thv_alpha_mn = np.mean(thv_alpha, axis=(2,3))
-        print(thv_alpha_mn.shape)
 
         # MESO-BETA (1-deg radius)
         rmax_beta = 1
         thv_beta = mask_tc_track(track_file, rmax_beta, thv, lon, lat, t0, t1)
         thv_beta_mn = np.mean(thv_beta, axis=(2,3))
         thv_prime = thv_beta_mn - thv_alpha_mn
-        print(thv_prime.shape)
 
         # Replace mask with NaN
         avor_mn = np.ma.filled(avor_mn, fill_value=np.nan)
@@ -204,4 +201,3 @@ for ktest in range(ntest):
         var_units='10^-5 /s'
         var_longname='absolute vorticity'
         write_vars(datdir,nt,nz,pres,avor_mn,vartag,var_units,var_longname)
-        sys.exit()
