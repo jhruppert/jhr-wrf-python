@@ -131,7 +131,7 @@ for ktest in range(ntest):
     
         print('Running imemb: ',memb_all[imemb])
     
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
+        datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'
         print(datdir)
 
         # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
@@ -141,6 +141,8 @@ for ktest in range(ntest):
         if 'ncrf' in tests[ktest]:
             trackfil_ex='_ctlcopy'
         track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
+
+        datdir = datdir+datdir2
 
         # Required variables
 
@@ -169,7 +171,7 @@ for ktest in range(ntest):
         rmax_avor = 1
         avor = mask_tc_track(track_file, rmax_avor, avor, lon, lat, t0, t1)
         avor_mn = np.mean(avor, axis=(2,3))
-        print(thv_alpha_mn.shape)
+        print(avor_mn.shape)
 
         # THV'
 
@@ -187,7 +189,9 @@ for ktest in range(ntest):
         print(thv_prime.shape)
 
         # Replace mask with NaN
+        avor_mn = np.ma.filled(avor_mn, fill_value=np.nan)
         thv_prime = np.ma.filled(thv_prime, fill_value=np.nan)
+
 
         ### Write out variables ##############################################
 
@@ -199,4 +203,5 @@ for ktest in range(ntest):
         vartag='avor'
         var_units='10^-5 /s'
         var_longname='absolute vorticity'
-        write_vars(datdir,nt,nz,pres,avor,vartag,var_units,var_longname)
+        write_vars(datdir,nt,nz,pres,avor_mn,vartag,var_units,var_longname)
+        sys.exit()
