@@ -258,7 +258,7 @@ for istorm in range(nstorm):
         # ### Combined plot: STRAT ##############################################
 
         # create figure
-        fig = plt.figure(figsize=(9,5))
+        fig = plt.figure(figsize=(9,4))
         ax = fig.add_subplot(111)
 
         t_range=[30,80]
@@ -305,6 +305,8 @@ for istorm in range(nstorm):
             linewidth=2, label=tests[1].upper(), color=color_t2, linestyle='--')
         plt.fill_between(range(t0_test2 + tshift2, t1_test2 + tshift2), frac_mean_t2 + frac_std_t2,
             frac_mean_t2 - frac_std_t2, alpha=0.2, color=color_t2)
+
+        plt.grid()
 
         # plt.legend(loc="upper right")
 

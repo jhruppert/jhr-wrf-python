@@ -338,7 +338,7 @@ for krain in range(nrain):
         var1 = np.copy(var1)
 
         # create figure
-        fig = plt.figure(figsize=(9,5))
+        fig = plt.figure(figsize=(9,4))
         ax = fig.add_subplot(111)
 
         ax.set_title(title_tag+' ('+storm.capitalize()+'; '+raintag+')')#, fontsize=20)
