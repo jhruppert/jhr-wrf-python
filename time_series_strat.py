@@ -60,7 +60,8 @@ for istorm in range(nstorm):
     # TC tracking
     ptrack='600' # tracking pressure level
     var_track = 'rvor' # variable
-    rmax = 6 # radius (deg) limit for masking around TC center
+    # rmax = 6 # radius (deg) limit for masking around TC center
+    rmax = 3 # radius (deg) limit for masking around TC center
 
     # #### Directories
 
@@ -138,10 +139,10 @@ for istorm in range(nstorm):
         varfil_main = Dataset(datdir+'strat.nc')
         strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
         varfil_main.close()
-        nt = strat.shape[0]
+        nt1 = strat.shape[0]
 
         t0_test1=0
-        t1_test1=nt
+        t1_test1=1
 
         # Mask out around TC center
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
@@ -161,11 +162,11 @@ for istorm in range(nstorm):
         #     label=nustr[imemb], color=color_t1, linestyle='solid')
 
         if imemb == 0:
-            frac_strat_all_t1 = np.reshape(frac_strat, (nt,1))
-            frac_conv_all_t1 = np.reshape(frac_conv, (nt,1))
+            frac_strat_all_t1 = np.reshape(frac_strat, (nt1,1))
+            frac_conv_all_t1 = np.reshape(frac_conv, (nt1,1))
         else:
-            frac_strat_all_t1 = np.append(frac_strat_all_t1, np.reshape(frac_strat, (nt,1)), axis=1)
-            frac_conv_all_t1 = np.append(frac_conv_all_t1, np.reshape(frac_conv, (nt,1)), axis=1)
+            frac_strat_all_t1 = np.append(frac_strat_all_t1, np.reshape(frac_strat, (nt1,1)), axis=1)
+            frac_conv_all_t1 = np.append(frac_conv_all_t1, np.reshape(frac_conv, (nt1,1)), axis=1)
 
 
         # Second test
@@ -258,14 +259,15 @@ for istorm in range(nstorm):
         # ### Combined plot: STRAT ##############################################
 
         # create figure
-        fig = plt.figure(figsize=(9,4))
+        fig = plt.figure(figsize=(9,5))
         ax = fig.add_subplot(111)
 
-        t_range=[30,80]
 
         ax.set_title(storm.capitalize()+': '+strattag)#, fontsize=20)
         ax.set_ylabel('Fraction')
         ax.set_xlabel('Time [hours]')
+
+        t_range=[0,nt1]
         plt.xlim(t_range)
 
         # ax.set_prop_cycle(color=[
@@ -292,7 +294,10 @@ for istorm in range(nstorm):
         frac_mean_t1 = np.nanmean(pvar1_smooth, axis=1)
         frac_std_t1 = np.nanstd(pvar1_smooth, axis=1)
 
-        plt.plot(range(t0_test1 + tshift1, t1_test1 + tshift1), frac_mean_t1, 
+        tshift1 = get_tshift(tests[0])
+        xdim = range(t0_test1 + tshift1, t0_test1 + tshift1+nt1)
+
+        plt.plot(xdim, frac_mean_t1, 
             linewidth=2, label=tests[0].upper(), color=color_t1, linestyle='solid')
         plt.fill_between(range(t0_test1 + tshift1, t1_test1 + tshift1), frac_mean_t1 + frac_std_t1,
             frac_mean_t1 - frac_std_t1, alpha=0.2, color=color_t1)
@@ -301,7 +306,10 @@ for istorm in range(nstorm):
         frac_mean_t2 = np.nanmean(pvar2_smooth, axis=1)
         frac_std_t2 = np.nanstd(pvar2_smooth, axis=1)
 
-        plt.plot(range(t0_test2 + tshift2, t1_test2 + tshift2), frac_mean_t2, 
+        tshift2 = get_tshift(tests[1])
+        xdim = range(t0_test2 + tshift2, t0_test2 + tshift2+nt)
+
+        plt.plot(xdim, frac_mean_t2, 
             linewidth=2, label=tests[1].upper(), color=color_t2, linestyle='--')
         plt.fill_between(range(t0_test2 + tshift2, t1_test2 + tshift2), frac_mean_t2 + frac_std_t2,
             frac_mean_t2 - frac_std_t2, alpha=0.2, color=color_t2)
@@ -311,7 +319,8 @@ for istorm in range(nstorm):
         # plt.legend(loc="upper right")
 
         # plt.show()
+        rmax_str = str(rmax)
         # plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
-        plt.savefig(figdir+'tser_'+storm+'_'+fig_extra+'_'+tests[1]+'.png',dpi=200, facecolor='white', \
+        plt.savefig(figdir+'tser_'+storm+'_'+fig_extra+'_rmax'+rmax_str+'.png',dpi=200, facecolor='white', \
                     bbox_inches='tight', pad_inches=0.2)
         plt.close()
