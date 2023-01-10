@@ -184,6 +184,12 @@ for itest in range(ntest):
         rain = np.ma.filled(rain, fill_value=np.nan)
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
         strat = np.ma.filled(strat, fill_value=np.nan)
+        vmfu = mask_tc_track(track_file, rmax, vmfu, lon, lat, t0, t1)
+        vmfu = np.ma.filled(vmfu, fill_value=np.nan)
+        vmfd = mask_tc_track(track_file, rmax, vmfd, lon, lat, t0, t1)
+        vmfd = np.ma.filled(vmfd, fill_value=np.nan)
+        condh = mask_tc_track(track_file, rmax, condh, lon, lat, t0, t1)
+        condh = np.ma.filled(condh, fill_value=np.nan)
 
         # IF CALCULATING RATIOS BEFORE AVERAGING
         # PE terms
