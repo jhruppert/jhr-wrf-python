@@ -83,8 +83,8 @@ for ivar in range(nvar):
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
   # for istrat in range(-1,4):
-  for istrat in range(1,3):
-  # for istrat in range(-1,3):
+  # for istrat in range(1,3):
+  for istrat in range(-1,3):
 
     for istorm in range(nstorm):
 
@@ -451,11 +451,12 @@ for ivar in range(nvar):
               var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
 
             # Mask out based on strat/conv
-            if istrat != -1 & istrat != 3:
+            if (istrat != -1) & (istrat != 3):
               var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
               # vmf_copy = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), vmf_copy, copy=True)
             elif istrat == 3:
-              var = np.ma.masked_where(((np.repeat(strat,nz,axis=1) == 0) & (np.repeat(strat,nz,axis=1) == 3)), var, copy=True)
+              var = np.ma.masked_where(((np.repeat(strat,nz,axis=1) == 0) & (np.repeat(strat,nz,axis=1) == 3)),
+                  var, copy=True)
 
             # Localize to TC track
             var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
