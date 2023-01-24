@@ -22,13 +22,19 @@ from mask_tc_track import mask_tc_track
 
 # #### Main settings
 
-# Index variable (independent var)
-ivar_select = 'the'
+# IVAR: Index variable (independent var)
+ivar_select = 'vmf'
 # options: the, vmf
 
-# Fill variable (3D; dependent var)
-fillvar_select = 'vmf'
-# options: avor, lwcrf, tprm, dbz, rh, vmf
+# BINVAR: Variable to bin (dependent var)
+#   i.e., BINVAR will be averaged as a function of IVAR
+binvar_select = 'the'
+# options: vmf, the
+
+# Calculate anomaly as deviation from xy-mean
+do_prm_xy = 0
+if (binvar_select == 'the'):
+    do_prm_xy = 1
 
 # Mask out all points except [stratiform/nonrain/etc], or switch off
 nstrat=5 # istrat = -1, 0, 1, 2, 3
@@ -75,7 +81,7 @@ if 'crfon' in tests[1]:
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
-rmax = 8 # radius (deg) limit for masking around TC center
+rmax = 6 # radius (deg) limit for masking around TC center
 
 
 # Starting member to read
@@ -125,11 +131,8 @@ def var_read_2d(datdir,varname,t0,t1):
     return var
 
 
-# #### NetCDF variable write function
-
-def write_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat):
-
-    # Strat/Conv index subset
+# Strat/Conv index subset
+def get_strattag(istrat):
     if istrat == -1:
         strattag='all'
     elif istrat == 0:
@@ -140,8 +143,13 @@ def write_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean
         strattag='strat'
     elif istrat == 3:
         strattag='stratconv'
+    return strattag
 
-    file_out = datdir+'isent_vmf_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'.nc'
+
+# #### NetCDF variable write function
+
+def write_nc(file_out,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean):
+
     ncfile = Dataset(file_out,mode='w', clobber=True)
 
     time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
@@ -173,15 +181,20 @@ def write_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean
 
 # #### Index aka Bin variable
 
-
 # Variable settings
 
-# Theta-e
-fmin=315; fmax=365 # K
-step=1
-bins=np.arange(fmin,fmax+step,step)
-xlabel=r'$\theta_e$ [K]'
-log_x='linear'
+# Theta-e (equivalent potential temperature)
+if ivar_select == 'th_e':
+    fmin=315; fmax=365 # K
+    step=1
+    bins=np.arange(fmin,fmax+step,step)
+    ivar_tag = 'isent'
+# Vertical mass flux
+elif ivar_select == 'vmf':
+    bins=np.logspace(-3,1.1,num=20)
+    # bins=np.logspace(-3.5,0.7,num=20)
+    bins=np.concatenate((-1.*np.flip(bins),bins))
+    ivar_tag='vmf'
 
 nbins = np.size(bins)
 
@@ -190,7 +203,6 @@ bin_axis = (bins[np.arange(nbins-1)]+bins[np.arange(nbins-1)+1])/2
 
 
 # #### Main loops and compositing
-
 
 # Main read loops for 3D (dependent) variables
 
@@ -254,6 +266,7 @@ for ktest in range(ntest):
         # Theta-e (equivalent potential temperature)
         if ivar_select == 'th_e':
             ivar = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+        # Vertical mass flux
         elif ivar_select == 'vmf':
             # Density
             rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
@@ -265,7 +278,7 @@ for ktest in range(ntest):
         # Three-dimensional dependent variables ("var")
 
         # Vertical mass flux
-        if fillvar_select == 'vmf':
+        if binvar_select == 'vmf':
             varname='W'
             w = var_read_3d(datdir3d,varname,t0,t1) # m/s
             # Subtract area-average W
@@ -274,10 +287,19 @@ for ktest in range(ntest):
             # w -= w_mn_copy
             rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
             var = rho * w
-        elif fillvar_select == 'the':
+        # Theta-e (equivalent potential temperature)
+        elif binvar_select == 'the':
             var = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
 
         ### Process and save variable ##############################################
+
+        # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
+        if do_prm_xy == 1:
+            # radius_ls=3
+            # var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
+            var_ls = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+            var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
+            var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
 
         # Localize to TC track
         # var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
@@ -321,5 +343,9 @@ for ktest in range(ntest):
                         # var_binned[it,ik,ibin] = np.mean(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
 
             # Write out to netCDF file
+            strattag = get_strattag(istrat)
             ex_tag='t0'+str(t0)
-            write_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
+            binvar_tag = binvar_select
+            if (do_prm_xy == 1): binvar_tag+='_xyp'
+            file_out = datdir+ivar_tag+'_'+binvar_tag+'_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'.nc'
+            write_nc(file_out,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean)
