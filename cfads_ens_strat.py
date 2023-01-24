@@ -36,7 +36,7 @@ enstag = str(nmem)
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
-ivar_all = ['the']
+ivar_all = ['thv']
 nvar=np.size(ivar_all)
 
 # #### Time selection
