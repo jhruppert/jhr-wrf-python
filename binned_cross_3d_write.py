@@ -127,7 +127,7 @@ def var_read_2d(datdir,varname,t0,t1):
 
 # #### NetCDF variable write function
 
-def write_isenvmf_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat):
+def write_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat):
 
     # Strat/Conv index subset
     if istrat == -1:
@@ -246,26 +246,36 @@ for ktest in range(ntest):
 
         # Index AKA Bin variable ("ivar")
 
-        # Theta-e (equivalent potential temperature)
-        # if ivar_select == 'th_e':
         varname='T'
         tmpk = var_read_3d(datdir3d,varname,t0,t1) # K
         varname = 'QVAPOR'
         qv = var_read_3d(datdir3d,varname,t0,t1) # kg/kg
-        ivar = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+
+        # Theta-e (equivalent potential temperature)
+        if ivar_select == 'th_e':
+            ivar = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+        elif ivar_select == 'vmf':
+            # Density
+            rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+            varname='W'
+            ww = var_read_3d(datdir3d,varname,t0,t1) # m/s
+            ivar = ww * rho # kg / m2 /s
+
 
         # Three-dimensional dependent variables ("var")
 
         # Vertical mass flux
-        # if fillvar_select == 'vmf':
-        varname='W'
-        w = var_read_3d(datdir3d,varname,t0,t1) # m/s
-        # Subtract area-average W
-        # w_mn = np.mean(w,axis=(2,3))
-        # w_mn_copy = np.repeat(np.repeat(w_mn[:,:,np.newaxis,np.newaxis], nx1, axis=2), nx2, axis=3)
-        # w -= w_mn_copy
-        rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
-        var = rho * w
+        if fillvar_select == 'vmf':
+            varname='W'
+            w = var_read_3d(datdir3d,varname,t0,t1) # m/s
+            # Subtract area-average W
+            # w_mn = np.mean(w,axis=(2,3))
+            # w_mn_copy = np.repeat(np.repeat(w_mn[:,:,np.newaxis,np.newaxis], nx1, axis=2), nx2, axis=3)
+            # w -= w_mn_copy
+            rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+            var = rho * w
+        elif fillvar_select == 'the':
+            var = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
 
         ### Process and save variable ##############################################
 
@@ -312,4 +322,4 @@ for ktest in range(ntest):
 
             # Write out to netCDF file
             ex_tag='t0'+str(t0)
-            write_isenvmf_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
+            write_nc(datdir,hr_tag,ex_tag,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,istrat)
