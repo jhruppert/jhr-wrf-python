@@ -36,7 +36,7 @@ enstag = str(nmem)
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
-# ivar_all = ['vmf']
+ivar_all = ['the']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -45,7 +45,7 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-# ntall=[3]
+ntall=[3]
 
 # #### Storm selection
 
@@ -60,6 +60,7 @@ nstorm=np.size(storm_all)
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
 rmax = 8 # radius (deg) limit for masking around TC center
+rmax = 3
 
 
 for ivar in range(nvar):
@@ -73,7 +74,7 @@ for ivar in range(nvar):
   # Calculate anomaly as time-increment
   do_prm_inc = 0
   # if (iplot == 'thv') or (iplot == 'qrad'):
-  if (iplot == 'thv'):
+  if (iplot == 'thv') or (iplot == 'the'):
       do_prm_xy = 1
   # Should be off for VMF
   if iplot == 'vmf':
@@ -412,7 +413,7 @@ for ivar in range(nvar):
               var = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
             # Equiv potential temp
             elif iplot == 'the': 
-              var = theta_equiv(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+              var = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
             # Vertical mass flux
             elif iplot == 'vmf':
               # Density

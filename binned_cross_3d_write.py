@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Notebook to genereate binned ISENTROPIC data from TC output and write out to ncdf files
+# ### Script to write out TC output binned according to a 3D variable to ncdf files.
 # 
 # Assumes output is in a single netcdf file on pressure levels.
 # 
@@ -21,6 +21,10 @@ from mask_tc_track import mask_tc_track
 
 
 # #### Main settings
+
+# Index variable (independent var)
+ivar_select = 'the'
+# options: the, vmf
 
 # Fill variable (3D; dependent var)
 fillvar_select = 'vmf'

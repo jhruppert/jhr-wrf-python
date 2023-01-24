@@ -129,7 +129,7 @@ for istorm in range(nstorm):
         # First test
 
         itest = tests[0]
-        tshift1 = get_tshift(itest)
+        # tshift1 = get_tshift(itest)
 
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
         track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
@@ -142,7 +142,7 @@ for istorm in range(nstorm):
         nt1 = strat.shape[0]
 
         t0_test1=0
-        t1_test1=1
+        t1_test1=nt1
 
         # Mask out around TC center
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
@@ -172,7 +172,7 @@ for istorm in range(nstorm):
         # Second test
 
         itest = tests[1]
-        tshift2 = get_tshift(itest)
+        # tshift2 = get_tshift(itest)
 
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
         # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
@@ -295,11 +295,11 @@ for istorm in range(nstorm):
         frac_std_t1 = np.nanstd(pvar1_smooth, axis=1)
 
         tshift1 = get_tshift(tests[0])
-        xdim = range(t0_test1 + tshift1, t0_test1 + tshift1+nt1)
+        xdim = range(t0_test1 + tshift1, t1_test1 + tshift1)
 
         plt.plot(xdim, frac_mean_t1, 
             linewidth=2, label=tests[0].upper(), color=color_t1, linestyle='solid')
-        plt.fill_between(range(t0_test1 + tshift1, t1_test1 + tshift1), frac_mean_t1 + frac_std_t1,
+        plt.fill_between(xdim, frac_mean_t1 + frac_std_t1,
             frac_mean_t1 - frac_std_t1, alpha=0.2, color=color_t1)
 
 
@@ -307,11 +307,11 @@ for istorm in range(nstorm):
         frac_std_t2 = np.nanstd(pvar2_smooth, axis=1)
 
         tshift2 = get_tshift(tests[1])
-        xdim = range(t0_test2 + tshift2, t0_test2 + tshift2+nt)
+        xdim = range(t0_test2 + tshift2, t1_test2 + tshift2)
 
         plt.plot(xdim, frac_mean_t2, 
             linewidth=2, label=tests[1].upper(), color=color_t2, linestyle='--')
-        plt.fill_between(range(t0_test2 + tshift2, t1_test2 + tshift2), frac_mean_t2 + frac_std_t2,
+        plt.fill_between(xdim, frac_mean_t2 + frac_std_t2,
             frac_mean_t2 - frac_std_t2, alpha=0.2, color=color_t2)
 
         plt.grid()

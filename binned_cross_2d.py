@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Notebook to genereate binned cross sections from TC output
+# ### Notebook to genereate cross sections from TC output binned according to a 2D variable.
 # 
 # Assumes output is in a single netcdf file on pressure levels.
 # 
