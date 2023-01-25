@@ -36,7 +36,7 @@ enstag = str(nmem)
 ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
-ivar_all = ['thv']
+ivar_all = ['thv','the']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -45,7 +45,7 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-ntall=[3]
+ntall=[1]
 
 # #### Storm selection
 
