@@ -37,6 +37,7 @@ ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
 ivar_all = ['thv','the']
+ivar_all = ['wpthp']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -45,13 +46,13 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-ntall=[1]
+ntall=[1,2]
 
 # #### Storm selection
 
 # storm = 'haiyan'
 # storm = 'maria'
-# storm_all=['haiyan','maria']
+storm_all=['haiyan','maria']
 storm_all=['haiyan']
 # storm_all=['maria']
 nstorm=np.size(storm_all)
@@ -77,7 +78,7 @@ for ivar in range(nvar):
   if (iplot == 'thv') or (iplot == 'the'):
       do_prm_xy = 1
   # Should be off for VMF
-  if iplot == 'vmf':
+  if (iplot == 'vmf') or (iplot == 'wpthp'):
       do_prm_xy=0
 
 
@@ -301,6 +302,29 @@ for ivar in range(nvar):
             xrange_mn=(-1,1)
             xrange_mn2=(-0.5,0.5)
 
+        elif iplot == 'wpthp':
+
+            # Bin settings
+            bins=np.logspace(-3,1.1,num=20)
+            bins=np.concatenate((-1.*np.flip(bins),bins))
+            # nbin=50
+            # fmax=10
+            # step=fmax*2/nbin
+            # bins=np.arange(0,fmax,step)+step
+            # bins=np.concatenate((-1.*np.flip(bins),bins))
+            nbin=np.shape(bins)[0]
+
+            # Figure settings
+            fig_title=r"$w'\theta_v'$"
+            fig_tag='wpthp'
+            units_var='K m s$^{-1}$'
+
+            # For mean var
+            scale_mn=1
+            units_mn=units_var
+            xrange_mn=(-4,4)
+            xrange_mn2=(-0.1,0.1)
+
         # Create axis of bin center-points
         bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
 
@@ -404,8 +428,8 @@ for ivar in range(nvar):
             varfil_main = Dataset(datdir+'T.nc')
             tmpk = varfil_main.variables['T'][t0:t1,:,:,:] # K
             varfil_main.close()
-            
-            
+
+
           ### Variable selection ##############################################
         
             # Virtual potential temp
@@ -439,6 +463,14 @@ for ivar in range(nvar):
               varfil = Dataset(datdir+'H_DIABATIC.nc') # this opens the netcdf file
               var = varfil.variables['H_DIABATIC'][t0:t1,:,:,:]*3600 # K/s --> K/hr
               varfil.close()
+            # W'Thv'
+            elif iplot == 'wpthp':
+              thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+              # Density
+              varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
+              www = varfil.variables['W'][t0:t1,:,:,:] # m/s
+              varfil.close()
+
 
             ### Process variable ##############################################
 
@@ -449,6 +481,17 @@ for ivar in range(nvar):
               var_ls = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
               var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
               var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
+
+            # Calculate w'thv'
+            if iplot == 'wpthp':
+              rmax_prime = rmax
+              var_ls1 = mask_tc_track(track_file, rmax_prime, thv, lon, lat, t0, t1)
+              var_ls1_avg = np.ma.mean(var_ls1,axis=(0,2,3))
+              thv -= var_ls1_avg[np.newaxis,:,np.newaxis,np.newaxis]
+              var_ls2 = mask_tc_track(track_file, rmax_prime, www, lon, lat, t0, t1)
+              var_ls2_avg = np.ma.mean(var_ls2,axis=(0,2,3))
+              www -= var_ls2_avg[np.newaxis,:,np.newaxis,np.newaxis]
+              var = thv*www
 
             # Mask out based on strat/conv
             if (istrat != -1) & (istrat != 3):
