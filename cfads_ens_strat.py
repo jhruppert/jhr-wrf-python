@@ -171,8 +171,8 @@ for ivar in range(nvar):
         if iplot == 'thv':
 
             # Bin settings
-            nbin=60
-            fmax=6 #5 #; fmin=-5
+            nbin=50
+            fmax=10 #5 #; fmin=-5
             #step=(fmax-fmin)/nbin
             step=fmax*2/nbin
             bins=np.arange(0,fmax,step)+step
@@ -188,13 +188,13 @@ for ivar in range(nvar):
             scale_mn=1.
             units_mn=units_var
             xrange_mn=(-1,1)
-            xrange_mn2=(-1,1)
+            xrange_mn2=(-0.1,0.1)
 
         elif iplot == 'the':
 
             # Bin settings
-            nbin=60
-            fmax=15 #; fmin=-10
+            nbin=50
+            fmax=10 #; fmin=-10
             #step=(fmax-fmin)/nbin
             step=fmax*2/nbin
             bins=np.arange(0,fmax,step)+step
@@ -209,7 +209,7 @@ for ivar in range(nvar):
             # For mean var
             scale_mn=1.#e3
             units_mn=units_var
-            xrange_mn=(-0.5,0.5)
+            xrange_mn=(-1,1)
             xrange_mn2=(-0.1,0.1)
 
         elif iplot == 'vmf':
