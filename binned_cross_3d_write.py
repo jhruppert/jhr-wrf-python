@@ -54,7 +54,7 @@ storm_all=['haiyan']
 # storm_all=['maria']
 nstorm=np.size(storm_all)
 
-
+############################################################################
 
 # #### NetCDF variable read functions
 
@@ -364,17 +364,26 @@ for istorm in range(nstorm):
 
                 var_binned=np.zeros((nt,nz,nbins-1))
 
-                # Bin the variables from (x,y) --> (bin)
-                for it in range(nt):
-                    for ik in range(nz):
-                        for ibin in range(nbins-1):
-                            indices = (np.logical_and((ivar_tmp[it,ik,:,:] >= bins[ibin]), (ivar_tmp[it,ik,:,:] < bins[ibin+1]))).nonzero()
-                        # Total across cells
-                            # var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
-                        # Total divided by n-all-cells
-                            # var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64) / ncell
-                        # Mean across ID'd cells
-                            var_binned[it,ik,ibin] = np.mean(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
+                if main_tag == 'isent':
+                    # Bin the variables from (x,y) --> (bin)
+                    for it in range(nt):
+                        for ik in range(nz):
+                            for ibin in range(nbins-1):
+                                indices = (np.logical_and((ivar_tmp[it,ik,:,:] >= bins[ibin]), (ivar_tmp[it,ik,:,:] < bins[ibin+1]))).nonzero()
+                            # Total across cells
+                                var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
+                            # Total divided by n-all-cells
+                                # var_binned[it,ik,ibin] = np.sum(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64) / ncell
+                            # Mean across ID'd cells
+                                # var_binned[it,ik,ibin] = np.mean(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
+                elif main_tag == 'vmf':
+                    # Bin the variables from (x,y) --> (bin)
+                    for it in range(nt):
+                        for ik in range(nz):
+                            for ibin in range(nbins-1):
+                                indices = (np.logical_and((ivar_tmp[it,ik,:,:] >= bins[ibin]), (ivar_tmp[it,ik,:,:] < bins[ibin+1]))).nonzero()
+                            # Mean across ID'd cells
+                                var_binned[it,ik,ibin] = np.mean(var_tmp[it,ik,indices[0],indices[1]], dtype=np.float64)
 
                 # Write out to netCDF file
 
