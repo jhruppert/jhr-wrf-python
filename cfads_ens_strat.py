@@ -305,7 +305,7 @@ for ivar in range(nvar):
         elif iplot == 'wpthp':
 
             # Bin settings
-            bins=np.logspace(-2,2,num=20)
+            bins=np.logspace(-2,3,num=20)
             bins=np.concatenate((-1.*np.flip(bins),bins))
             # nbin=50
             # fmax=10
@@ -599,8 +599,11 @@ for ivar in range(nvar):
                       clevs=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)))
                       
                       locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
+                      # if iplot == 'vmf':
+                      #   locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
+                      # elif iplot == 'wpthp':
+                      #   locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
                       ax.xaxis.set_major_locator(locmin)
-                      ticks=[1e-2,1e-1,1,1e1]
                   else: #if iplot == 'thv' or iplot == 'the':
                       clevs=[0.01,0.05,0.1,0.5,1,5,10,50]
                       ticks=None
