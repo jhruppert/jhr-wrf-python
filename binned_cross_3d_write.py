@@ -51,7 +51,7 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 # #### Additional settings and directories
 
 storm_all=['haiyan']
-# storm_all=['maria']
+storm_all=['maria']
 nstorm=np.size(storm_all)
 
 ############################################################################
