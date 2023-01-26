@@ -22,19 +22,21 @@ from mask_tc_track import mask_tc_track
 
 # #### Main settings
 
-# IVAR: Index variable (independent var)
-ivar_select = 'vmf'
-# options: th_e, vmf
+main_tag = 'isent'#'vmf'#
+# isent: isentropic mass flux: *summed* vmf as a function of theta-e
+# vmf: theta-e *averaged* as a function of vmf
 
+# IVAR: Index variable (independent var)
 # AVGVAR: Variable to bin (dependent var)
 #   i.e., AVGVAR will be averaged as a function of IVAR
-avgvar_select = 'th_e'
-# options: vmf, th_e
-
-# Calculate anomaly as deviation from xy-mean
-do_prm_xy = 0
-if (avgvar_select == 'th_e'):
-    do_prm_xy = 1
+if main_tag == 'isent':
+    ivar_select = 'th_e' # options: th_e, vmf
+    avgvar_select = 'vmf' # options: vmf, th_e
+    do_prm_xy = 0 # Calculate anomaly as deviation from xy-mean
+elif main_tag == 'vmf':
+    ivar_select = 'vmf' # options: th_e, vmf
+    avgvar_select = 'th_e' # options: vmf, th_e
+    do_prm_xy = 1 # Calculate anomaly as deviation from xy-mean
 
 # Mask out all points except [stratiform/nonrain/etc], or switch off
 nstrat=5 # istrat = -1, 0, 1, 2, 3
@@ -116,9 +118,8 @@ def write_nc(file_out,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,
 
     ncfile.close()
 
-# #### Index aka Bin variable
 
-# Variable settings
+# #### Index aka Bin variable settings
 
 # Theta-e (equivalent potential temperature)
 if ivar_select == 'th_e':
@@ -126,10 +127,10 @@ if ivar_select == 'th_e':
     step=1
     bins=np.arange(fmin,fmax+step,step)
 
+    # For netcdf write-out
     ivmean_label='th_e'
     ivmean_units='K'
     ivmean_descrip='equiv potential temperature averaged over x,y'
-    ivar_tag = 'isent'
     bin_units = 'K'
 
 # Vertical mass flux
@@ -138,7 +139,7 @@ elif ivar_select == 'vmf':
     # bins=np.logspace(-3.5,0.7,num=20)
     bins=np.concatenate((-1.*np.flip(bins),bins))
 
-    ivar_tag='vmf'
+    # For netcdf write-out
     bin_units = 'kg/m2/s'
     ivmean_label='vmf'
     ivmean_units='kg / m2 / s'
@@ -148,6 +149,9 @@ nbins = np.size(bins)
 
 # Create axis of bin center-points for plotting
 bin_axis = (bins[np.arange(nbins-1)]+bins[np.arange(nbins-1)+1])/2
+
+
+# #### AVGVAR variable settings
 
 # Vertical mass flux
 if avgvar_select == 'vmf':
@@ -379,7 +383,7 @@ for istorm in range(nstorm):
                 avgvar_tag = avgvar_select
                 if (do_prm_xy == 1): avgvar_tag+='_xyp'
 
-                file_out = datdir+'binned_'+ivar_tag+'_'+avgvar_tag+'_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'.nc'
+                file_out = datdir+'binned_'+main_tag+'_'+avgvar_tag+'_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'.nc'
 
                 write_nc(file_out,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,
                     bin_units,

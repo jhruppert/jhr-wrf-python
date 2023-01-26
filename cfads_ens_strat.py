@@ -46,7 +46,7 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-ntall=[1,2]
+ntall=[1]
 
 # #### Storm selection
 
@@ -465,7 +465,8 @@ for ivar in range(nvar):
               varfil.close()
             # W'Thv'
             elif iplot == 'wpthp':
-              thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+              # thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+              thv = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
               # Density
               varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
               www = varfil.variables['W'][t0:t1,:,:,:] # m/s
@@ -593,7 +594,7 @@ for ivar in range(nvar):
                   ax.set_title('CFAD')
                   ax.set_ylabel('Pressure [hPa]')
 
-                  if iplot == 'vmf':
+                  if (iplot == 'vmf') or (iplot == 'wpthp'):
                       ax.set_xscale('symlog')
                       clevs=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)))
                       
@@ -672,7 +673,7 @@ for ivar in range(nvar):
                 ax.set_title('CFAD')
                 ax.set_ylabel('Pressure [hPa]')
 
-                if iplot == 'vmf':
+                if (iplot == 'vmf') or (iplot == 'wpthp'):
                     ax.set_xscale('symlog')
                     clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
 
@@ -685,7 +686,7 @@ for ivar in range(nvar):
                       clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e0))
 
                 clevs = np.concatenate((-1*np.flip(clevsi),clevsi))
-                ticks=[1e-2,1e-1,1,1e1]
+                # ticks=[1e-2,1e-1,1,1e1]
 
                 im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.SymLogNorm(base=10,linthresh=clevsi[0],linscale=clevsi[0]),
                                 cmap='RdBu_r', alpha=1.0, extend='max', zorder=2)
