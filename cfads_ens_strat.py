@@ -60,7 +60,7 @@ nstorm=np.size(storm_all)
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
-rmax = 8 # radius (deg) limit for masking around TC center
+# rmax = 8 # radius (deg) limit for masking around TC center
 rmax = 3
 
 
@@ -305,7 +305,7 @@ for ivar in range(nvar):
         elif iplot == 'wpthp':
 
             # Bin settings
-            bins=np.logspace(-3,1.1,num=20)
+            bins=np.logspace(-2,2,num=20)
             bins=np.concatenate((-1.*np.flip(bins),bins))
             # nbin=50
             # fmax=10

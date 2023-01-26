@@ -42,6 +42,12 @@ elif main_tag == 'vmf':
 nstrat=5 # istrat = -1, 0, 1, 2, 3
          # -1-all, 0-non-raining, 1-conv, 2-strat, 3-conv+strat
 
+# TC tracking
+ptrack='600' # tracking pressure level
+var_track = 'rvor' # variable
+rmax = 6 # radius (deg) limit for masking around TC center
+rmax = 3
+
 # Number of sample time steps
 nt=12
 # nt=2
@@ -199,12 +205,6 @@ for istorm in range(nstorm):
     if 'crfon' in tests[1]:
         t0_test=24 # CRFON is restarted at t=24 in NCRF
         # memb0=5 # for CRFFON test
-
-    # TC tracking
-    ptrack='600' # tracking pressure level
-    var_track = 'rvor' # variable
-    rmax = 6 # radius (deg) limit for masking around TC center
-    rmax = 3
 
 
     # Starting member to read
