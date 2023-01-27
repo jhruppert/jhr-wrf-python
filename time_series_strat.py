@@ -56,12 +56,12 @@ for istorm in range(nstorm):
 #     istrat_all=[1,2,4]
 #     nstrat=np.size(istrat_all)
 
-
     # TC tracking
     ptrack='600' # tracking pressure level
     var_track = 'rvor' # variable
     # rmax = 6 # radius (deg) limit for masking around TC center
     rmax = 3 # radius (deg) limit for masking around TC center
+    rmax = 1
 
     # #### Directories
 
