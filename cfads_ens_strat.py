@@ -37,12 +37,26 @@ ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
 ivar_all = ['thv','the']
-
-# #### Time selection
-
 ivar_all = ['the']
 nvar=np.size(ivar_all)
 
+# #### Time selection
+
+# ntall=[1,3,6,12,24,36]
+# ntall=[1,3,6,12]
+# ntall=[1,6,12]
+ntall=[1,2,3,6]
+ntall=[2,3]
+ntall=[1]
+
+# #### Storm selection
+
+# storm = 'haiyan'
+# storm = 'maria'
+storm_all=['haiyan','maria']
+storm_all=['haiyan']
+# storm_all=['maria']
+nstorm=np.size(storm_all)
 
 # TC tracking
 ptrack='600' # tracking pressure level
