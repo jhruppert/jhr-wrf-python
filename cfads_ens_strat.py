@@ -37,7 +37,8 @@ ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
 ivar_all = ['thv','the']
-ivar_all = ['the']
+ivar_all = ['wpthp']
+ivar_all = ['wpthp','wpthep']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -46,8 +47,8 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-ntall=[2,3]
-ntall=[1]
+ntall=[1,2,3]
+# ntall=[1]
 
 # #### Storm selection
 
@@ -79,7 +80,7 @@ for ivar in range(nvar):
   if (iplot == 'thv') or (iplot == 'the'):
       do_prm_xy = 1
   # Should be off for VMF
-  if (iplot == 'vmf') or (iplot == 'wpthp'):
+  if (iplot == 'vmf') or ('wpth' in iplot):
       do_prm_xy=0
 
 
@@ -303,7 +304,7 @@ for ivar in range(nvar):
             xrange_mn=(-1,1)
             xrange_mn2=(-0.5,0.5)
 
-        elif iplot == 'wpthp':
+        elif 'wpth' in iplot:
 
             # Bin settings
             # bins=np.logspace(-3,1.1,num=20)
@@ -317,8 +318,12 @@ for ivar in range(nvar):
             nbin=np.shape(bins)[0]
 
             # Figure settings
-            fig_title=r"$w'\theta_v'$"
-            fig_tag='wpthp'
+            if iplot == 'wpthp':
+              fig_title=r"$w'\theta_v'$"
+            elif iplot == 'wpthep':
+              fig_title=r"$w'\theta_e'$"
+            
+            fig_tag=iplot
             units_var='K m s$^{-1}$'
 
             # For mean var
@@ -467,8 +472,14 @@ for ivar in range(nvar):
               varfil.close()
             # W'Thv'
             elif iplot == 'wpthp':
-              # thv = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-              thv = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+              thp = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+              # Density
+              varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
+              www = varfil.variables['W'][t0:t1,:,:,:] # m/s
+              varfil.close()
+            # W'The'
+            elif iplot == 'wpthep':
+              thp = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
               # Density
               varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
               www = varfil.variables['W'][t0:t1,:,:,:] # m/s
@@ -485,16 +496,16 @@ for ivar in range(nvar):
               var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
               var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
 
-            # Calculate w'thv'
-            if iplot == 'wpthp':
+            # Calculate w'th'
+            if ('wpth' in iplot):
               rmax_prime = rmax
-              var_ls1 = mask_tc_track(track_file, rmax_prime, thv, lon, lat, t0, t1)
+              var_ls1 = mask_tc_track(track_file, rmax_prime, thp, lon, lat, t0, t1)
               var_ls1_avg = np.ma.mean(var_ls1,axis=(0,2,3))
-              thv -= var_ls1_avg[np.newaxis,:,np.newaxis,np.newaxis]
+              thp -= var_ls1_avg[np.newaxis,:,np.newaxis,np.newaxis]
               var_ls2 = mask_tc_track(track_file, rmax_prime, www, lon, lat, t0, t1)
               var_ls2_avg = np.ma.mean(var_ls2,axis=(0,2,3))
               www -= var_ls2_avg[np.newaxis,:,np.newaxis,np.newaxis]
-              var = thv*www
+              var = thp*www
 
             # Mask out based on strat/conv
             if (istrat != -1) & (istrat != 3):
@@ -556,7 +567,7 @@ for ivar in range(nvar):
         matplotlib.rc('font', **font)
         
         
-        # ### Plot CFADs for both tests ########################
+# ### Plot CFADs for both tests ################################
         
         for ktest in range(ntest):
         
@@ -596,7 +607,7 @@ for ivar in range(nvar):
                   ax.set_title('CFAD')
                   ax.set_ylabel('Pressure [hPa]')
 
-                  if (iplot == 'vmf') or (iplot == 'wpthp'):
+                  if (iplot == 'vmf') or ('wpth' in iplot):
                       ax.set_xscale('symlog')
                       clevs=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)))
                       
@@ -680,7 +691,7 @@ for ivar in range(nvar):
                 ax.set_title('CFAD')
                 ax.set_ylabel('Pressure [hPa]')
 
-                if (iplot == 'vmf') or (iplot == 'wpthp'):
+                if (iplot == 'vmf') or ('wpth' in iplot):
                     ax.set_xscale('symlog')
                     clevsi=np.concatenate(([1e-2],np.arange(2,11,2)*1e-2,np.arange(2,11,2)*1e-1,np.arange(2,11,2)*1e-0))
 
