@@ -37,25 +37,12 @@ ivar_all = ['thv','vmf','lh','rh','qrad']
 ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
 ivar_all = ['thv','the']
-ivar_all = ['wpthp']
-nvar=np.size(ivar_all)
 
 # #### Time selection
 
-# ntall=[1,3,6,12,24,36]
-# ntall=[1,3,6,12]
-# ntall=[1,6,12]
-ntall=[1,2,3,6]
-ntall=[1]
+ivar_all = ['the']
+nvar=np.size(ivar_all)
 
-# #### Storm selection
-
-# storm = 'haiyan'
-# storm = 'maria'
-storm_all=['haiyan','maria']
-storm_all=['haiyan']
-# storm_all=['maria']
-nstorm=np.size(storm_all)
 
 # TC tracking
 ptrack='600' # tracking pressure level
@@ -305,6 +292,7 @@ for ivar in range(nvar):
         elif iplot == 'wpthp':
 
             # Bin settings
+            # bins=np.logspace(-3,1.1,num=20)
             bins=np.logspace(-2,3,num=20)
             bins=np.concatenate((-1.*np.flip(bins),bins))
             # nbin=50
@@ -604,8 +592,10 @@ for ivar in range(nvar):
                       # elif iplot == 'wpthp':
                       #   locmin = ticker.SymmetricalLogLocator(base=10.0,linthresh=2,subs=np.arange(2,11,2)*0.1)
                       ax.xaxis.set_major_locator(locmin)
+                      ticks=[1e-2,1e-1,1,1e1]
                   else: #if iplot == 'thv' or iplot == 'the':
                       clevs=[0.01,0.05,0.1,0.5,1,5,10,50]
+                      # clevs=[1,2,5,10,25,50,100,200,500]
                       ticks=None
           
                   im = ax.contourf(bin_axis, pres, pltvar, clevs, norm=colors.LogNorm(),
