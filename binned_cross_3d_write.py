@@ -46,7 +46,7 @@ nstrat=5 # istrat = -1, 0, 1, 2, 3
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
 rmax = 6 # radius (deg) limit for masking around TC center
-rmax = 3
+# rmax = 3
 
 # Number of sample time steps
 nt=12
@@ -56,8 +56,8 @@ hr_tag = str(np.char.zfill(str(nt), 2))
 
 # #### Additional settings and directories
 
-storm_all=['haiyan']
-storm_all=['maria']
+storm_all=['haiyan','maria']
+# storm_all=['maria']
 nstorm=np.size(storm_all)
 
 ############################################################################
@@ -390,9 +390,10 @@ for istorm in range(nstorm):
                 strattag = get_strattag(istrat)
                 ex_tag='t0'+str(t0)
                 avgvar_tag = avgvar_select
+                radstr = str(rmax)
                 if (do_prm_xy == 1): avgvar_tag+='_xyp'
 
-                file_out = datdir+'binned_'+main_tag+'_'+avgvar_tag+'_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'.nc'
+                file_out = datdir+'binned_'+main_tag+'_'+avgvar_tag+'_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'_rmax'+radstr+'.nc'
 
                 write_nc(file_out,nt,nz,nbins,pres,bin_axis,var_binned,ivar_mean,
                     bin_units,

@@ -40,6 +40,7 @@ ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
 ivar_all = ['lh','thv']
 ivar_all = ['the','thv']
+ivar_all = ['qrad']
 nvar=np.size(ivar_all)
 
 # #### Time selection
