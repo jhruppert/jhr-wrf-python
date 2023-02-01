@@ -40,7 +40,6 @@ ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
 ivar_all = ['lh','thv']
 ivar_all = ['the','thv']
-ivar_all = ['qrad']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -492,9 +491,9 @@ for ivar in range(nvar):
 
             # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
             if do_prm_xy == 1:
-              # radius_ls=12
-              # var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
-              var_ls = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+              radius_ls=6
+              var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
+              # var_ls = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
               var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
               var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
 
