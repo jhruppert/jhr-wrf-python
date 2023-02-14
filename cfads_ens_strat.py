@@ -38,8 +38,8 @@ ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
 ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
-ivar_all = ['lh','thv']
-ivar_all = ['the','thv']
+ivar_all = ['lh','thv','the']
+ivar_all = ['lh','vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
