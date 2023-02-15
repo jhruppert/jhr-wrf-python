@@ -213,18 +213,26 @@ for imemb in range(nmem):
             clon_shift += clon_offset
         clon_shift -= offset
 
+        if (imemb == 0) & (ktest == 0):
+            print(clon[35])
+            print(clat[35])
+        
         # storm track
         plt.plot(clon_shift, clat, linewidth=2, label=nustr[imemb])#, color='k')
         skip=24
         itim=np.arange(0,nt,skip)
+        if (imemb == 0) & (ktest == 0): itim = 35
         plt.plot(clon_shift[itim], clat[itim], "s", color='r')
+
+    if storm == 'haiyan':
+        xloc=np.arange(130,185,5)
 
     # add map features
     ax.add_feature(cartopy.feature.LAND,facecolor="lightgray") #land color
     # ax.add_feature(cartopy.feature.OCEAN) #ocean color
     ax.add_feature(cartopy.feature.COASTLINE)
     # ax.add_feature(cartopy.feature.STATES)
-    ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
+    ax.gridlines(draw_labels=True, dms=True, xlocs=xloc, x_inline=False, y_inline=False)
 
     ax.set_extent(plt_area)
 
