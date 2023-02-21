@@ -44,7 +44,7 @@ nvar=np.size(ivar_all)
 
 # #### Time selection
 
-# ntall=[1,3,6,12,24,36]
+#ntall=[1,3,6,12,24,36]
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
