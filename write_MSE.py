@@ -63,7 +63,7 @@ nz = varfil_main.dimensions['level'].size
 nx1 = varfil_main.dimensions['lat'].size
 nx2 = varfil_main.dimensions['lon'].size
 pres = varfil_main.variables['pres'][:] # hPa
-dp = (pres[1]-pres[0])*1e2 # Pa
+dp = (pres[0]-pres[1])*1e2 # Pa
 varfil_main.close()
 
 process = subprocess.Popen(['ls '+main+storm+'/'+memb_all[0]+'/'+tests[0]+'/wrfout_d02_*'],shell=True,
