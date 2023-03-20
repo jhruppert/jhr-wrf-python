@@ -23,7 +23,7 @@ import sys
 pres_top = 100
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -39,7 +39,7 @@ elif storm == 'maria':
     # tests = [tests[1],'crfon72h']
 
 # Members
-nmem = 1#10 # number of ensemble members (1-5 have NCRF)
+nmem = 10 # number of ensemble members (1-5 have NCRF)
 # nmem = 2
 enstag = str(nmem)
 # Starting member to read
@@ -100,12 +100,12 @@ def write_vars(datdir,nt,nz,nx1,nx2,mse,mse_int):
     x1_dim = ncfile.createDimension('nx1', nx1)
     x2_dim = ncfile.createDimension('nx2', nx2)
 
-    mse_nc = ncfile.createVariable('mse', np.float64, ('nt','nz','nx1','nx2',))
+    mse_nc = ncfile.createVariable('mse', np.single, ('nt','nz','nx1','nx2',))
     mse_nc.units = 'J/kg'
     mse_nc.long_name = 'moist static energy, calculated as cpT + gz + L_v*q'
     mse_nc[:,:,:] = mse[:,np.newaxis,:,:]
 
-    msei_nc = ncfile.createVariable('mse_int', np.float64, ('nt','nx1','nx2',))
+    msei_nc = ncfile.createVariable('mse_int', np.single, ('nt','nx1','nx2',))
     msei_nc.units = 'J/m^2'
     msei_nc.long_name = 'integrated moist static energy, calculated as 1/g*integral(mse)dp up to 100 hPa'
     msei_nc[:,:,:] = mse_int[:,np.newaxis,:,:]
