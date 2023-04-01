@@ -23,7 +23,7 @@ import sys
 pres_top = 100
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -90,7 +90,7 @@ def var_read(datdir,varname,ikread):
 
 # #### NetCDF variable write function
 
-def write_vars(datdir,nt,nz,nx1,nx2,mse,mse_int):
+def write_vars(datdir,nt,nz,nx1,nx2,dse,mse,mse_int):
 
     file_out = datdir+'mse.nc'
     ncfile = Dataset(file_out,mode='w', clobber=True)
@@ -100,10 +100,15 @@ def write_vars(datdir,nt,nz,nx1,nx2,mse,mse_int):
     x1_dim = ncfile.createDimension('nx1', nx1)
     x2_dim = ncfile.createDimension('nx2', nx2)
 
+    dse_nc = ncfile.createVariable('dse', np.single, ('nt','nz','nx1','nx2',))
+    dse_nc.units = 'J/kg'
+    dse_nc.long_name = 'dry static energy, calculated as cpT + gz'
+    dse_nc[:,:,:,:] = dse[:,np.newaxis,:,:]
+
     mse_nc = ncfile.createVariable('mse', np.single, ('nt','nz','nx1','nx2',))
     mse_nc.units = 'J/kg'
     mse_nc.long_name = 'moist static energy, calculated as cpT + gz + L_v*q'
-    mse_nc[:,:,:] = mse[:,np.newaxis,:,:]
+    mse_nc[:,:,:,:] = mse[:,np.newaxis,:,:]
 
     msei_nc = ncfile.createVariable('mse_int', np.single, ('nt','nx1','nx2',))
     msei_nc.units = 'J/m^2'
@@ -162,7 +167,8 @@ for ktest in range(ntest):
         lv = lv0 - (cpl-cpv)*(tmpk-273.15)
 
         g=9.81 # m/s2
-        mse = cp*tmpk + g*z + lv*qv
+        dse = cp*tmpk + g*z
+        mse = dse + lv*qv
 
         # Vertically integrate
         cons = dp/g
@@ -170,4 +176,4 @@ for ktest in range(ntest):
 
         ### Write out variables ##############################################
 
-        write_vars(datdir,nt,nz,nx1,nx2,mse,mse_int)
+        write_vars(datdir,nt,nz,nx1,nx2,dse,mse,mse_int)
