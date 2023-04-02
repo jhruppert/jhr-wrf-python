@@ -35,6 +35,8 @@ storm = 'haiyan'
 nmem = 10 # number of ensemble members
 nmem = 2
 
+ptop = 100 # top for integrals; hPa
+
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
@@ -43,13 +45,14 @@ rmax = 3 # radius (deg) limit for masking around TC center
 
 # Strat/Conv index subset
 # istrat_all=[0,1,2] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
-nrain=5 # np.size(istrat_all)
+nrain=6 # np.size(istrat_all)
 # krain = 
     # 0 = conv+strat points
     # 1 = conv points
     # 2 = strat points
     # 3 = rainfall rate threshold
-    # 4 = all points (inside of TC mask)
+    # 4 = del . <sV> > 0
+    # 5 = all points (inside of TC mask)
 
 # #### Directories
 
@@ -95,6 +98,13 @@ varfil_main.close()
 lon1d=lon[0,:]
 lat1d=lat[:,0]
 
+datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/post/d02/'
+fil = Dataset(datdir+'U.nc') # this opens the netcdf file
+pres = fil.variables['pres'][:] # hPa
+fil.close()
+nk=np.size(pres)
+iktop = np.where(pres == ptop)[0][0]
+
 
 # Create arrays
 
@@ -109,8 +119,19 @@ for itest in range(ntest):
 
     nt[itest]=i_nt
 
+gms_t0 = np.zeros((nmem,nrain,nt[0]))
+gms_t1 = np.zeros((nmem,nrain,nt[0]))
+dsecon_t0 = np.zeros((nmem,nrain,nt[0]))
+dsecon_t1 = np.zeros((nmem,nrain,nt[1]))
 msecon_t0 = np.zeros((nmem,nrain,nt[0]))
 msecon_t1 = np.zeros((nmem,nrain,nt[1]))
+
+
+def var_read_3d(datdir,varname,iktop):
+    varfil_main = Dataset(datdir+varname+'.nc')
+    var = varfil_main.variables[varname][:,0:iktop+1,:,:]
+    varfil_main.close()
+    return var
 
 
 def plot_rainhist(x):
@@ -158,17 +179,35 @@ for itest in range(ntest):
         varfil_main.close()
 
         # Main variables
-        # Moist static energy (MSE)
+        # Moist and dry static energy (MSE, DSE); saved up to 100 hPa
         varfil_main = Dataset(datdir+'mse.nc')
+        dse = varfil_main.variables['dse'][:,:,:,:] # J/kg, calculated as cpT + gz
         mse = varfil_main.variables['mse'][:,:,:,:] # J/kg, calculated as cpT + gz + L_v*q
         varfil_main.close()
-        varfil_main = Dataset(datdir+'QVAPOR.nc')
-        # QV
-        qv = varfil_main.variables['QVAPOR'][:,:,:,:] # kg/kg
-        varfil_main.close()
 
-        # Dry static energy (DSE) = cp*T + gz = MSE - qv
-        dse = mse - lv*qv
+        u = var_read_3d(datdir,'U',iktop)
+        v = var_read_3d(datdir,'V',iktop)
+
+        # Gradient terms (Inoue and Back 2015):
+        #   dse-term = del . <sV> where s = DSE
+        #       = d/dx <su> + d/dy <sv>
+        #   mse-term = same but with h = MSE
+        #   < > is vertical integral over the troposphere
+        g = 9.81
+        dp = (pres[0]-pres[1])*100
+        su = np.sum(u * dse, axis=1)*dp/g
+        sv = np.sum(v * dse, axis=1)*dp/g
+        hu = np.sum(u * mse, axis=1)*dp/g
+        hv = np.sum(v * mse, axis=1)*dp/g
+        deg2m = np.pi*6371*1e3/180
+        x1d = lon1d * deg2m
+        y1d = lat1d * deg2m
+        grad_s_x = np.gradient(su,x1d,axis=2)
+        grad_s_y = np.gradient(su,y1d,axis=1)
+        grad_s = grad_s_x + grad_s_y
+        grad_h_x = np.gradient(hu,x1d,axis=2)
+        grad_h_y = np.gradient(hu,y1d,axis=1)
+        grad_h = grad_h_x + grad_h_y
 
         t0=0
         t1=nt[itest]
@@ -178,26 +217,14 @@ for itest in range(ntest):
         rain = np.ma.filled(rain, fill_value=np.nan)
         strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
         strat = np.ma.filled(strat, fill_value=np.nan)
-        vmfu = mask_tc_track(track_file, rmax, vmfu, lon, lat, t0, t1)
-        vmfu = np.ma.filled(vmfu, fill_value=np.nan)
-        vmfd = mask_tc_track(track_file, rmax, vmfd, lon, lat, t0, t1)
-        vmfd = np.ma.filled(vmfd, fill_value=np.nan)
-        condh = mask_tc_track(track_file, rmax, condh, lon, lat, t0, t1)
-        condh = np.ma.filled(condh, fill_value=np.nan)
-
-        # IF CALCULATING RATIOS BEFORE AVERAGING
-        # PE terms
-        # mf_ratio = -1 * vmfd / vmfu
-        # pe_mf = 1 - mf_ratio
-        # pe_mp = rain / condh
-        # mf_ratio = np.ma.masked_invalid(mf_ratio)
-        # pe_mf = np.ma.masked_invalid(pe_mf)
-        # pe_mp = np.ma.masked_invalid(pe_mp)
+        grad_s = mask_tc_track(track_file, rmax, grad_s[:,np.newaxis,:,:], lon, lat, t0, t1)
+        grad_s = np.ma.filled(grad_s, fill_value=np.nan)
+        grad_h = mask_tc_track(track_file, rmax, grad_h[:,np.newaxis,:,:], lon, lat, t0, t1)
+        grad_h = np.ma.filled(grad_h, fill_value=np.nan)
 
         # Average across raining points
         for it in range(nt[itest]):
             for krain in range(nrain):
-                # krain=3
 
                 # conv+strat points
                 if krain == 0:
@@ -212,53 +239,29 @@ for itest in range(ntest):
                 elif krain == 3:
                     rain_thresh = 3. # mm/hr
                     ind_rain = (rain[it,0,:,:] >= rain_thresh).nonzero()
-                # Simple mean across (unmasked) domain
-                # elif krain == 4:
+                # Where del . <sV> > 0
+                elif krain == 4:
+                    ind_rain = (grad_s[it,0,:,:] > 0).nonzero()
 
-                if krain < 4:
-                    condh_avg = np.nanmean(condh[it,0,ind_rain[0],ind_rain[1]])
+                if krain < 5:
+                    grad_s_avg = np.nanmean(grad_s[it,ind_rain[0],ind_rain[1]])
+                    grad_h_avg = np.nanmean(grad_h[it,ind_rain[0],ind_rain[1]])
                     rain_avg = np.nanmean(rain[it,0,ind_rain[0],ind_rain[1]])
-                    vmfu_avg = np.nanmean(vmfu[it,0,ind_rain[0],ind_rain[1]])
-                    vmfd_avg = np.nanmean(vmfd[it,0,ind_rain[0],ind_rain[1]])
                 else:
-                    condh_avg = np.nanmean(condh[it,0,:,:])
+                    grad_s_avg = np.nanmean(grad_s[it,:,:])
+                    grad_h_avg = np.nanmean(grad_h[it,:,:])
                     rain_avg = np.nanmean(rain[it,0,:,:])
-                    vmfu_avg = np.nanmean(vmfu[it,0,:,:])
-                    vmfd_avg = np.nanmean(vmfd[it,0,:,:])
 
-                mf_ratio = -1 * vmfd_avg / vmfu_avg
-                pe_mf = 1 - mf_ratio
-                pe_mp = rain_avg / condh_avg
+                gms = grad_h_avg / grad_s_avg
 
                 if itest == 0:
-                    mf_ratio_t0[imemb,krain,it] = mf_ratio
-                    pe_mf_t0[imemb,krain,it] = pe_mf
-                    pe_mp_t0[imemb,krain,it] = pe_mp
+                    gms_t0[imemb,krain,it] = gms
+                    dsecon_t0[imemb,krain,it] = grad_s_avg
+                    msecon_t0[imemb,krain,it] = grad_h_avg
                 elif itest == 1:
-                    mf_ratio_t1[imemb,krain,it] = mf_ratio
-                    pe_mf_t1[imemb,krain,it] = pe_mf
-                    pe_mp_t1[imemb,krain,it] = pe_mp
-
-            # IF CALCULATING RATIOS BEFORE AVERAGING
-
-                # if krain < 4:
-                #     mf_ratio_avg = np.mean(mf_ratio[it,0,ind_rain[0],ind_rain[1]])
-                #     pe_mf_avg = np.mean(pe_mf[it,0,ind_rain[0],ind_rain[1]])
-                #     pe_mp_avg = np.mean(pe_mp[it,0,ind_rain[0],ind_rain[1]])
-                # else:
-                #     mf_ratio_avg = np.mean(mf_ratio[it,0,:,:])
-                #     pe_mf_avg = np.mean(pe_mf[it,0,:,:])
-                #     pe_mp_avg = np.mean(pe_mp[it,0,:,:])
-
-                # if itest == 0:
-                #     mf_ratio_t0[imemb,krain,it] = mf_ratio_avg
-                #     pe_mf_t0[imemb,krain,it] = pe_mf_avg
-                #     pe_mp_t0[imemb,krain,it] = pe_mp_avg
-                # elif itest == 1:
-                #     mf_ratio_t1[imemb,krain,it] = mf_ratio_avg
-                #     pe_mf_t1[imemb,krain,it] = pe_mf_avg
-                #     pe_mp_t1[imemb,krain,it] = pe_mp_avg
-
+                    gms_t1[imemb,krain,it] = gms
+                    dsecon_t1[imemb,krain,it] = grad_s_avg
+                    msecon_t1[imemb,krain,it] = grad_h_avg
 
 # ---
 # ### Plotting routines
@@ -292,36 +295,39 @@ for krain in range(nrain):
         raintag='Rainfall threshold'
     # rainfall rate threshold
     elif krain == 4:
+        fig_extra='dsethresh'
+        raintag='DSE threshold'
+    elif krain == 5:
         fig_extra='all'
         raintag='All points'
 
-    mf0 = mf_ratio_t0[:,krain,:]
-    pe_mf0 = pe_mf_t0[:,krain,:]
-    pe_mp0 = pe_mp_t0[:,krain,:]
+    gms0 = gms_t0[:,krain,:]
+    dse0 = dsecon_t0[:,krain,:]
+    mse0 = msecon_t0[:,krain,:]
 
-    mf1 = mf_ratio_t1[:,krain,:]
-    pe_mf1 = pe_mf_t1[:,krain,:]
-    pe_mp1 = pe_mp_t1[:,krain,:]
+    gms1 = gms_t1[:,krain,:]
+    dse1 = dsecon_t1[:,krain,:]
+    mse1 = msecon_t1[:,krain,:]
 
     nvar=3
     for ivar in range(nvar):
     # for ivar in range(0,1):
 
         if ivar == 0:
-            var0 = np.copy(mf0)
-            var1 = np.copy(mf1)
-            title_tag = 'MF Ratio (dn/up)'
-            figtag = 'mffrac'
+            var0 = np.copy(gms0)
+            var1 = np.copy(gms1)
+            title_tag = 'GMS'
+            figtag = 'gms'
         elif ivar == 1:
-            var0 = np.copy(pe_mf0)
-            var1 = np.copy(pe_mf1)
-            title_tag = 'PE (MF)'
-            figtag = 'pemf'
+            var0 = np.copy(dse0)
+            var1 = np.copy(dse1)
+            title_tag = 'DSE Con'
+            figtag = 'dsecon'
         elif ivar == 2:
-            var0 = np.copy(pe_mp0)
-            var1 = np.copy(pe_mp1)
-            title_tag = 'PE (MP)'
-            figtag = 'pemp'
+            var0 = np.copy(mse0)
+            var1 = np.copy(mse1)
+            title_tag = 'MSE Con'
+            figtag = 'msecon'
 
         var0 = pd.DataFrame(var0)
         var0 = var0.rolling(window=3, center=True, closed='both', axis=1).mean()
@@ -336,7 +342,7 @@ for krain in range(nrain):
         ax = fig.add_subplot(111)
 
         ax.set_title(title_tag+' ('+storm.capitalize()+'; '+raintag+')')#, fontsize=20)
-        ax.set_ylabel('Fraction')
+        ax.set_ylabel(' ')
         ax.set_xlabel('Time [hours]')
 
         t_range=[30,80]
