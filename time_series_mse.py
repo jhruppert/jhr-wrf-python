@@ -120,7 +120,7 @@ for itest in range(ntest):
     nt[itest]=i_nt
 
 gms_t0 = np.zeros((nmem,nrain,nt[0]))
-gms_t1 = np.zeros((nmem,nrain,nt[0]))
+gms_t1 = np.zeros((nmem,nrain,nt[1]))
 dsecon_t0 = np.zeros((nmem,nrain,nt[0]))
 dsecon_t1 = np.zeros((nmem,nrain,nt[1]))
 msecon_t0 = np.zeros((nmem,nrain,nt[0]))
@@ -244,12 +244,12 @@ for itest in range(ntest):
                     ind_rain = (grad_s[it,0,:,:] > 0).nonzero()
 
                 if krain < 5:
-                    grad_s_avg = np.nanmean(grad_s[it,ind_rain[0],ind_rain[1]])
-                    grad_h_avg = np.nanmean(grad_h[it,ind_rain[0],ind_rain[1]])
+                    grad_s_avg = np.nanmean(grad_s[it,0,ind_rain[0],ind_rain[1]])
+                    grad_h_avg = np.nanmean(grad_h[it,0,ind_rain[0],ind_rain[1]])
                     rain_avg = np.nanmean(rain[it,0,ind_rain[0],ind_rain[1]])
                 else:
-                    grad_s_avg = np.nanmean(grad_s[it,:,:])
-                    grad_h_avg = np.nanmean(grad_h[it,:,:])
+                    grad_s_avg = np.nanmean(grad_s[it,:,:,:])
+                    grad_h_avg = np.nanmean(grad_h[it,:,:,:])
                     rain_avg = np.nanmean(rain[it,0,:,:])
 
                 gms = grad_h_avg / grad_s_avg
