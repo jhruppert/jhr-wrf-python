@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import subprocess
 import sys
 from mask_tc_track import mask_tc_track
+from thermo_functions import density_moist
 import pandas as pd
 
 
@@ -33,15 +34,15 @@ storm = 'haiyan'
 
 # How many members
 nmem = 10 # number of ensemble members
-nmem = 2
+# nmem = 2
 
 ptop = 100 # top for integrals; hPa
 
 # TC tracking
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
-# rmax = 6 # radius (deg) limit for masking around TC center
-rmax = 3 # radius (deg) limit for masking around TC center
+rmax = 6 # radius (deg) limit for masking around TC center
+# rmax = 3 # radius (deg) limit for masking around TC center
 
 # Strat/Conv index subset
 # istrat_all=[0,1,2] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
@@ -185,30 +186,47 @@ for itest in range(ntest):
         mse = varfil_main.variables['mse'][:,:,:,:] # J/kg, calculated as cpT + gz + L_v*q
         varfil_main.close()
 
-        u = var_read_3d(datdir,'U',iktop)
-        v = var_read_3d(datdir,'V',iktop)
+        # u = var_read_3d(datdir,'U',iktop)
+        # v = var_read_3d(datdir,'V',iktop)
+        varfil_main = Dataset(datdir+'density.nc')
+        rho = varfil_main.variables['rho'] # kg/m3
+        varfil_main.close()
+        w = var_read_3d(datdir,'W',iktop) # m/s
+        omeg = w * (-9.81)*rho
 
+        ## Gradient terms (Inoue and Back 2015):
+        ##   dse-term = del . <sV> where s = DSE
+        ##       = d/dx <su> + d/dy <sv>
+        ##   mse-term = same but with h = MSE
+        ##   < > is vertical integral over the troposphere
         # Gradient terms (Inoue and Back 2015):
-        #   dse-term = del . <sV> where s = DSE
-        #       = d/dx <su> + d/dy <sv>
-        #   mse-term = same but with h = MSE
+        #   dse-term = < omeg * ds/dp > where s = DSE
+        #   mse-term = < omeg * dh/dp > where h = MSE
         #   < > is vertical integral over the troposphere
         g = 9.81
         dp = (pres[0]-pres[1])*100
+        # su = np.sum(u * dse, axis=1)*dp/g
+        # sv = np.sum(v * dse, axis=1)*dp/g
+        # hu = np.sum(u * mse, axis=1)*dp/g
+        # hv = np.sum(v * mse, axis=1)*dp/g
+        # deg2m = np.pi*6371*1e3/180
+        # x1d = lon1d * deg2m
+        # y1d = lat1d * deg2m
+        # grad_s_x = np.gradient(su,x1d,axis=2)
+        # grad_s_y = np.gradient(su,y1d,axis=1)
+        # grad_s = grad_s_x + grad_s_y
+        # grad_h_x = np.gradient(hu,x1d,axis=2)
+        # grad_h_y = np.gradient(hu,y1d,axis=1)
+        # grad_h = grad_h_x + grad_h_y
+        g = 9.81
+        dp = (pres[0]-pres[1])*100
+        grad_h_x = np.gradient(hu,x1d,axis=2)
+
         su = np.sum(u * dse, axis=1)*dp/g
         sv = np.sum(v * dse, axis=1)*dp/g
-        hu = np.sum(u * mse, axis=1)*dp/g
-        hv = np.sum(v * mse, axis=1)*dp/g
-        deg2m = np.pi*6371*1e3/180
-        x1d = lon1d * deg2m
-        y1d = lat1d * deg2m
-        grad_s_x = np.gradient(su,x1d,axis=2)
-        grad_s_y = np.gradient(su,y1d,axis=1)
-        grad_s = grad_s_x + grad_s_y
         grad_h_x = np.gradient(hu,x1d,axis=2)
         grad_h_y = np.gradient(hu,y1d,axis=1)
         grad_h = grad_h_x + grad_h_y
-
         t0=0
         t1=nt[itest]
 
