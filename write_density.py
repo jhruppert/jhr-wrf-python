@@ -21,7 +21,7 @@ from thermo_functions import density_moist
 # #### Main settings
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -73,15 +73,15 @@ lat = varfil_main.variables['XLAT'][:][0] # deg
 lon = varfil_main.variables['XLONG'][:][0] # deg
 varfil_main.close()
 
-ikread = np.where(pres == pres_top)[0][0]
+# ikread = np.where(pres == pres_top)[0][0]
 
 
 # #### NetCDF variable read functions
 
 
-def var_read(datdir,varname,ikread):
+def var_read(datdir,varname):
     varfil_main = Dataset(datdir+varname+'.nc')
-    var = varfil_main.variables[varname][:,0:ikread+1,:,:]
+    var = varfil_main.variables[varname][:,:,:,:]
     varfil_main.close()
     return var
 
@@ -90,7 +90,7 @@ def var_read(datdir,varname,ikread):
 
 def write_vars(datdir,nt,nz,nx1,nx2,rho):
 
-    file_out = datdir+'mse.nc'
+    file_out = datdir+'density.nc'
     ncfile = Dataset(file_out,mode='w', clobber=True)
 
     time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
@@ -131,11 +131,11 @@ for ktest in range(ntest):
 
         # Water vapor
         varname='QVAPOR'
-        qv = var_read(datdir,varname,ikread) # kg/kg
+        qv = var_read(datdir,varname) # kg/kg
         nt,nz,nx1,nx2 = qv.shape
         # Temperature
         varname='T'
-        tmpk = var_read(datdir,varname,ikread) # K
+        tmpk = var_read(datdir,varname) # K
 
         # Calculate density
         rho = density_moist(tmpk,qv,pres[np.newaxis,:,np.newaxis,np.newaxis,]*1e2)
