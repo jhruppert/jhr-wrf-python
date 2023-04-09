@@ -18,7 +18,6 @@ import matplotlib.pyplot as plt
 import subprocess
 import sys
 from mask_tc_track import mask_tc_track
-from thermo_functions import density_moist
 import pandas as pd
 
 
@@ -34,11 +33,11 @@ storm = 'haiyan'
 
 # How many members
 nmem = 10 # number of ensemble members
-# nmem = 2
+nmem = 2
 
 ptop = 100 # top for integrals; hPa
 
-formula='vadv'#'hflux'#'converg'
+formula='vadv'#'hflux'#'converg'#
 
 # TC tracking
 ptrack='600' # tracking pressure level
@@ -191,28 +190,7 @@ for itest in range(ntest):
         dp = (pres[0]-pres[1])*100
         g = 9.81
 
-        if formula == 'hflux':
-        # Gradient terms (Inoue and Back 2015):
-        #   dse-term = del . <sV> where s = DSE
-        #       = d/dx <su> + d/dy <sv>
-        #   mse-term = same but with h = MSE
-        #   < > is vertical integral over the troposphere
-            u = var_read_3d(datdir,'U',iktop)
-            v = var_read_3d(datdir,'V',iktop)
-            su = np.sum(u * dse, axis=1)*dp/g
-            sv = np.sum(v * dse, axis=1)*dp/g
-            hu = np.sum(u * mse, axis=1)*dp/g
-            hv = np.sum(v * mse, axis=1)*dp/g
-            deg2m = np.pi*6371*1e3/180
-            x1d = lon1d * deg2m
-            y1d = lat1d * deg2m
-            grad_s_x = np.gradient(su,x1d,axis=2)
-            grad_s_y = np.gradient(sv,y1d,axis=1)
-            grad_s = grad_s_x + grad_s_y
-            grad_h_x = np.gradient(hu,x1d,axis=2)
-            grad_h_y = np.gradient(hv,y1d,axis=1)
-            grad_h = grad_h_x + grad_h_y
-        elif formula == 'vadv':
+        if formula == 'vadv':
         # Gradient terms (Inoue and Back 2015):
         #   dse-term = < omeg * ds/dp > where s = DSE
         #   mse-term = < omeg * dh/dp > where h = MSE
@@ -221,29 +199,41 @@ for itest in range(ntest):
             varfil_main.close()
             w = var_read_3d(datdir,'W',iktop) # m/s
             omeg = w * (-1)*g*rho
-            vgrad_s = np.gradient(dse,axis=1)
-            print(np.shape(vgrad_s))
-            sys.exit()
             vadv_s = omeg * np.gradient(dse,axis=1)
             grad_s = np.sum(vadv_s, axis=1)*dp/g
             vadv_h = omeg * np.gradient(mse,axis=1)
             grad_h = np.sum(vadv_h, axis=1)*dp/g
-        elif formula == 'converg':
-        # Gradient terms (Inoue and Back 2015):
-        #   dse-term = del . <sV> where s = DSE
-        #       = d/dx <su> + d/dy <sv>
-        #   mse-term = same but with h = MSE
-        #   < > is vertical integral over the troposphere
+        else:
             u = var_read_3d(datdir,'U',iktop)
             v = var_read_3d(datdir,'V',iktop)
             deg2m = np.pi*6371*1e3/180
             x1d = lon1d * deg2m
             y1d = lat1d * deg2m
-            dudx = np.gradient(u,x1d,axis=3) # /s
-            dvdy = np.gradient(v,y1d,axis=2) # /s
-            div = dudx + dvdy
-            grad_s = np.sum(dse * div, axis=1)*dp/g
-            grad_h = np.sum(mse * div, axis=1)*dp/g
+            if formula == 'hflux':
+            # Gradient terms (Inoue and Back 2015):
+            #   dse-term = del . <sV> where s = DSE
+            #       = d/dx <su> + d/dy <sv>
+            #   mse-term = same but with h = MSE
+            #   < > is vertical integral over the troposphere
+                su = np.sum(u * dse, axis=1)*dp/g
+                sv = np.sum(v * dse, axis=1)*dp/g
+                hu = np.sum(u * mse, axis=1)*dp/g
+                hv = np.sum(v * mse, axis=1)*dp/g
+                grad_s_x = np.gradient(su,x1d,axis=2)
+                grad_s_y = np.gradient(sv,y1d,axis=1)
+                grad_s = grad_s_x + grad_s_y
+                grad_h_x = np.gradient(hu,x1d,axis=2)
+                grad_h_y = np.gradient(hv,y1d,axis=1)
+                grad_h = grad_h_x + grad_h_y
+            elif formula == 'converg':
+            # Gradient terms (Inoue and Back 2015):
+            #   dse-term = <s del . V> where s = DSE
+            #   mse-term = same but with h = MSE
+                dudx = np.gradient(u,x1d,axis=3) # /s
+                dvdy = np.gradient(v,y1d,axis=2) # /s
+                div = dudx + dvdy
+                grad_s = np.sum(dse * div, axis=1)*dp/g
+                grad_h = np.sum(mse * div, axis=1)*dp/g
 
         t0=0
         t1=nt[itest]
@@ -418,7 +408,7 @@ for krain in range(nrain):
         # plt.legend(loc="upper right")
 
         rmax_str = str(rmax)
-        plt.savefig(figdir+rmax_str+'deg/'+'tser_'+storm+'_'+figtag+'_'+fig_extra+'_rmax'+rmax_str+'deg.png',dpi=200, facecolor='white', \
+        plt.savefig(figdir+rmax_str+'deg/'+'tser_'+storm+'_'+figtag+'_'+fig_extra+'_'+formula+'_rmax'+rmax_str+'deg.png',dpi=200, facecolor='white', \
                     bbox_inches='tight', pad_inches=0.2)
         # plt.show()
         plt.close()
