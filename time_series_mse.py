@@ -6,7 +6,7 @@
 # Assumes key integrated variables have been processed and written out by PE_write.py to single-level netcdf files.
 # 
 # James Ruppert  
-# jruppert@ou.edu  
+# jruppert@ou.edu
 # 1/5/23
 
 
