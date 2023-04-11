@@ -17,7 +17,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import subprocess
 import sys
-from mask_tc_track import mask_tc_track
+# from mask_tc_track import mask_tc_track
 import pandas as pd
 
 
@@ -33,7 +33,7 @@ storm = 'haiyan'
 
 # How many members
 nmem = 10 # number of ensemble members
-nmem = 2
+# nmem = 2
 
 ptop = 100 # top for integrals; hPa
 
@@ -127,18 +127,19 @@ def plot_rainhist(x):
     # plt.show()
 
 def mask_edges(array):
-    # Array must be time,x1,x2
+    # Last dimensions of array must be x1,x2
+    #   It is otherwise versatile
     buffer=80
     array = np.ma.array(array, mask=False, copy=True)
-    array.mask[:,0:buffer,:]=True
-    array.mask[:,-buffer:,:]=True
-    array.mask[:,:,0:buffer]=True
-    array.mask[:,:,-buffer:]=True
+    array.mask[...,0:buffer,:]=True
+    array.mask[...,-buffer:,:]=True
+    array.mask[...,:,0:buffer]=True
+    array.mask[...,:,-buffer:]=True
     # array = np.ma.filled(array, fill_value=np.nan)
     return array
 
 
-# MSE / DSE convergence functions
+##### MSE / DSE convergence functions ####################
 
 def mse_vadv(w, rho, dse, mse, dp, g):
     # Gradient terms (Inoue and Back 2015):
@@ -257,7 +258,7 @@ for itest in range(ntest):
         varfil = Dataset(datdir+'precip_eff_vars.nc')
         vmfu = varfil.variables['vmfu'][:,:,:,:] # kg/m/s
         vmfd = varfil.variables['vmfd'][:,:,:,:] # kg/m/s
-        condh = varfil.variables['condh'][:,:,:,:] # mm/d
+        condh = varfil.variables['condh'][:,0,:,:] # mm/d
         varfil.close()
         condh /= 24 # mm/d --> mm/hr
 
@@ -317,7 +318,7 @@ for itest in range(ntest):
 
                 # conv+strat points
                 if krain == 0:
-                    ind_rain = ((strat[it,:,:] == 1) | (strat[it,0,:,:] == 2)).nonzero()
+                    ind_rain = ((strat[it,:,:] == 1) | (strat[it,:,:] == 2)).nonzero()
                 # conv points
                 elif krain == 1:
                     ind_rain = (strat[it,:,:] == 1).nonzero()
