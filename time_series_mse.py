@@ -105,7 +105,7 @@ fil = Dataset(datdir+'U.nc') # this opens the netcdf file
 pres = fil.variables['pres'][:] # hPa
 fil.close()
 nk=np.size(pres)
-iktop = np.where(pres == ptop)[0][0]
+# iktop = np.where(pres == ptop)[0][0]
 
 
 ##### FUNCTIONS ############################################################
