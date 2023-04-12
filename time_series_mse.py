@@ -183,6 +183,7 @@ def mse_converg(u, v, x1d, y1d, dse, mse, dp, g):
 
 ############################################################
 
+
 # Create arrays
 
 nt = np.zeros(ntest, dtype=np.int32)
@@ -196,21 +197,22 @@ for itest in range(ntest):
 
     nt[itest]=i_nt
 
-gms_t0 = np.zeros((nmem,nrain,nt[0]))
-dsecon_t0 = np.zeros((nmem,nrain,nt[0]))
-msecon_t0 = np.zeros((nmem,nrain,nt[0]))
-mf_ratio_t0 = np.zeros((nmem,nrain,nt[0]))
-pe_mf_t0 = np.zeros((nmem,nrain,nt[0]))
-pe_mp_t0 = np.zeros((nmem,nrain,nt[0]))
-satfrac_t0 = np.zeros((nmem,nrain,nt[0]))
+# Time index set based on TEST 0 (e.g., CTL)
+gms_sav = np.empty((ntest,nmem,nrain,nt[0]))
+dsecon_sav = np.empty((ntest,nmem,nrain,nt[0]))
+msecon_sav = np.empty((ntest,nmem,nrain,nt[0]))
+mf_ratio_sav = np.empty((ntest,nmem,nrain,nt[0]))
+pe_mf_sav = np.empty((ntest,nmem,nrain,nt[0]))
+pe_mp_sav = np.empty((ntest,nmem,nrain,nt[0]))
+satfrac_sav = np.empty((ntest,nmem,nrain,nt[0]))
 
-gms_t1 = np.zeros((nmem,nrain,nt[1]))
-dsecon_t1 = np.zeros((nmem,nrain,nt[1]))
-msecon_t1 = np.zeros((nmem,nrain,nt[1]))
-mf_ratio_t1 = np.zeros((nmem,nrain,nt[1]))
-pe_mf_t1 = np.zeros((nmem,nrain,nt[1]))
-pe_mp_t1 = np.zeros((nmem,nrain,nt[1]))
-satfrac_t1 = np.zeros((nmem,nrain,nt[1]))
+gms_sav[:]=np.nan
+dsecon_sav[:]=np.nan
+msecon_sav[:]=np.nan
+mf_ratio_sav[:]=np.nan
+pe_mf_sav[:]=np.nan
+pe_mp_sav[:]=np.nan
+satfrac_sav[:]=np.nan
 
 
 # #### Main loop
@@ -250,14 +252,23 @@ for itest in range(ntest):
 
         # Moist and dry static energy (MSE, DSE); saved up to 100 hPa
         varfil_main = Dataset(datdir+'mse.nc')
-        dse = varfil_main.variables['dse'][:,:,:,:] # J/kg, calculated as cpT + gz
-        mse = varfil_main.variables['mse'][:,:,:,:] # J/kg, calculated as cpT + gz + L_v*q
+        # dse = varfil_main.variables['dse'][:,:,:,:] # J/kg, calculated as cpT + gz
+        # mse = varfil_main.variables['mse'][:,:,:,:] # J/kg, calculated as cpT + gz + L_v*q
+        if formula == 'vadv':
+            grad_s = varfil_main.variables['grad_s_vadv'][:,:,:] # J/m^2/s
+            grad_h = varfil_main.variables['grad_h_vadv'][:,:,:] # J/m^2/s
+        elif formula == 'hflux':
+            grad_s = varfil_main.variables['grad_s_hflux'][:,:,:] # J/m^2/s
+            grad_h = varfil_main.variables['grad_h_hflux'][:,:,:] # J/m^2/s
+        elif formula == 'converg':
+            grad_s = varfil_main.variables['grad_s_converg'][:,:,:] # J/m^2/s
+            grad_h = varfil_main.variables['grad_h_converg'][:,:,:] # J/m^2/s
         varfil_main.close()
 
         # PE variables
         varfil = Dataset(datdir+'precip_eff_vars.nc')
-        vmfu = varfil.variables['vmfu'][:,:,:,:] # kg/m/s
-        vmfd = varfil.variables['vmfd'][:,:,:,:] # kg/m/s
+        vmfu = varfil.variables['vmfu'][:,0,:,:] # kg/m/s
+        vmfd = varfil.variables['vmfd'][:,0,:,:] # kg/m/s
         condh = varfil.variables['condh'][:,0,:,:] # mm/d
         varfil.close()
         condh /= 24 # mm/d --> mm/hr
@@ -268,26 +279,6 @@ for itest in range(ntest):
         pws = varfil.variables['pw_sat'][:,0,:,:] # mm
         varfil.close()
         satfrac = pw/pws # %
-
-        dp = (pres[0]-pres[1])*1e2
-        g = 9.81
-
-        if formula == 'vadv':
-            varfil_main = Dataset(datdir+'density.nc')
-            rho = varfil_main.variables['rho'][:,0:iktop+1,:,:] # kg/m3
-            varfil_main.close()
-            w = var_read_3d_mse(datdir,'W',iktop) # m/s
-            grad_s, grad_h = mse_vadv(w, rho, dse, mse, dp, g)
-        else:
-            deg2m = np.pi*6371*1e3/180
-            x1d = lon1d * deg2m
-            y1d = lat1d * deg2m
-            u = var_read_3d_mse(datdir,'U',iktop)
-            v = var_read_3d_mse(datdir,'V',iktop)
-            if formula == 'hflux':
-                grad_s, grad_h = mse_hflux(u, v, x1d, y1d, dse, mse, dp, g)
-            elif formula == 'converg':
-                grad_s, grad_h = mse_converg(u, v, x1d, y1d, dse, mse, dp, g)
 
         t0=0
         t1=nt[itest]
@@ -313,44 +304,53 @@ for itest in range(ntest):
         satfrac = mask_edges(satfrac)
 
         # Average across raining points
+
+        tshift = get_tshift(tests[itest])
+
         for it in range(nt[itest]):
             for krain in range(nrain):
 
-                # conv+strat points
-                if krain == 0:
-                    ind_rain = ((strat[it,:,:] == 1) | (strat[it,:,:] == 2)).nonzero()
-                # conv points
-                elif krain == 1:
-                    ind_rain = (strat[it,:,:] == 1).nonzero()
-                # strat points
-                elif krain == 2:
-                    ind_rain = (strat[it,:,:] == 2).nonzero()
-                # rainfall rate threshold
-                elif krain == 3:
-                    rain_thresh = 3. # mm/hr
-                    ind_rain = (rain[it,:,:] >= rain_thresh).nonzero()
-                # Where del . <sV> > 0
-                elif krain == 4:
-                    ind_rain = (grad_s[it,:,:] > 0).nonzero()
+                strat_it = strat[it]
 
+                # conv+strat points
                 if krain < 5:
+
+                    if krain == 0:
+                        ind_rain = ((strat_it == 1) | (strat_it == 2)).nonzero()
+                    # conv points
+                    elif krain == 1:
+                        ind_rain = (strat_it == 1).nonzero()
+                    # strat points
+                    elif krain == 2:
+                        ind_rain = (strat_it == 2).nonzero()
+                    # rainfall rate threshold
+                    elif krain == 3:
+                        rain_thresh = 3. # mm/hr
+                        ind_rain = (rain[it] >= rain_thresh).nonzero()
+                    # Where del . <sV> > 0
+                    elif krain == 4:
+                        ind_rain = (grad_s[it] > 0).nonzero()
+
+                    # Jump time step if too few points found
+                    if np.size(ind_rain[0]) < 4: continue
+
                     grad_s_avg = np.nanmean(grad_s[it,ind_rain[0],ind_rain[1]])
                     grad_h_avg = np.nanmean(grad_h[it,ind_rain[0],ind_rain[1]])
                     rain_avg = np.nanmean(rain[it,ind_rain[0],ind_rain[1]])
                     condh_avg = np.nanmean(condh[it,ind_rain[0],ind_rain[1]])
-                    rain_avg = np.nanmean(rain[it,ind_rain[0],ind_rain[1]])
                     vmfu_avg = np.nanmean(vmfu[it,ind_rain[0],ind_rain[1]])
                     vmfd_avg = np.nanmean(vmfd[it,ind_rain[0],ind_rain[1]])
                     satfrac_avg = np.nanmean(satfrac[it,ind_rain[0],ind_rain[1]])
+
                 else:
-                    grad_s_avg = np.nanmean(grad_s[it,:,:])
-                    grad_h_avg = np.nanmean(grad_h[it,:,:])
-                    rain_avg = np.nanmean(rain[it,:,:])
-                    condh_avg = np.nanmean(condh[it,:,:])
-                    rain_avg = np.nanmean(rain[it,:,:])
-                    vmfu_avg = np.nanmean(vmfu[it,:,:])
-                    vmfd_avg = np.nanmean(vmfd[it,:,:])
-                    satfrac_avg = np.nanmean(satfrac[it,:,:])
+
+                    grad_s_avg = np.nanmean(grad_s[it])
+                    grad_h_avg = np.nanmean(grad_h[it])
+                    rain_avg = np.nanmean(rain[it])
+                    condh_avg = np.nanmean(condh[it])
+                    vmfu_avg = np.nanmean(vmfu[it])
+                    vmfd_avg = np.nanmean(vmfd[it])
+                    satfrac_avg = np.nanmean(satfrac[it])
 
                 gms = grad_h_avg / grad_s_avg
 
@@ -358,23 +358,13 @@ for itest in range(ntest):
                 pe_mf = 1 - mf_ratio
                 pe_mp = rain_avg / condh_avg
 
-                if itest == 0:
-                    gms_t0[imemb,krain,it] = gms
-                    dsecon_t0[imemb,krain,it] = grad_s_avg
-                    msecon_t0[imemb,krain,it] = grad_h_avg
-                    mf_ratio_t0[imemb,krain,it] = mf_ratio
-                    pe_mf_t0[imemb,krain,it] = pe_mf
-                    pe_mp_t0[imemb,krain,it] = pe_mp
-                    satfrac_t0[imemb,krain,it] = satfrac_avg
-                elif itest == 1:
-                    gms_t1[imemb,krain,it] = gms
-                    dsecon_t1[imemb,krain,it] = grad_s_avg
-                    msecon_t1[imemb,krain,it] = grad_h_avg
-                    mf_ratio_t1[imemb,krain,it] = mf_ratio
-                    pe_mf_t1[imemb,krain,it] = pe_mf
-                    pe_mp_t1[imemb,krain,it] = pe_mp
-                    satfrac_t1[imemb,krain,it] = satfrac_avg
-
+                gms_sav[itest,imemb,krain,it+tshift] = gms
+                dsecon_sav[itest,imemb,krain,it+tshift] = grad_s_avg
+                msecon_sav[itest,imemb,krain,it+tshift] = grad_h_avg
+                mf_ratio_sav[itest,imemb,krain,it+tshift] = mf_ratio
+                pe_mf_sav[itest,imemb,krain,it+tshift] = pe_mf
+                pe_mp_sav[itest,imemb,krain,it+tshift] = pe_mp
+                satfrac_sav[itest,imemb,krain,it+tshift] = satfrac_avg
 # ---
 # ### Plotting routines
 
@@ -413,21 +403,21 @@ for krain in range(nrain):
         fig_extra='all'
         raintag='All points'
 
-    gms0 = gms_t0[:,krain,:]
-    dse0 = dsecon_t0[:,krain,:]
-    mse0 = msecon_t0[:,krain,:]
-    mf0 = mf_ratio_t0[:,krain,:]
-    pe_mf0 = pe_mf_t0[:,krain,:]
-    pe_mp0 = pe_mp_t0[:,krain,:]
-    satfrac0 = satfrac_t0[:,krain,:]
+    gms0 = gms_sav[0,:,krain,:]
+    dse0 = dsecon_sav[0,:,krain,:]
+    mse0 = msecon_sav[0,:,krain,:]
+    mf0 = mf_ratio_sav[0,:,krain,:]
+    pe_mf0 = pe_mf_sav[0,:,krain,:]
+    pe_mp0 = pe_mp_sav[0,:,krain,:]
+    satfrac0 = satfrac_sav[0,:,krain,:]
 
-    gms1 = gms_t1[:,krain,:]
-    dse1 = dsecon_t1[:,krain,:]
-    mse1 = msecon_t1[:,krain,:]
-    mf1 = mf_ratio_t1[:,krain,:]
-    pe_mf1 = pe_mf_t1[:,krain,:]
-    pe_mp1 = pe_mp_t1[:,krain,:]
-    satfrac1 = satfrac_t1[:,krain,:]
+    gms1 = gms_sav[1,:,krain,:]
+    dse1 = dsecon_sav[1,:,krain,:]
+    mse1 = msecon_sav[1,:,krain,:]
+    mf1 = mf_ratio_sav[1,:,krain,:]
+    pe_mf1 = pe_mf_sav[1,:,krain,:]
+    pe_mp1 = pe_mp_sav[1,:,krain,:]
+    satfrac1 = satfrac_sav[1,:,krain,:]
 
     nvar=7
     for ivar in range(nvar):
@@ -498,8 +488,9 @@ for krain in range(nrain):
         mean_t0 = np.nanmean(var0, axis=0)
         std_t0 = np.nanstd(var0, axis=0)
 
-        tshift = get_tshift(tests[0])
-        xdim = range(0+tshift, nt[0]+tshift)
+        # tshift = get_tshift(tests[0])
+        # xdim = range(0+tshift, nt[0]+tshift)
+        xdim = range(nt[0])
 
         # for imemb in range(nmem):
         #     plt.plot(xdim, var0[imemb,:], linewidth=2, label=tests[0].upper(), color=color_t0, linestyle='solid')
@@ -511,8 +502,8 @@ for krain in range(nrain):
         mean_t1 = np.nanmean(var1, axis=0)
         std_t1 = np.nanstd(var1, axis=0)
 
-        tshift = get_tshift(tests[1])
-        xdim = range(0+tshift, nt[1]+tshift)
+        # tshift = get_tshift(tests[1])
+        # xdim = range(0+tshift, nt[1]+tshift)
 
         # for imemb in range(nmem):
         #     plt.plot(xdim, var1[imemb,:], linewidth=2, label=tests[0].upper(), color=color_t1, linestyle='solid')

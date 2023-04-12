@@ -58,14 +58,13 @@ datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
 datdir3d = datdir #+'v2/'
 varfil_main = Dataset(datdir3d+'T.nc')
 nz = varfil_main.dimensions['level'].size
-# lat = varfil_main.variables['XLAT'][:][0] # deg
-# lon = varfil_main.variables['XLONG'][:][0] # deg
 nx1 = varfil_main.dimensions['lat'].size
 nx2 = varfil_main.dimensions['lon'].size
 pres = varfil_main.variables['pres'][:] # hPa
 dp = (pres[0]-pres[1])*1e2 # Pa
 varfil_main.close()
 
+# Get Lat/Lon
 process = subprocess.Popen(['ls '+main+storm+'/'+memb_all[0]+'/'+tests[0]+'/wrfout_d02_*'],shell=True,
     stdout=subprocess.PIPE,universal_newlines=True)
 output = process.stdout.readline()
@@ -74,12 +73,13 @@ varfil_main = Dataset(wrffil)
 lat = varfil_main.variables['XLAT'][:][0] # deg
 lon = varfil_main.variables['XLONG'][:][0] # deg
 varfil_main.close()
+lon1d=lon[0,:]
+lat1d=lat[:,0]
 
 ikread = np.where(pres == pres_top)[0][0]
 
 
 # #### NetCDF variable read functions
-
 
 def var_read(datdir,varname,ikread):
     varfil_main = Dataset(datdir+varname+'.nc')
@@ -90,7 +90,10 @@ def var_read(datdir,varname,ikread):
 
 # #### NetCDF variable write function
 
-def write_vars(datdir,nt,nz,nx1,nx2,dse,mse,mse_int):
+def write_vars(datdir,nt,nz,nx1,nx2,dse,mse,mse_int,
+                grad_s_vadv,   grad_h_vadv,
+                grad_s_hflux,  grad_h_hflux,
+                grad_s_converg,grad_h_converg):
 
     file_out = datdir+'mse.nc'
     ncfile = Dataset(file_out,mode='w', clobber=True)
@@ -103,19 +106,89 @@ def write_vars(datdir,nt,nz,nx1,nx2,dse,mse,mse_int):
     dse_nc = ncfile.createVariable('dse', np.single, ('nt','nz','nx1','nx2',))
     dse_nc.units = 'J/kg'
     dse_nc.long_name = 'dry static energy, calculated as cpT + gz'
-    dse_nc[:,:,:,:] = dse[:,np.newaxis,:,:]
+    dse_nc[:,:,:,:] = dse[:,:,:,:]
 
     mse_nc = ncfile.createVariable('mse', np.single, ('nt','nz','nx1','nx2',))
     mse_nc.units = 'J/kg'
     mse_nc.long_name = 'moist static energy, calculated as cpT + gz + L_v*q'
-    mse_nc[:,:,:,:] = mse[:,np.newaxis,:,:]
+    mse_nc[:,:,:,:] = mse[:,:,:,:]
 
     msei_nc = ncfile.createVariable('mse_int', np.single, ('nt','nx1','nx2',))
     msei_nc.units = 'J/m^2'
     msei_nc.long_name = 'integrated moist static energy, calculated as 1/g*integral(mse)dp up to 100 hPa'
-    msei_nc[:,:,:] = mse_int[:,np.newaxis,:,:]
+    msei_nc[:,:,:] = mse_int[:,:,:]
+
+    grad_s_v = ncfile.createVariable('grad_s_vadv', np.single, ('nt','nx1','nx2',))
+    grad_s_v.units = 'J/m^2/s'
+    grad_s_v.long_name = 'integrated VADV of DSE (up to 100 hPa)'
+    grad_s_v[:,:,:] = grad_s_vadv[:,:,:]
+
+    grad_h_v = ncfile.createVariable('grad_h_vadv', np.single, ('nt','nx1','nx2',))
+    grad_h_v.units = 'J/m^2/s'
+    grad_h_v.long_name = 'integrated VADV of MSE (up to 100 hPa)'
+    grad_h_v[:,:,:] = grad_h_vadv[:,:,:]
+
+    grad_s_h = ncfile.createVariable('grad_s_hflux', np.single, ('nt','nx1','nx2',))
+    grad_s_h.units = 'J/m^2/s'
+    grad_s_h.long_name = 'integrated del.(DSE*V) (up to 100 hPa)'
+    grad_s_h[:,:,:] = grad_s_hflux[:,:,:]
+
+    grad_h_h = ncfile.createVariable('grad_h_hflux', np.single, ('nt','nx1','nx2',))
+    grad_h_h.units = 'J/m^2/s'
+    grad_h_h.long_name = 'integrated del.(MSE*V) (up to 100 hPa)'
+    grad_h_h[:,:,:] = grad_h_hflux[:,:,:]
+
+    grad_s_c = ncfile.createVariable('grad_s_converg', np.single, ('nt','nx1','nx2',))
+    grad_s_c.units = 'J/m^2/s'
+    grad_s_c.long_name = 'integrated DSE(del.V) (up to 100 hPa)'
+    grad_s_c[:,:,:] = grad_s_converg[:,:,:]
+
+    grad_h_c = ncfile.createVariable('grad_h_converg', np.single, ('nt','nx1','nx2',))
+    grad_h_c.units = 'J/m^2/s'
+    grad_h_c.long_name = 'integrated MSE(del.V) (up to 100 hPa)'
+    grad_h_c[:,:,:] = grad_h_converg[:,:,:]
 
     ncfile.close()
+
+
+##### MSE / DSE convergence functions ####################
+
+def calc_vadv(w, rho, var, dp, g):
+    # Gradient terms (Inoue and Back 2015):
+    #   VADV_SUM = < omeg * dVAR/dp >
+    omeg = w * (-1)*g*rho
+    vadv = omeg * np.gradient(var,axis=1)/dp
+    vadv_sum = np.sum(vadv, axis=1)*dp/g
+    return vadv_sum
+
+def mse_hflux(u, v, x1d, y1d, dse, mse, dp, g):
+    # Gradient terms (Inoue and Back 2015):
+    #   dse-term = del . <sV> where s = DSE
+    #       = d/dx <su> + d/dy <sv>
+    #   mse-term = same but with h = MSE
+    #   < > is vertical integral over the troposphere
+    su = np.sum(u * dse, axis=1)*dp/g
+    sv = np.sum(v * dse, axis=1)*dp/g
+    hu = np.sum(u * mse, axis=1)*dp/g
+    hv = np.sum(v * mse, axis=1)*dp/g
+    grad_s_x = np.gradient(su,x1d,axis=2)
+    grad_s_y = np.gradient(sv,y1d,axis=1)
+    grad_s = grad_s_x + grad_s_y
+    grad_h_x = np.gradient(hu,x1d,axis=2)
+    grad_h_y = np.gradient(hv,y1d,axis=1)
+    grad_h = grad_h_x + grad_h_y
+    return grad_s, grad_h
+
+def mse_converg(u, v, x1d, y1d, dse, mse, dp, g):
+    # Gradient terms (Inoue and Back 2015):
+    #   dse-term = <s del . V> where s = DSE
+    #   mse-term = same but with h = MSE
+    dudx = np.gradient(u,x1d,axis=3) # /s
+    dvdy = np.gradient(v,y1d,axis=2) # /s
+    div = dudx + dvdy
+    grad_s = np.sum(dse * div, axis=1)*dp/g
+    grad_h = np.sum(mse * div, axis=1)*dp/g
+    return grad_s, grad_h
 
 
 # #### Main loops and calculations
@@ -174,6 +247,28 @@ for ktest in range(ntest):
         cons = dp/g
         mse_int = np.sum(mse, axis=1) * cons # J/m^2
 
+        # Diagnostics for Gross Moist Stability
+
+        varfil_main = Dataset(datdir+'density.nc')
+        rho = varfil_main.variables['rho'][:,0:ikread+1,:,:] # kg/m3
+        varfil_main.close()
+        w = var_read(datdir,'W',ikread) # m/s
+        grad_s_vadv = calc_vadv(w, rho, dse, dp, g)
+        grad_h_vadv = calc_vadv(w, rho, mse, dp, g)
+
+        deg2m = np.pi*6371*1e3/180
+        x1d = lon1d * deg2m
+        y1d = lat1d * deg2m
+        u = var_read(datdir,'U',ikread)
+        v = var_read(datdir,'V',ikread)
+
+        grad_s_hflux, grad_h_hflux     = mse_hflux(  u, v, x1d, y1d, dse, mse, dp, g)
+        grad_s_converg, grad_h_converg = mse_converg(u, v, x1d, y1d, dse, mse, dp, g)
+
+
         ### Write out variables ##############################################
 
-        write_vars(datdir,nt,nz,nx1,nx2,dse,mse,mse_int)
+        write_vars(datdir,nt,nz,nx1,nx2, dse,mse,mse_int,
+                   grad_s_vadv,   grad_h_vadv,
+                   grad_s_hflux,  grad_h_hflux,
+                   grad_s_converg,grad_h_converg)
