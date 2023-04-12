@@ -156,7 +156,7 @@ def calc_vadv(w, rho, var, dp, g):
     # Gradient terms (Inoue and Back 2015):
     #   VADV_SUM = < omeg * dVAR/dp >
     omeg = w * (-1)*g*rho
-    vadv = omeg * np.gradient(var,axis=1)/dp
+    vadv = omeg * np.gradient(var,(-dp),axis=1)
     vadv_sum = np.sum(vadv, axis=1)*dp/g
     return vadv_sum
 

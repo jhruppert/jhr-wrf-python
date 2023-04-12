@@ -477,6 +477,8 @@ for krain in range(nrain):
         ax.set_ylabel(' ')
         ax.set_xlabel('Time [hours]')
 
+        if ivar == 0: plt.ylim([-1,1])
+
         t_range=[30,80]
         # plt.xlim(t_range)
 
