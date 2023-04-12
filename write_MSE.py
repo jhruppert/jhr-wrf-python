@@ -27,7 +27,6 @@ storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
-figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
 
 # Tests to read and compare
 if storm == 'haiyan':

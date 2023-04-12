@@ -427,17 +427,17 @@ for krain in range(nrain):
             var0 = np.copy(gms0)
             var1 = np.copy(gms1)
             title_tag = 'GMS'
-            figtag = 'gms'
+            figtag = 'gms-'+formula
         elif ivar == 1:
             var0 = np.copy(dse0)
             var1 = np.copy(dse1)
             title_tag = 'DSE Con'
-            figtag = 'dsecon'
+            figtag = 'dsecon-'+formula
         elif ivar == 2:
             var0 = np.copy(mse0)
             var1 = np.copy(mse1)
             title_tag = 'MSE Con'
-            figtag = 'msecon'
+            figtag = 'msecon-'+formula
         if ivar == 3:
             var0 = np.copy(mf0)
             var1 = np.copy(mf1)
@@ -517,8 +517,8 @@ for krain in range(nrain):
         # rmax_str = str(rmax)
         # figdir2 = figdir+rmax_str+'deg/'
         figdir2 = figdir+'all/'
-        # figname=figdir2+'tser_'+storm+'_'+figtag+'_'+fig_extra+'_'+formula+'_rmax'+rmax_str+'deg.png'
-        figname=figdir2+'tser_'+storm+'_'+figtag+'_'+fig_extra+'_'+formula+'.png'
+        # figname=figdir2+'tser_'+storm+'_'+figtag+'_'+fig_extra+'_rmax'+rmax_str+'deg.png'
+        figname=figdir2+'tser_'+storm+'_'+figtag+'_'+fig_extra+'.png'
         plt.savefig(figname,dpi=200, facecolor='white', \
                     bbox_inches='tight', pad_inches=0.2)
         # plt.show()
