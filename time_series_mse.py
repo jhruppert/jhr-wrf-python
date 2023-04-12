@@ -35,7 +35,7 @@ storm = 'haiyan'
 nmem = 10 # number of ensemble members
 # nmem = 2
 
-ptop = 100 # top for integrals; hPa
+# ptop = 100 # top for integrals; hPa
 
 formula='vadv'#'hflux'#'converg'#
 
@@ -312,23 +312,23 @@ for itest in range(ntest):
 
                 strat_it = strat[it]
 
-                # conv+strat points
                 if krain < 5:
 
                     if krain == 0:
+                    # conv+strat points
                         ind_rain = ((strat_it == 1) | (strat_it == 2)).nonzero()
-                    # conv points
                     elif krain == 1:
+                    # conv points
                         ind_rain = (strat_it == 1).nonzero()
-                    # strat points
                     elif krain == 2:
+                    # strat points
                         ind_rain = (strat_it == 2).nonzero()
-                    # rainfall rate threshold
                     elif krain == 3:
+                    # rainfall rate threshold
                         rain_thresh = 3. # mm/hr
                         ind_rain = (rain[it] >= rain_thresh).nonzero()
-                    # Where del . <sV> > 0
                     elif krain == 4:
+                    # Where del . <sV> > 0
                         ind_rain = (grad_s[it] > 0).nonzero()
 
                     # Jump time step if too few points found
