@@ -20,14 +20,14 @@ from matplotlib import ticker, cm
 import subprocess
 import sys
 import cmocean
-from thermo_functions import density_moist, theta_equiv, theta_virtual, relh
 from mask_tc_track import mask_tc_track
+from cfads_functions import cfads_var_settings, cfads_var_calc
 
 
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
 # nmem = 5
-# nmem = 2
+nmem = 3
 enstag = str(nmem)
 
 # #### Variable selection
@@ -40,6 +40,7 @@ ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
 ivar_all = ['lh','thv','the']
 ivar_all = ['lh','vmf']
+ivar_all = ['lq']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -78,7 +79,7 @@ for ivar in range(nvar):
   # Calculate anomaly as time-increment
   do_prm_inc = 0
   # if (iplot == 'thv') or (iplot == 'qrad'):
-  if (iplot == 'thv') or (iplot == 'the'):
+  if (iplot == 'thv') or (iplot == 'the') or (iplot == 'lq'):
       do_prm_xy = 1
   # Should be off for VMF
   if (iplot == 'vmf') or ('wpth' in iplot):
@@ -170,168 +171,10 @@ for ivar in range(nvar):
         lon = varfil_main.variables['XLONG'][:][0] # deg
         varfil_main.close()
 
-        # Variable settings
-
-        if iplot == 'thv':
-
-            # Bin settings
-            nbin=50
-            fmax=10 #5 #; fmin=-5
-            #step=(fmax-fmin)/nbin
-            step=fmax*2/nbin
-            bins=np.arange(0,fmax,step)+step
-            bins=np.concatenate((-1.*np.flip(bins),bins))
-            nbin=np.shape(bins)[0]
-        
-            # Figure settings
-            fig_title=r"$\theta_v$"
-            fig_tag='thv'
-            units_var='K'
-        
-            # For mean var
-            scale_mn=1.
-            units_mn=units_var
-            xrange_mn=(-1,1)
-            xrange_mn2=(-0.1,0.1)
-
-        elif iplot == 'the':
-
-            # Bin settings
-            nbin=50
-            fmax=10 #; fmin=-10
-            #step=(fmax-fmin)/nbin
-            step=fmax*2/nbin
-            bins=np.arange(0,fmax,step)+step
-            bins=np.concatenate((-1.*np.flip(bins),bins))
-            nbin=np.shape(bins)[0]
-        
-            # Figure settings
-            fig_title=r"$\theta_e$"
-            fig_tag='the'
-            units_var='K'
-        
-            # For mean var
-            scale_mn=1.#e3
-            units_mn=units_var
-            xrange_mn=(-1,1)
-            xrange_mn2=(-0.1,0.1)
-
-        elif iplot == 'vmf':
-
-            # Bin settings
-            bins=np.logspace(-3,1.1,num=20)
-            # bins=np.logspace(-3.5,0.7,num=20)
-            bins=np.concatenate((-1.*np.flip(bins),bins))
-            nbin=np.shape(bins)[0]
-
-            # Figure settings
-            fig_title='VMF'
-            fig_tag='vmf'
-            units_var='kg m$^{-2}$ s$^{-1}$'
-            # fig_title='$w$'
-            # fig_tag='w'
-            # units_var='m s$^{-1}$'
-
-            # For mean var
-            scale_mn=1e2
-            units_mn='$10^{-2}$ '+units_var
-            xrange_mn=(-20,20)
-            xrange_mn2=(-1,1)
-
-        elif iplot == 'rh':
-
-            # Bin settings
-            # bins=np.logspace(-3,1.1,num=20)
-            # bins=np.concatenate((-1.*np.flip(bins),bins))
-            # nbin=np.shape(bins)[0]
-            nbin=45
-            fmax=125; fmin=-10
-            step=(fmax-fmin)/nbin
-            bins=np.arange(fmin,fmax,step)
-            nbin=np.shape(bins)[0]
-
-            # Figure settings
-            fig_title='RH'
-            fig_tag='rh'
-            units_var='%'
-
-            # For mean var
-            scale_mn=1
-            units_mn=units_var
-            xrange_mn=(-1,105)
-            xrange_mn2=(-2,2)
-          
-        elif iplot == 'qrad':
-
-            # Bin settings
-            nbin=60
-            fmax=20 #; fmin=-10
-            #step=(fmax-fmin)/nbin
-            step=fmax*2/nbin
-            bins=np.arange(0,fmax,step)+step
-            bins=np.concatenate((-1.*np.flip(bins),bins))
-            nbin=np.shape(bins)[0]
-
-            # Figure settings
-            fig_title='$Q_R$'
-            fig_tag='qrad'
-            units_var='K d$^{-1}$'
-
-            # For mean var
-            scale_mn=1.
-            units_mn=units_var
-            xrange_mn=(-8,3)
-            xrange_mn2=(-10,7)
-
-        elif iplot == 'lh':
-
-            # Bin settings
-            nbin=60
-            fmax=20 #; fmin=-10
-            #step=(fmax-fmin)/nbin
-            step=fmax*2/nbin
-            bins=np.arange(0,fmax,step)+step
-            bins=np.concatenate((-1.*np.flip(bins),bins))
-            nbin=np.shape(bins)[0]
-
-            # Figure settings
-            fig_title='$Q_L$'
-            fig_tag='lheat'
-            units_var='K hr$^{-1}$'
-
-            # For mean var
-            scale_mn=1.
-            units_mn=units_var
-            xrange_mn=(-1,1)
-            xrange_mn2=(-0.5,0.5)
-
-        elif 'wpth' in iplot:
-
-            # Bin settings
-            # bins=np.logspace(-3,1.1,num=20)
-            bins=np.logspace(-2,3,num=20)
-            bins=np.concatenate((-1.*np.flip(bins),bins))
-            # nbin=50
-            # fmax=10
-            # step=fmax*2/nbin
-            # bins=np.arange(0,fmax,step)+step
-            # bins=np.concatenate((-1.*np.flip(bins),bins))
-            nbin=np.shape(bins)[0]
-
-            # Figure settings
-            if iplot == 'wpthp':
-              fig_title=r"$w'\theta_v'$"
-            elif iplot == 'wpthep':
-              fig_title=r"$w'\theta_e'$"
-            
-            fig_tag=iplot
-            units_var='K m s$^{-1}$'
-
-            # For mean var
-            scale_mn=1
-            units_mn=units_var
-            xrange_mn=(-4,4)
-            xrange_mn2=(-0.1,0.1)
+        # Get variable settings
+        bins, fig_title, fig_tag, units_var, scale_mn, \
+          units_mn, xrange_mn, xrange_mn2 = cfads_var_settings(iplot)
+        nbin=np.shape(bins)[0]
 
         # Create axis of bin center-points
         bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
@@ -416,78 +259,13 @@ for ivar in range(nvar):
               varfil_main = Dataset(datdir+'strat.nc')
               strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
               varfil_main.close()
-              # Testing strat/conv classification mods
-              # varfil_main = Dataset(main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/v2/strat_origit1.nc') # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
-              # strat1 = varfil_main.variables['strat'][:,:,:,:]
-              # varfil_main.close()
-              # varfil_main = Dataset(main+storm+'/'+memb_all[imemb]+'/'+itest+'/'+'post/d02/v2/strat.nc') # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
-              # strat2 = varfil_main.variables['strat'][:,:,:,:]
-              # varfil_main.close()
-              # strat=strat2
 
           # Three-dimensional variables
-        
-          # Mixing ratio
-            varfil_main = Dataset(datdir+'QVAPOR.nc')
-            qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
-            varfil_main.close()
+            var = cfads_var_calc(iplot, datdir, pres, t0, t1)
+            print("MAX: ", var.max())
+            print("MIN: ", var.min())
 
-          # Temperature
-            varfil_main = Dataset(datdir+'T.nc')
-            tmpk = varfil_main.variables['T'][t0:t1,:,:,:] # K
-            varfil_main.close()
-
-
-          ### Variable selection ##############################################
-        
-            # Virtual potential temp
-            if iplot == 'thv':
-              var = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-            # Equiv potential temp
-            elif iplot == 'the': 
-              var = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-            # Vertical mass flux
-            elif iplot == 'vmf':
-              # Density
-              rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
-              varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
-              var = varfil.variables['W'][t0:t1,:,:,:] # m/s
-              varfil.close()
-              # vmf_copy=np.copy(var)
-              var *= rho
-            # Humidity
-            elif iplot == 'rh':
-              var = relh(qv,pres[np.newaxis,:,np.newaxis,np.newaxis]*1e2,tmpk,ice=1) # %
-            # Radiation
-            elif iplot == 'qrad':
-              varfil = Dataset(datdir+'RTHRATLW.nc') # this opens the netcdf file
-              var = varfil.variables['RTHRATLW'][t0:t1,:,:,:]*3600*24 # K/s --> K/d
-              varfil.close()
-              varfil = Dataset(datdir+'RTHRATSW.nc') # this opens the netcdf file
-              var += varfil.variables['RTHRATSW'][t0:t1,:,:,:]*3600*24 # K/s --> K/d
-              varfil.close()
-            # Latent heat
-            elif iplot == 'lh':
-              varfil = Dataset(datdir+'H_DIABATIC.nc') # this opens the netcdf file
-              var = varfil.variables['H_DIABATIC'][t0:t1,:,:,:]*3600 # K/s --> K/hr
-              varfil.close()
-            # W'Thv'
-            elif iplot == 'wpthp':
-              thp = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-              # Density
-              varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
-              www = varfil.variables['W'][t0:t1,:,:,:] # m/s
-              varfil.close()
-            # W'The'
-            elif iplot == 'wpthep':
-              thp = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-              # Density
-              varfil = Dataset(datdir+'W.nc') # this opens the netcdf file
-              www = varfil.variables['W'][t0:t1,:,:,:] # m/s
-              varfil.close()
-
-
-            ### Process variable ##############################################
+          ### Process variable ##############################################
 
             # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
             if do_prm_xy == 1:
@@ -499,14 +277,17 @@ for ivar in range(nvar):
 
             # Calculate w'th'
             if ('wpth' in iplot):
-              rmax_prime = rmax
-              var_ls1 = mask_tc_track(track_file, rmax_prime, thp, lon, lat, t0, t1)
-              var_ls1_avg = np.ma.mean(var_ls1,axis=(0,2,3))
-              thp -= var_ls1_avg[np.newaxis,:,np.newaxis,np.newaxis]
-              var_ls2 = mask_tc_track(track_file, rmax_prime, www, lon, lat, t0, t1)
-              var_ls2_avg = np.ma.mean(var_ls2,axis=(0,2,3))
-              www -= var_ls2_avg[np.newaxis,:,np.newaxis,np.newaxis]
-              var = thp*www
+              print("NOT RUNNING THIS VAR. NEED TO FIX READ FUNCTION")
+              print("PUNTING TO FUTURE SELF WHO IS WISER THAN I")
+              sys.exit()
+              # rmax_prime = rmax
+              # var_ls1 = mask_tc_track(track_file, rmax_prime, thp, lon, lat, t0, t1)
+              # var_ls1_avg = np.ma.mean(var_ls1,axis=(0,2,3))
+              # thp -= var_ls1_avg[np.newaxis,:,np.newaxis,np.newaxis]
+              # var_ls2 = mask_tc_track(track_file, rmax_prime, www, lon, lat, t0, t1)
+              # var_ls2_avg = np.ma.mean(var_ls2,axis=(0,2,3))
+              # www -= var_ls2_avg[np.newaxis,:,np.newaxis,np.newaxis]
+              # var = thp*www
 
             # Mask out based on strat/conv
             if (istrat != -1) & (istrat != 3):
