@@ -69,22 +69,22 @@ def cfads_var_settings(ivar_plot):
 
         # Bin settings
         nbin=50
-        fmax=10 #; fmin=-10
+        fmax=1e4 #; fmin=-10
         #step=(fmax-fmin)/nbin
         step=fmax*2/nbin
         bins=np.arange(0,fmax,step)+step
         bins=np.concatenate((-1.*np.flip(bins),bins))
     
         # Figure settings
-        fig_title='Lq'
+        fig_title='$L_vq$'
         fig_tag='lvq'
         units_var='J kg$^{-1}$'
     
         # For mean var
         scale_mn=1.#e3
         units_mn=units_var
-        xrange_mn=(-1,1)
-        xrange_mn2=(-0.1,0.1)
+        xrange_mn=(-2e3,4e3)
+        xrange_mn2=(-15,50)
 
     elif ivar_plot == 'vmf':
         
@@ -242,11 +242,17 @@ def cfads_var_calc(ivar_plot, datdir, pres, t0, t1):
       
       # Latent energy, calculated as MSE - DSE
       
-      varfil_main = Dataset(datdir+'MSE.nc')
+      varfil_main = Dataset(datdir+'mse.nc')
       mse = varfil_main.variables['mse'][t0:t1,:,:,:] # J/kg
       dse = varfil_main.variables['dse'][t0:t1,:,:,:] # J/kg
       varfil_main.close()
-      var = mse - dse
+      # var = mse - dse
+      
+      nt, nz, nx1, nx2 = mse.shape
+      nz+=1
+      var = np.zeros([nt,nz,nx1,nx2])
+      var[:,nz-1,:,:]=np.nan
+      var[:,0:nz-1,:,:]=mse-dse
     
     elif ivar_plot == 'vmf':
       

@@ -88,8 +88,8 @@ for ivar in range(nvar):
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
   # for istrat in range(-1,4):
-  # for istrat in range(1,3):
-  for istrat in range(-1,3):
+  for istrat in range(2,3):
+  # for istrat in range(-1,3):
 
     for istorm in range(nstorm):
 
@@ -262,8 +262,6 @@ for ivar in range(nvar):
 
           # Three-dimensional variables
             var = cfads_var_calc(iplot, datdir, pres, t0, t1)
-            print("MAX: ", var.max())
-            print("MIN: ", var.min())
 
           ### Process variable ##############################################
 
