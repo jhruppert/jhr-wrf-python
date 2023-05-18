@@ -27,7 +27,7 @@ from cfads_functions import cfads_var_settings, cfads_var_calc
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
 # nmem = 5
-nmem = 3
+# nmem = 3
 enstag = str(nmem)
 
 # #### Variable selection
@@ -88,8 +88,8 @@ for ivar in range(nvar):
 
   # istrat=2 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
   # for istrat in range(-1,4):
-  for istrat in range(2,3):
-  # for istrat in range(-1,3):
+  # for istrat in range(2,3):
+  for istrat in range(-1,3):
 
     for istorm in range(nstorm):
 
