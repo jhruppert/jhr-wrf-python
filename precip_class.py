@@ -3,10 +3,9 @@
 # 
 # Input:
 # 
-#       Q_VAR: 4D array as f(q, z, x1, x2), where q(5) is the hydrometeor
-#               dimension, arranged as ['QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP']
-# 
-#       Q_INT: 3D array as f(q, x1, x2), vertically integrated Q_VAR.
+#       Q_INT: 3D array of vertically integrated hydrometeors as f(q, x1, x2), where
+#               q(5) is the hydrometeor dimension, arranged as
+#               ['QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP'].
 # 
 # Returns:
 # 
@@ -26,9 +25,9 @@
 
 import numpy as np
 
-def precip_class(q_var, q_int):
+def precip_class(q_int):
 
-    nx1,nx2 = q_var.shape[2:4]
+    nx1,nx2 = q_int.shape[1:3]
 
     # Integrated water variables
     LWP = q_int[0] + q_int[1]               # Liquid water path = cloud + rain
