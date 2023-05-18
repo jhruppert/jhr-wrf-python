@@ -42,7 +42,7 @@ def precip_class(q_int):
     rain_thresh_conv = 1e-1
     rain_thresh_strat = 1e-2
 
-    # Initialize output array
+    # Initialize output array0
     c_type = np.zeros((nx1,nx2))
 
     for ix1 in range(nx1): # loop through lat
