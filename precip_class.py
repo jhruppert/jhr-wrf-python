@@ -3,13 +3,13 @@
 # 
 # Input:
 # 
-#       Q_INT: 3D array of vertically integrated hydrometeors as f(q, x1, x2), where
+#       Q_INT: n-D array of vertically integrated hydrometeors as f(q, X), where
 #               q(5) is the hydrometeor dimension, arranged as
-#               ['QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP'].
-# 
+#               ['QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP'] and X includes the
+#               remaining (time and) spatial dimensions.
 # Returns:
 # 
-#       C_TYPE: 2D array as f(x1, x2) with classification results:
+#       C_TYPE: (n-2)-D array as f(X) with classification results:
 #               0: non-precipitating
 #           Convective:
 #               1: deep convective
@@ -21,13 +21,15 @@
 # 
 # Emily Luschen - emily.w.luschen-1@ou.edu
 # James Ruppert - jruppert@ou.edu
-# 5/18/23
+# 5/19/23
 
 import numpy as np
 
 def precip_class(q_int):
 
-    nx1,nx2 = q_int.shape[1:3]
+    shape = q_int.shape
+    ndims=len(shape)
+    shape_out = shape[1:ndims]
 
     # Integrated water variables
     LWP = q_int[0] + q_int[1]               # Liquid water path = cloud + rain
@@ -42,36 +44,32 @@ def precip_class(q_int):
     rain_thresh_conv = 1e-1
     rain_thresh_strat = 1e-2
 
-    # Initialize output array0
-    c_type = np.zeros((nx1,nx2))
+    # Initialize output array
+    c_type = np.zeros(shape_out)
 
-    for ix1 in range(nx1): # loop through lat
-        for ix2 in range(nx2): # loop through lon
+    cr = IWP/LWP
 
-            # Considered non-cloud/non-precipitating if below TWP threshold
-            if TWP[ix1,ix2] > twp_thresh:
-
-                # Skip points with zero CWP (NANs)
-                if LWP[ix1,ix2] != 0:
-
-                    CR = IWP[ix1,ix2]/LWP[ix1,ix2] # cloud ratio
-
-                    # Convective types
-                    if CR <= cr_thresh: # bottom-heaviness threshold
-
-                        if q_int[1,ix1,ix2] >= rain_thresh_conv: # rain threshold
-                            if q_int[4,ix1,ix2] >= graup_thresh: # graupel threshold
-                                c_type[ix1,ix2] = 1 # deep convective
-                            else:
-                                c_type[ix1,ix2] = 2 # congestus convective
-                        else:
-                            c_type[ix1,ix2] = 3 # shallow
-
-                    # Stratiform types
-                    else:
-                        if q_int[1,ix1,ix2] >= rain_thresh_strat: # rain threshold
-                            c_type[ix1,ix2] = 4 # stratiform
-                        else:
-                            c_type[ix1,ix2] = 5 # anvil
+    # Deep convection
+    c_type[( ((LWP != 0) & (TWP > twp_thresh)) &
+            (cr <= cr_thresh) &
+            (q_int[1] >= rain_thresh_conv) &
+            (q_int[4] >= graup_thresh) ).nonzero() ] = 1
+    # Congestus
+    c_type[( ((LWP != 0) & (TWP > twp_thresh)) &
+            (cr <= cr_thresh) &
+            (q_int[1] >= rain_thresh_conv) &
+            (q_int[4] < graup_thresh) ).nonzero() ] = 2
+    # Shallow
+    c_type[( ((LWP != 0) & (TWP > twp_thresh)) &
+            (cr <= cr_thresh) &
+            (q_int[1] < rain_thresh_conv) ).nonzero() ] = 3
+    # Stratiform
+    c_type[( ((LWP != 0) & (TWP > twp_thresh)) &
+            (cr > cr_thresh) &
+            (q_int[1] >= rain_thresh_strat) ).nonzero() ] = 4
+    # Anvil
+    c_type[( ((LWP != 0) & (TWP > twp_thresh)) &
+            (cr > cr_thresh) &
+            (q_int[1] < rain_thresh_strat) ).nonzero() ] = 5
 
     return c_type
