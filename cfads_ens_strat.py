@@ -56,7 +56,7 @@ ntall=[1,6]
 
 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # kclass=[0,1,2,3]
-kclass=[2]
+kclass=[1]
 
 # #### Storm selection
 
