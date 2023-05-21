@@ -54,10 +54,11 @@ delp=(pres[0]-pres[1])*1e2
 
 # #### NetCDF variable read functions
 
-def var_read_3d(datdir,varname):
+def var_read_3d(datdir, varname, delp):
     varfil_main = Dataset(datdir+varname+'.nc')
     var = varfil_main.variables[varname][:,:,:,:]
     varfil_main.close()
+    var = np.sum(var, axis=1)*(delp/9.81) # density is absorbed into the unit conversion; units: [mm]
     return var
 
 
@@ -96,8 +97,9 @@ for ktest in range(ntest):
 
     # Loop over ensemble members
 
-    for imemb in range(nmem):
-    
+    # for imemb in range(nmem):
+    for imemb in range(3,nmem):
+
         print('Running imemb: ',memb_all[imemb])
     
         datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
@@ -108,12 +110,10 @@ for ktest in range(ntest):
         # read in mixing ratios
         q_list = ['QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP']
         nvar = len(q_list)
-        q_var = []
+        q_int = []
         for ivar in range(nvar):
-            q_var.append(var_read_3d(datdir,q_list[ivar]))
-        q_var = np.stack(q_var, axis=0)
-        # vertically integrate specific humidity
-        q_int = np.sum(q_var, axis=2)*(delp/9.81) # density is absorbed into the unit conversion; units: [mm]
+            q_int.append(var_read_3d(datdir, q_list[ivar], delp))
+        q_int = np.stack(q_int, axis=0)
 
         ### Write out variables ##############################################
 

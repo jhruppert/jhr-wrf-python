@@ -40,7 +40,7 @@ ivar_all = ['wpthp','wpthep']
 ivar_all = ['lh','thv','the']
 ivar_all = ['lh','vmf']
 ivar_all = ['lq']
-ivar_all = ['lh','vmf']
+ivar_all = ['vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -49,7 +49,7 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-ntall=[1,6]
+ntall=[6]
 # ntall=[1,3,6]
 
 # #### Classification selection
