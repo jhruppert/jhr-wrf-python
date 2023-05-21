@@ -98,7 +98,7 @@ for ktest in range(ntest):
     # Loop over ensemble members
 
     # for imemb in range(nmem):
-    for imemb in range(3,nmem):
+    for imemb in range(2,3):
 
         print('Running imemb: ',memb_all[imemb])
     

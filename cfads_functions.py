@@ -86,6 +86,29 @@ def cfads_var_settings(ivar_plot):
         xrange_mn=(-2e3,4e3)
         xrange_mn2=(-15,50)
 
+    elif ivar_plot == 'qv':
+        
+        # Water vapor mixing ratio
+
+        # Bin settings
+        nbin=50
+        fmax=10 #; fmin=-10
+        #step=(fmax-fmin)/nbin
+        step=fmax*2/nbin
+        bins=np.arange(0,fmax,step)+step
+        bins=np.concatenate((-1.*np.flip(bins),bins))
+    
+        # Figure settings
+        fig_title='$q_v$'
+        fig_tag='qv'
+        units_var='g kg$^{-1}$'
+
+        # For mean var
+        scale_mn=1.#e3
+        units_mn=units_var
+        xrange_mn=(-10,10)
+        xrange_mn2=(-0.05,0.05)
+
     elif ivar_plot == 'vmf':
         
         # Vertical mass flux
@@ -218,7 +241,7 @@ def cfads_var_calc(ivar_plot, datdir, pres, t0, t1):
 
     # Mixing ratio
     varfil_main = Dataset(datdir+'QVAPOR.nc')
-    qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
+    var = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
     varfil_main.close()
 
     # Temperature
@@ -253,6 +276,15 @@ def cfads_var_calc(ivar_plot, datdir, pres, t0, t1):
       var = np.zeros([nt,nz,nx1,nx2])
       var[:,nz-1,:,:]=np.nan
       var[:,0:nz-1,:,:]=mse-dse
+    
+    elif ivar_plot == 'qv': 
+      
+      # Water vapor mixing ratio
+      
+      varfil_main = Dataset(datdir+'QVAPOR.nc')
+      qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
+      varfil_main.close()
+      var *= 1e3 # kg/kg --> g/kg
     
     elif ivar_plot == 'vmf':
       

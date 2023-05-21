@@ -19,6 +19,7 @@ import subprocess
 import sys
 # from mask_tc_track import mask_tc_track
 import pandas as pd
+import precip_class
 
 
 # #### Main settings
@@ -40,9 +41,9 @@ nmem = 10 # number of ensemble members
 formula='vadv'#'hflux'#'converg'#
 
 # TC tracking
-ptrack='600' # tracking pressure level
-var_track = 'rvor' # variable
-rmax = 6 # radius (deg) limit for masking around TC center
+# ptrack='600' # tracking pressure level
+# var_track = 'rvor' # variable
+# rmax = 6 # radius (deg) limit for masking around TC center
 # rmax = 3 # radius (deg) limit for masking around TC center
 
 # Strat/Conv index subset
@@ -88,17 +89,17 @@ nustr = np.char.zfill(nums, 2)
 memb_all=np.char.add('memb_',nustr)
 
 # Get Lat/Lon
-datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
-process = subprocess.Popen(['ls '+datdir+'/wrfout_d02_*'],shell=True,
-    stdout=subprocess.PIPE,universal_newlines=True)
-output = process.stdout.readline()
-wrffil = output.strip() #[3]
-varfil_main = Dataset(wrffil)
-lat = varfil_main.variables['XLAT'][:][0] # deg
-lon = varfil_main.variables['XLONG'][:][0] # deg
-varfil_main.close()
-lon1d=lon[0,:]
-lat1d=lat[:,0]
+# datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
+# process = subprocess.Popen(['ls '+datdir+'/wrfout_d02_*'],shell=True,
+#     stdout=subprocess.PIPE,universal_newlines=True)
+# output = process.stdout.readline()
+# wrffil = output.strip() #[3]
+# varfil_main = Dataset(wrffil)
+# lat = varfil_main.variables['XLAT'][:][0] # deg
+# lon = varfil_main.variables['XLONG'][:][0] # deg
+# varfil_main.close()
+# lon1d=lon[0,:]
+# lat1d=lat[:,0]
 
 datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/post/d02/'
 fil = Dataset(datdir+'U.nc') # this opens the netcdf file
@@ -229,19 +230,25 @@ for itest in range(ntest):
         # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
         # Localize to TC track
         # NOTE: Using copied tracking from CTL for NCRF tests
-        trackfil_ex=''
-        if 'ncrf' in tests[itest]:
-            trackfil_ex='_ctlcopy'
-        track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
+        # trackfil_ex=''
+        # if 'ncrf' in tests[itest]:
+        #     trackfil_ex='_ctlcopy'
+        # track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
 
         # Read variables
 
         datdir = main+storm+'/'+memb_all[imemb]+'/'+tests[itest]+'/post/d02/'
 
         # Strat
-        varfil_main = Dataset(datdir+'strat.nc')
-        strat = varfil_main.variables['strat'][:,0,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        # varfil_main = Dataset(datdir+'strat.nc')
+        # strat = varfil_main.variables['strat'][:,0,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        # varfil_main.close()
+
+        # New classification scheme
+        varfil_main = Dataset(datdir+'q_int.nc')
+        q_int = varfil_main.variables['q_int'][:,:,:,:] # Integrated hydrometeors [mm]
         varfil_main.close()
+        strat2 = precip_class(q_int)
 
         # Rain
         varfil_main = Dataset(datdir+'rainrate.nc')
@@ -315,8 +322,9 @@ for itest in range(ntest):
                 if krain < 5:
 
                     if krain == 0:
-                    # conv+strat points
-                        ind_rain = ((strat_it == 1) | (strat_it == 2)).nonzero()
+                    # all raining points
+                        # ind_rain = ((strat_it == 1) | (strat_it == 2)).nonzero()
+                        ind_rain = (strat_it > 0).nonzero()
                     elif krain == 1:
                     # conv points
                         ind_rain = (strat_it == 1).nonzero()

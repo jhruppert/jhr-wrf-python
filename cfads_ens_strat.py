@@ -26,7 +26,7 @@ from cfads_functions import cfads_var_settings, cfads_var_calc
 
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
-# nmem = 3
+# nmem = 2
 enstag = str(nmem)
 
 # #### Variable selection
@@ -37,10 +37,9 @@ ivar_all = ['thv','vmf','lh','rh']
 # ivar_all = ['lh','rh']
 ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
-ivar_all = ['lh','thv','the']
+ivar_all = ['lq','lh','thv','the']
 ivar_all = ['lh','vmf']
-ivar_all = ['lq']
-ivar_all = ['vmf']
+ivar_all = ['qv']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -49,14 +48,15 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-ntall=[6]
+ntall=[1,6]
+# ntall=[6]
 # ntall=[1,3,6]
 
 # #### Classification selection
 
 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # kclass=[0,1,2,3]
-kclass=[1]
+kclass=[2]
 
 # #### Storm selection
 
@@ -88,7 +88,7 @@ for ivar in range(nvar):
   # Calculate anomaly as time-increment
   do_prm_inc = 0
   # if (iplot == 'thv') or (iplot == 'qrad'):
-  if (iplot == 'thv') or (iplot == 'the') or (iplot == 'lq'):
+  if (iplot == 'thv') or (iplot == 'the') or (iplot == 'lq') or (iplot == 'qv'):
       do_prm_xy = 1
   # Should be off for VMF
   if (iplot == 'vmf') or ('wpth' in iplot):
