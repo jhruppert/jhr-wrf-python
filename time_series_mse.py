@@ -19,7 +19,7 @@ import subprocess
 import sys
 # from mask_tc_track import mask_tc_track
 import pandas as pd
-import precip_class
+from precip_class import precip_class
 
 
 # #### Main settings
@@ -248,7 +248,7 @@ for itest in range(ntest):
         varfil_main = Dataset(datdir+'q_int.nc')
         q_int = varfil_main.variables['q_int'][:,:,:,:] # Integrated hydrometeors [mm]
         varfil_main.close()
-        strat2 = precip_class(q_int)
+        strat = precip_class(q_int)
 
         # Rain
         varfil_main = Dataset(datdir+'rainrate.nc')
