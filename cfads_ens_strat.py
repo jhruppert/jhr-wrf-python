@@ -39,7 +39,7 @@ ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
 ivar_all = ['lq','lh','thv','the']
 ivar_all = ['lh','vmf']
-ivar_all = ['qv']
+ivar_all = ['vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -48,15 +48,14 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-ntall=[1,6]
-# ntall=[6]
+ntall=[6]
 # ntall=[1,3,6]
 
 # #### Classification selection
 
 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # kclass=[0,1,2,3]
-kclass=[2]
+kclass=[1]
 
 # #### Storm selection
 

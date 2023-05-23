@@ -213,9 +213,6 @@ for istorm in range(nstorm):
         t0_test2=0
         t1_test2=nt
 
-        # Mask out where TC track is undefined
-
-
         # Mask out around TC center
         # strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test2, t1_test2)
         # count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
