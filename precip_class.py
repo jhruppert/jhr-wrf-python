@@ -1,5 +1,10 @@
 # 
-# Column-based precipitation classification algorithm for numerical model output.
+# Column-based precipitation classification algorithm designed for application on
+# numerical model output.
+# 
+# It has been designed using WRF model output using the Thompson and Eidhammer
+# (2014, JAS) microphysics scheme, which has 2 liquid and 3 frozen categories as
+# listed and expected below.
 # 
 # Input:
 # 

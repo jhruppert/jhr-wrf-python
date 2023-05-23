@@ -19,16 +19,38 @@ from matplotlib import ticker, cm
 import subprocess
 from mask_tc_track import mask_tc_track
 import sys
+import os
 import pandas as pd
+from precip_class import precip_class
 
 
-# #### Variable selection
+# #### Storm selection
 
 storms=['haiyan','maria']
 # storms=['maria']
-# storms=['haiyan']
-# storm = 'haiyan'
-# storm = 'maria'
+storms=['haiyan']
+
+
+def mask_edges(array):
+    # Last dimensions of array must be x1,x2
+    #   It is otherwise versatile
+    buffer=80
+    array = np.ma.array(array, mask=False, copy=True)
+    array.mask[...,0:buffer,:]=True
+    array.mask[...,-buffer:,:]=True
+    array.mask[...,:,0:buffer]=True
+    array.mask[...,:,-buffer:]=True
+    # array = np.ma.filled(array, fill_value=np.nan)
+    return array
+
+def get_tshift(itest):
+    if itest == 'ctl':
+        tshift=0
+    elif itest == 'ncrf36h':
+        tshift=36
+    elif itest == 'ncrf48h':
+        tshift=48
+    return tshift
 
 nstorm = np.size(storms)
 for istorm in range(nstorm):
@@ -49,19 +71,12 @@ for istorm in range(nstorm):
     # Starting member to read
     memb0=1
 
-    # Strat/Conv index subset
-#     istrat=1 # Convective
-# #    istrat=2 # Stratiform
-#     istrat=4 # Convective/Stratiform fraction
-#     istrat_all=[1,2,4]
-#     nstrat=np.size(istrat_all)
-
     # TC tracking
-    ptrack='600' # tracking pressure level
-    var_track = 'rvor' # variable
+    # ptrack='600' # tracking pressure level
+    # var_track = 'rvor' # variable
     # rmax = 6 # radius (deg) limit for masking around TC center
-    rmax = 3 # radius (deg) limit for masking around TC center
-    rmax = 1
+    # rmax = 3 # radius (deg) limit for masking around TC center
+    # rmax = 1
 
     # #### Directories
 
@@ -90,16 +105,6 @@ for istorm in range(nstorm):
     #         strattag='frac'
     #     fig_extra='_'+strattag.lower()
 
-    def get_tshift(itest):
-        if itest == 'ctl':
-            tshift=0
-        elif itest == 'ncrf36h':
-            tshift=36
-        elif itest == 'ncrf48h':
-            tshift=48
-        return tshift
-
-
     ##### Get dimensions
 
     datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
@@ -110,16 +115,18 @@ for istorm in range(nstorm):
     pres = varfil_main.variables['pres'][:] # hPa
     varfil_main.close()
 
-    process = subprocess.Popen(['ls '+datdir+'/wrfout_d02_*'],shell=True,
-        stdout=subprocess.PIPE,universal_newlines=True)
-    output = process.stdout.readline()
-    wrffil = output.strip() #[3]
-    varfil_main = Dataset(wrffil)
-    lat = varfil_main.variables['XLAT'][:][0] # deg
-    lon = varfil_main.variables['XLONG'][:][0] # deg
-    varfil_main.close()
-    lon1d=lon[0,:]
-    lat1d=lat[:,0]
+    count_total = nx1*nx2
+
+    # process = subprocess.Popen(['ls '+datdir+'/wrfout_d02_*'],shell=True,
+    #     stdout=subprocess.PIPE,universal_newlines=True)
+    # output = process.stdout.readline()
+    # wrffil = output.strip() #[3]
+    # varfil_main = Dataset(wrffil)
+    # lat = varfil_main.variables['XLAT'][:][0] # deg
+    # lon = varfil_main.variables['XLONG'][:][0] # deg
+    # varfil_main.close()
+    # lon1d=lon[0,:]
+    # lat1d=lat[:,0]
 
 
     for imemb in range(nmem):
@@ -132,27 +139,35 @@ for istorm in range(nstorm):
         # tshift1 = get_tshift(itest)
 
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/'
-        track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
+        # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
 
         # Read variable
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
-        varfil_main = Dataset(datdir+'strat.nc')
-        strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        # varfil_main = Dataset(datdir+'strat.nc')
+        # strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        # varfil_main.close()
+        # New classification scheme
+        varfil_main = Dataset(datdir+'q_int.nc')
+        q_int = varfil_main.variables['q_int'][:,:,:,:] # Integrated hydrometeors [mm]
         varfil_main.close()
+        strat = precip_class(q_int)
         nt1 = strat.shape[0]
 
         t0_test1=0
         t1_test1=nt1
 
         # Mask out around TC center
-        strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
-        count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
+        # strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
+        # count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
+        # count_total = np.ma.count(strat, axis=(1,2))
 
         # Count strat/conv cells
-        strat_ind = np.ma.masked_where((strat != 2), strat)
-        conv_ind = np.ma.masked_where((strat != 1), strat)
-        count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
-        count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
+        # strat_ind = np.ma.masked_where((strat != 2), strat)
+        # conv_ind = np.ma.masked_where((strat != 1), strat)
+        strat_ind = np.ma.masked_where((strat < 4), strat)
+        conv_ind = np.ma.masked_where(((strat != 1) & (strat != 2)), strat)
+        count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2))
+        count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2))
 
         frac_strat = count_strat / count_total
         frac_conv = count_conv / count_total
@@ -178,16 +193,21 @@ for istorm in range(nstorm):
         # track_file = datdir+'track_'+var_track+'_'+ptrack+'hPa.nc'
         # Localize to TC track
         # NOTE: Using copied tracking from CTL for NCRF tests
-        trackfil_ex=''
-        if 'ncrf' in itest:
-            trackfil_ex='_ctlcopy'
-        track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
+        # trackfil_ex=''
+        # if 'ncrf' in itest:
+        #     trackfil_ex='_ctlcopy'
+        # track_file = datdir+'track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
 
         # Read variable
         datdir = main+storm+'/'+memb_all[imemb]+'/'+itest+'/post/d02/'
-        varfil_main = Dataset(datdir+'strat.nc')
-        strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        # varfil_main = Dataset(datdir+'strat.nc')
+        # strat = varfil_main.variables['strat'][:,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+        # varfil_main.close()
+        # New classification scheme
+        varfil_main = Dataset(datdir+'q_int.nc')
+        q_int = varfil_main.variables['q_int'][:,:,:,:] # Integrated hydrometeors [mm]
         varfil_main.close()
+        strat = precip_class(q_int)
         nt = strat.shape[0]
 
         t0_test2=0
@@ -197,14 +217,17 @@ for istorm in range(nstorm):
 
 
         # Mask out around TC center
-        strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test2, t1_test2)
-        count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
+        # strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test2, t1_test2)
+        # count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
+        # count_total = np.ma.count(strat, axis=(1,2))
 
         # Count strat/conv cells
-        strat_ind = np.ma.masked_where((strat != 2), strat)
-        conv_ind = np.ma.masked_where((strat != 1), strat)
-        count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2,3))
-        count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2,3))
+        # strat_ind = np.ma.masked_where((strat != 2), strat)
+        # conv_ind = np.ma.masked_where((strat != 1), strat)
+        strat_ind = np.ma.masked_where((strat < 4), strat)
+        conv_ind = np.ma.masked_where(((strat != 1) & (strat != 2)), strat)
+        count_strat = np.ma.MaskedArray.count(strat_ind, axis=(1,2))
+        count_conv = np.ma.MaskedArray.count(conv_ind, axis=(1,2))
 
         frac_strat = count_strat / count_total
         frac_conv = count_conv / count_total
@@ -319,8 +342,8 @@ for istorm in range(nstorm):
         # plt.legend(loc="upper right")
 
         # plt.show()
-        rmax_str = str(rmax)
+        # rmax_str = str(rmax)
         # plt.savefig(figdir+storm+'_track_'+var_track+'_'+ptrack+'_'+memb_all[imemb]+'.png',dpi=200, facecolor='white', \
-        plt.savefig(figdir+'tser_'+storm+'_'+fig_extra+'_rmax'+rmax_str+'.png',dpi=200, facecolor='white', \
+        plt.savefig(figdir+'tser_'+storm+'_'+fig_extra+'.png',dpi=200, facecolor='white', \
                     bbox_inches='tight', pad_inches=0.2)
         plt.close()
