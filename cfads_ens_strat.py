@@ -17,16 +17,17 @@ matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib import ticker, cm
-import subprocess
-import sys
+import os
 import cmocean
 from mask_tc_track import mask_tc_track
 from cfads_functions import cfads_var_settings, cfads_var_calc
+from scipy import stats
+import sys
 
 
 # How many ensemble members
 nmem = 10 # number of ensemble members (1-10 have NCRF)
-# nmem = 2
+# nmem = 3
 enstag = str(nmem)
 
 # #### Variable selection
@@ -39,7 +40,6 @@ ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
 ivar_all = ['lq','lh','thv','the']
 ivar_all = ['lh','vmf']
-ivar_all = ['vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -48,14 +48,14 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
-ntall=[6]
-# ntall=[1,3,6]
+# ntall=[6]
+ntall=[1,3,6]
 
 # #### Classification selection
 
 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # kclass=[0,1,2,3]
-kclass=[1]
+kclass=[1,2]
 
 # #### Storm selection
 
@@ -92,7 +92,6 @@ for ivar in range(nvar):
   # Should be off for VMF
   if (iplot == 'vmf') or ('wpth' in iplot):
       do_prm_xy=0
-
 
   for istorm in range(nstorm):
 
@@ -142,18 +141,19 @@ for ivar in range(nvar):
       datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
       varfil_main = Dataset(datdir+'T.nc')
       nz = varfil_main.dimensions['level'].size
-      # lat = varfil_main.variables['XLAT'][:][0] # deg
-      # lon = varfil_main.variables['XLONG'][:][0] # deg
       nx1 = varfil_main.dimensions['lat'].size
-      nx2 = varfil_main.dimensions['lon'].size#-xmin-1
+      nx2 = varfil_main.dimensions['lon'].size
       pres = varfil_main.variables['pres'][:] # hPa
       varfil_main.close()
 
-      process = subprocess.Popen(['ls '+main+storm+'/'+memb_all[0]+'/'+tests[0]+'/wrfout_d02_*'],shell=True,
-          stdout=subprocess.PIPE,universal_newlines=True)
-      output = process.stdout.readline()
-      wrffil = output.strip() #[3]
-      varfil_main = Dataset(wrffil)
+      # WRFOUT file list
+      testdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
+      dirlist = os.listdir(testdir)
+      subs="wrfout_d02"
+      wrf_files = list(filter(lambda x: subs in x, dirlist))
+      wrf_files.sort()
+      wrfout = [testdir + s for s in wrf_files][0]
+      varfil_main = Dataset(wrfout)
       lat = varfil_main.variables['XLAT'][:][0] # deg
       lon = varfil_main.variables['XLONG'][:][0] # deg
       varfil_main.close()
@@ -185,8 +185,8 @@ for ivar in range(nvar):
         var_all = np.ma.zeros((ntest,nmem,nt+1,nz,nx1,nx2)) # time dim will be reduced to nt in the subtraction
       else:
         var_all = np.ma.zeros((ntest,nmem,nt,nz,nx1,nx2))
-        # var_copy = np.ma.zeros((ntest,nmem,nt,nz,nx1,nx2))
-        strat_all = np.ma.zeros((ntest,nmem,nt,1,nx1,nx2))
+        # strat_all = np.ma.zeros((ntest,nmem,nt,nx1,nx2))
+        strat_all = np.ma.zeros((ntest,nmem,nt,nx1,nx2))
 
       for ktest in range(ntest):
       
@@ -277,19 +277,18 @@ for ivar in range(nvar):
           # # Mask out based on strat/conv
           # if (istrat != -1) & (istrat != 3):
           #   var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-          #   # vmf_copy = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), vmf_copy, copy=True)
           # elif istrat == 3:
           #   var = np.ma.masked_where(((np.repeat(strat,nz,axis=1) == 0) & (np.repeat(strat,nz,axis=1) == 3)),
           #       var, copy=True)
 
           # Localize to TC track
           var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-          # vmf_copy = mask_tc_track(track_file, rmax, vmf_copy, lon, lat, t0, t1)
+          strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
 
           # Save ens member
           var_all[ktest,imemb,:,:,:,:] = var
-          strat_all[ktest,imemb,:,:,:,:] = strat
-          # var_copy[imemb,:,:,:,:] = vmf_copy
+          strat_all[ktest,imemb,:,:,:] = np.squeeze(strat)
+          # strat_all[ktest,imemb,:,:,:,:] = strat
 
       # Calculate var' as time-increment: var[t] - var[t-1]
       if do_prm_inc == 1:
@@ -314,51 +313,46 @@ for ivar in range(nvar):
           elif istrat == 2:
             strattag='Strat'
           elif istrat == 3:
-            # strattag='Anv'
             strattag='CS'
           fig_extra='_'+strattag.lower()
           print("Strat tag: ",strattag)
 
         # Mask out based on strat/conv
-        if ((istrat != -1) & (istrat != 3)):
-          var_ma = np.ma.masked_where((np.repeat(strat_all,nz,axis=3) != istrat), var_all, copy=True)
-          # vmf_copy = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), vmf_copy, copy=True)
-        elif istrat == 3:
-          var_ma = np.ma.masked_where(((np.repeat(strat_all,nz,axis=3) == 0) & (np.repeat(strat_all,nz,axis=3) == 3)),
-              var_all, copy=True)
+        # if ((istrat != -1) & (istrat != 3)):
+        #   ind = (strat_all == istrat).nonzero()
+        #   var_ma = np.ma.masked_where((np.repeat(strat_all[:,:,:,np.newaxis,...],nz,axis=3) != istrat), var_all, copy=True)
+        # elif istrat == 3:
+        #   ind = (strat_all > 0).nonzero()
 
-        #### Calculate basic mean
-        var_mn=np.ma.mean(var_ma, axis=(1,2,4,5))
+        # np.ma.mean(var_all[ind[0],ind[1],ind[2],:,ind[3],ind[4]], axis=(1,2,4,5))
+        # var_mn=np.ma.mean(var_ma, axis=(1,2,4,5))
 
 #### Calculate frequency ##############################################
 
+        #### Basic mean
+        var_mn=np.zeros([ntest,nz])
+
         for ktest in range(ntest):
+          
+          # Mask out based on strat/conv
+          if ((istrat != -1) & (istrat != 3)):
+            ind = (strat_all[ktest] == istrat).nonzero()
+          elif istrat == 3:
+            ind = (strat_all[ktest] > 0).nonzero()
+          
+          var_test = var_all[ktest]
+          var_mn[ktest,:] = np.ma.mean(var_test[ind[0],ind[1],:,ind[2],ind[3]], axis=0)
+
           for iz in range(nz):
-            for ibin in range(nbin-1):
-              indices = ((var_ma[ktest,:,:,iz,:,:] >= bins[ibin]) & (var_ma[ktest,:,:,iz,:,:] < bins[ibin+1])).nonzero()
-              var_freq[ktest,ibin,iz]=np.shape(indices)[1]
-            var_freq[ktest,:,iz] /= np.ma.sum(var_freq[ktest,:,iz])
-          #ncell=nx1*nx2*nt*nmem
-          var_freq[ktest,:,:] *= 100. #/ncell
-
-          # Integrate binvar
-          # dp = (pres[1]-pres[0])*1e2 # Pa
-          # # p_int = [900,500] # layer to integrate over
-          # p_int = [800,600] # layer to integrate over
-          # ik0 = np.where(pres == p_int[0])[0][0]; ik1 = np.where(pres == p_int[1])[0][0]
-          # var_copy.shape
-          # var_int = np.sum(var_copy[:,:,ik0:ik1,:,:],axis=2) * dp / 9.81
-
-          # Vertically integrated variable
-          # for ibin in range(nbin-1):
-          #   indices = ((var_int >= bins[ibin]) & (var_int < bins[ibin+1])).nonzero()
-          #   var_freq_int[ktest,ibin]=np.shape(indices)[1]
-          #   # print(np.shape(indices)[1])
-          # var_freq_int[ktest,:] /= np.ma.sum(var_freq_int[ktest,:])
-          # var_freq_int[ktest,:] *= 100.
+            var_slice = np.copy(var_test[:,:,iz,...])
+            var_slice = var_slice[ind]
+            count, placeholder = np.histogram(var_slice, bins=bins)
+            # count, placeholder = np.histogram(np.ma.compressed(var_ma[ktest,:,:,iz,:,:]), bins=bins)
+            var_freq[ktest,:,iz] = 100 * count / np.sum(count)
+            #ncell=nx1*nx2*nt*nmem
 
 
-        # ### Plotting routines ##############################################
+# ### Plotting routines ##############################################
         
         font = {'family' : 'sans-serif',
                 'weight' : 'normal',
@@ -511,7 +505,7 @@ for ivar in range(nvar):
 
                 plt.xlim(np.min(bin_axis), np.max(bin_axis))
 
-                #if iplot == 'thv': 
+                # if iplot == 'thv':
                 plt.axvline(x=0,color='k',linewidth=1.)
 
                 cbar = plt.colorbar(im, ax=ax, shrink=0.75, ticks=ticker.SymmetricalLogLocator(base=10.0, linthresh=.5),

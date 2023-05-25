@@ -241,7 +241,7 @@ def cfads_var_calc(ivar_plot, datdir, pres, t0, t1):
 
     # Mixing ratio
     varfil_main = Dataset(datdir+'QVAPOR.nc')
-    var = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
+    qv = varfil_main.variables['QVAPOR'][t0:t1,:,:,:] # kg/kg
     varfil_main.close()
 
     # Temperature
