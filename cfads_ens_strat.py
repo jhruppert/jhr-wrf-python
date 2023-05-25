@@ -25,11 +25,6 @@ from scipy import stats
 import sys
 
 
-# How many ensemble members
-nmem = 10 # number of ensemble members (1-10 have NCRF)
-# nmem = 3
-enstag = str(nmem)
-
 # #### Variable selection
 
 # Fill variable
@@ -39,7 +34,7 @@ ivar_all = ['thv','vmf','lh','rh']
 ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
 ivar_all = ['lq','lh','thv','the']
-ivar_all = ['lh','vmf']
+ivar_all = ['thv']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -49,7 +44,12 @@ nvar=np.size(ivar_all)
 # ntall=[1,6,12]
 ntall=[1,2,3,6]
 # ntall=[6]
-ntall=[1,3,6]
+ntall=[1]
+
+# How many ensemble members
+
+nmem = 10 # number of ensemble members (1-10 have NCRF)
+nmem = 3
 
 # #### Classification selection
 
@@ -75,6 +75,7 @@ rmax = 3
 
 ########## GO LOOPS GO ###############################################
 
+########## VAR LOOP ###############################################
 
 for ivar in range(nvar):
 # for ivar in range(1):
@@ -106,8 +107,60 @@ for ivar in range(nvar):
       tests = ['ctl','ncrf48h']
     # tests = ['crfon','ncrf']
 
+    # #### Directories
+
+    figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
+    # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+    main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
+    datdir2 = 'post/d02/'
+
+    enstag = str(nmem)
+    memb0=1
+    nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
+    nustr = np.char.zfill(nums, 2)
+    memb_all=np.char.add('memb_',nustr)
+
+    ##### Get dimensions
+    datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
+    varfil_main = Dataset(datdir+'T.nc')
+    nz = varfil_main.dimensions['level'].size
+    nx1 = varfil_main.dimensions['lat'].size
+    nx2 = varfil_main.dimensions['lon'].size
+    pres = varfil_main.variables['pres'][:] # hPa
+    varfil_main.close()
+
+    # WRFOUT file list
+    testdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
+    dirlist = os.listdir(testdir)
+    subs="wrfout_d02"
+    wrf_files = list(filter(lambda x: subs in x, dirlist))
+    wrf_files.sort()
+    wrfout = [testdir + s for s in wrf_files][0]
+    varfil_main = Dataset(wrfout)
+    lat = varfil_main.variables['XLAT'][:][0] # deg
+    lon = varfil_main.variables['XLONG'][:][0] # deg
+    varfil_main.close()
+
+    # Get variable settings
+    bins, fig_title, fig_tag, units_var, scale_mn, \
+      units_mn, xrange_mn, xrange_mn2 = cfads_var_settings(iplot)
+    nbin=np.shape(bins)[0]
+
+    # Create axis of bin center-points
+    bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
+
+    if do_prm_xy == 1:
+        fig_tag+='_xyp'
+        fig_title+="$'$"# (xp)'
+    if do_prm_inc == 1:
+        fig_tag+='_tp'
+        fig_title+=' (tp)'
+
     # Shift starting-read time step for CRFON comparison
     t0_test=0
+
+
+########## TIME LOOP ###############################################
 
     # #### Time selection
     i_nt=np.shape(ntall)[0]
@@ -119,62 +172,6 @@ for ivar in range(nvar):
       nt = ntall[knt]
       hr_tag = str(np.char.zfill(str(nt), 2))
       print("Hour sample: ",hr_tag)
-
-
-      # #### Directories
-
-      figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
-      # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
-      main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
-
-      memb0=1
-      nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
-      nustr = np.char.zfill(nums, 2)
-      memb_all=np.char.add('memb_',nustr)
-
-      # datdir2 = 'post/d02/v2/'
-      datdir2 = 'post/d02/'
-
-
-      ##### Get dimensions
-
-      datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
-      varfil_main = Dataset(datdir+'T.nc')
-      nz = varfil_main.dimensions['level'].size
-      nx1 = varfil_main.dimensions['lat'].size
-      nx2 = varfil_main.dimensions['lon'].size
-      pres = varfil_main.variables['pres'][:] # hPa
-      varfil_main.close()
-
-      # WRFOUT file list
-      testdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
-      dirlist = os.listdir(testdir)
-      subs="wrfout_d02"
-      wrf_files = list(filter(lambda x: subs in x, dirlist))
-      wrf_files.sort()
-      wrfout = [testdir + s for s in wrf_files][0]
-      varfil_main = Dataset(wrfout)
-      lat = varfil_main.variables['XLAT'][:][0] # deg
-      lon = varfil_main.variables['XLONG'][:][0] # deg
-      varfil_main.close()
-
-      # Get variable settings
-      bins, fig_title, fig_tag, units_var, scale_mn, \
-        units_mn, xrange_mn, xrange_mn2 = cfads_var_settings(iplot)
-      nbin=np.shape(bins)[0]
-
-      # Create axis of bin center-points
-      bin_axis = (bins[np.arange(nbin-1)]+bins[np.arange(nbin-1)+1])/2
-
-      if do_prm_xy == 1:
-          fig_tag+='_xyp'
-          fig_title+="$'$"# (xp)'
-      if do_prm_inc == 1:
-          fig_tag+='_tp'
-          fig_title+=' (tp)'
-
-
-      # #### Read variables ##############################################
       
       ntest=2
       var_freq=np.ma.zeros((ntest,nbin-1,nz))
@@ -187,6 +184,9 @@ for ivar in range(nvar):
         var_all = np.ma.zeros((ntest,nmem,nt,nz,nx1,nx2))
         # strat_all = np.ma.zeros((ntest,nmem,nt,nx1,nx2))
         strat_all = np.ma.zeros((ntest,nmem,nt,nx1,nx2))
+
+
+########## TEST LOOP ###############################################
 
       for ktest in range(ntest):
       
@@ -220,6 +220,9 @@ for ivar in range(nvar):
           t1+=1
 
         print('Running itest: ',itest)
+
+
+########## ENS MEMBER LOOP ###############################################
 
         for imemb in range(nmem):
       
@@ -274,21 +277,13 @@ for ivar in range(nvar):
             # www -= var_ls2_avg[np.newaxis,:,np.newaxis,np.newaxis]
             # var = thp*www
 
-          # # Mask out based on strat/conv
-          # if (istrat != -1) & (istrat != 3):
-          #   var = np.ma.masked_where((np.repeat(strat,nz,axis=1) != istrat), var, copy=True)
-          # elif istrat == 3:
-          #   var = np.ma.masked_where(((np.repeat(strat,nz,axis=1) == 0) & (np.repeat(strat,nz,axis=1) == 3)),
-          #       var, copy=True)
-
           # Localize to TC track
-          var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+          # var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
           strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
 
           # Save ens member
           var_all[ktest,imemb,:,:,:,:] = var
           strat_all[ktest,imemb,:,:,:] = np.squeeze(strat)
-          # strat_all[ktest,imemb,:,:,:,:] = strat
 
       # Calculate var' as time-increment: var[t] - var[t-1]
       if do_prm_inc == 1:
@@ -317,39 +312,27 @@ for ivar in range(nvar):
           fig_extra='_'+strattag.lower()
           print("Strat tag: ",strattag)
 
-        # Mask out based on strat/conv
-        # if ((istrat != -1) & (istrat != 3)):
-        #   ind = (strat_all == istrat).nonzero()
-        #   var_ma = np.ma.masked_where((np.repeat(strat_all[:,:,:,np.newaxis,...],nz,axis=3) != istrat), var_all, copy=True)
-        # elif istrat == 3:
-        #   ind = (strat_all > 0).nonzero()
-
-        # np.ma.mean(var_all[ind[0],ind[1],ind[2],:,ind[3],ind[4]], axis=(1,2,4,5))
-        # var_mn=np.ma.mean(var_ma, axis=(1,2,4,5))
-
 #### Calculate frequency ##############################################
 
         #### Basic mean
         var_mn=np.zeros([ntest,nz])
 
         for ktest in range(ntest):
-          
-          # Mask out based on strat/conv
+
+          # Classification-specific indices
           if ((istrat != -1) & (istrat != 3)):
             ind = (strat_all[ktest] == istrat).nonzero()
           elif istrat == 3:
             ind = (strat_all[ktest] > 0).nonzero()
-          
+
           var_test = var_all[ktest]
           var_mn[ktest,:] = np.ma.mean(var_test[ind[0],ind[1],:,ind[2],ind[3]], axis=0)
 
           for iz in range(nz):
-            var_slice = np.copy(var_test[:,:,iz,...])
-            var_slice = var_slice[ind]
-            count, placeholder = np.histogram(var_slice, bins=bins)
-            # count, placeholder = np.histogram(np.ma.compressed(var_ma[ktest,:,:,iz,:,:]), bins=bins)
-            var_freq[ktest,:,iz] = 100 * count / np.sum(count)
-            #ncell=nx1*nx2*nt*nmem
+            var_slice = var_test[:,:,iz,...]
+            var_strat = var_slice[ind]
+            count, placeholder = np.histogram(var_strat, bins=bins)
+            var_freq[ktest,:,iz] = 100 * count / np.sum(count) # /(nx1*nx2*nt*nmem)
 
 
 # ### Plotting routines ##############################################
