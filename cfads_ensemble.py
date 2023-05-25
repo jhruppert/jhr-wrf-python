@@ -20,8 +20,8 @@ from matplotlib import ticker, cm
 import os
 import cmocean
 from mask_tc_track import mask_tc_track
-from cfads_functions import cfads_var_settings, cfads_var_calc
-from scipy import stats
+from cfads_functions import cfads_var_settings, cfads_var_calc, mask_edges
+from precip_class import precip_class
 import sys
 
 
@@ -34,7 +34,7 @@ ivar_all = ['thv','vmf','lh','rh']
 ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
 ivar_all = ['lq','lh','thv','the']
-ivar_all = ['thv']
+ivar_all = ['vmf','thv']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -49,7 +49,7 @@ ntall=[1]
 # How many ensemble members
 
 nmem = 10 # number of ensemble members (1-10 have NCRF)
-nmem = 3
+# nmem = 3
 
 # #### Classification selection
 
@@ -67,6 +67,7 @@ storm_all=['haiyan']
 nstorm=np.size(storm_all)
 
 # TC tracking
+do_tc_track=False # Localize to TC track? Use whole domain otherwise
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
 # rmax = 8 # radius (deg) limit for masking around TC center
@@ -246,9 +247,23 @@ for ivar in range(nvar):
 
         # Stratiform index
           # if istrat != -1:
-          varfil_main = Dataset(datdir+'strat.nc')
-          strat = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          # varfil_main = Dataset(datdir+'strat.nc')
+          # strat2 = varfil_main.variables['strat'][t0:t1,:,:,:] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil
+          # varfil_main.close()
+        # New stratiform scheme
+          varfil_main = Dataset(datdir+'q_int.nc')
+          q_int = varfil_main.variables['q_int'][:,t0:t1,:,:] # 'nq','nt','nx1','nx2',
           varfil_main.close()
+          strat = precip_class(q_int)
+          strat = strat[:,np.newaxis,...]
+          #   0: non-precipitating
+          # Convective:
+          #   1: deep convective
+          #   2: congestus
+          #   3: shallow
+          # Layered:
+          #   4: stratiform
+          #   5: anvil (weaker rainfall)
 
         # Three-dimensional variables
           var = cfads_var_calc(iplot, datdir, pres, t0, t1)
@@ -257,10 +272,12 @@ for ivar in range(nvar):
 
           # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
           if do_prm_xy == 1:
-            radius_ls=6
-            var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
-            # var_ls = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-            var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
+            if do_tc_track:
+              radius_ls=6
+              var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
+              var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
+            else:
+              var_ls_avg = np.ma.mean(var,axis=(0,2,3))
             var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
 
           # Calculate w'th'
@@ -278,8 +295,11 @@ for ivar in range(nvar):
             # var = thp*www
 
           # Localize to TC track
-          # var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-          strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
+          ## var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
+          if do_tc_track:
+            strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0, t1)
+          else:
+            strat = mask_edges(strat)
 
           # Save ens member
           var_all[ktest,imemb,:,:,:,:] = var
@@ -308,7 +328,19 @@ for ivar in range(nvar):
           elif istrat == 2:
             strattag='Strat'
           elif istrat == 3:
-            strattag='CS'
+            strattag='Precip'
+          # elif istrat == 1:
+          #   strattag='DCon'
+          # elif istrat == 2:
+          #   strattag='Shall'
+          # elif istrat == 3:
+          #   strattag='Cong'
+          # elif istrat == 4:
+          #   strattag='Strat'
+          # elif istrat == 5:
+          #   strattag='Anvil'
+          # elif istrat == 6:
+          #   strattag='Precip'
           fig_extra='_'+strattag.lower()
           print("Strat tag: ",strattag)
 
@@ -320,8 +352,13 @@ for ivar in range(nvar):
         for ktest in range(ntest):
 
           # Classification-specific indices
-          if ((istrat != -1) & (istrat != 3)):
-            ind = (strat_all[ktest] == istrat).nonzero()
+          # if ((istrat != -1) & (istrat != 3)):
+          #   ind = (strat_all[ktest] == istrat).nonzero()
+          if (istrat == 1):
+            # Convection: Deep + Congestus
+            ind = ((strat_all[ktest] == 1) | (strat_all[ktest] == 2)).nonzero()
+          if (istrat == 2):
+            ind = (strat_all[ktest] > 4).nonzero()
           elif istrat == 3:
             ind = (strat_all[ktest] > 0).nonzero()
 
@@ -336,18 +373,18 @@ for ivar in range(nvar):
 
 
 # ### Plotting routines ##############################################
-        
+
         font = {'family' : 'sans-serif',
                 'weight' : 'normal',
                 'size'   : 16}
-        
+
         matplotlib.rc('font', **font)
-        
-        
+
+
 # ### Plot CFADs for both tests ################################
-        
+
         for ktest in range(ntest):
-        
+
           itest=tests[ktest]
 
           # pltvar = np.transpose(var_freq[ktest,:,:])

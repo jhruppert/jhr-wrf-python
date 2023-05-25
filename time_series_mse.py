@@ -20,6 +20,7 @@ import sys
 # from mask_tc_track import mask_tc_track
 import pandas as pd
 from precip_class import precip_class
+from cfads_functions import mask_edges
 
 
 # #### Main settings
@@ -126,18 +127,6 @@ def plot_rainhist(x):
     # plt.ylim(0, 0.03)
     # plt.grid(True)
     # plt.show()
-
-def mask_edges(array):
-    # Last dimensions of array must be x1,x2
-    #   It is otherwise versatile
-    buffer=80
-    array = np.ma.array(array, mask=False, copy=True)
-    array.mask[...,0:buffer,:]=True
-    array.mask[...,-buffer:,:]=True
-    array.mask[...,:,0:buffer]=True
-    array.mask[...,:,-buffer:]=True
-    # array = np.ma.filled(array, fill_value=np.nan)
-    return array
 
 
 ##### MSE / DSE convergence functions ####################
