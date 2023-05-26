@@ -42,9 +42,8 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12,24,36]
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
-ntall=[1,2,3,6]
-# ntall=[6]
-ntall=[1]
+ntall=[1,3,6]
+ntall=[3]
 
 # How many ensemble members
 
@@ -56,6 +55,15 @@ nmem = 10 # number of ensemble members (1-10 have NCRF)
 # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 # kclass=[0,1,2,3]
 kclass=[1,2]
+kclass=[3]
+      #   0: non-precipitating
+      # Convective:
+      #   1: deep convective
+      #   2: congestus
+      #   3: shallow
+      # Layered:
+      #   4: stratiform
+      #   5: anvil (weaker rainfall)
 
 # #### Storm selection
 
@@ -256,14 +264,6 @@ for ivar in range(nvar):
           varfil_main.close()
           strat = precip_class(q_int)
           strat = strat[:,np.newaxis,...]
-          #   0: non-precipitating
-          # Convective:
-          #   1: deep convective
-          #   2: congestus
-          #   3: shallow
-          # Layered:
-          #   4: stratiform
-          #   5: anvil (weaker rainfall)
 
         # Three-dimensional variables
           var = cfads_var_calc(iplot, datdir, pres, t0, t1)
@@ -358,9 +358,10 @@ for ivar in range(nvar):
             # Convection: Deep + Congestus
             ind = ((strat_all[ktest] == 1) | (strat_all[ktest] == 2)).nonzero()
           if (istrat == 2):
-            ind = (strat_all[ktest] > 4).nonzero()
+            # ind = (strat_all[ktest] > 4).nonzero()
+            ind = (strat_all[ktest] == 4).nonzero()
           elif istrat == 3:
-            ind = (strat_all[ktest] > 0).nonzero()
+            ind = ((strat_all[ktest] != 0) & (strat_all[ktest] != 3)).nonzero()
 
           var_test = var_all[ktest]
           var_mn[ktest,:] = np.ma.mean(var_test[ind[0],ind[1],:,ind[2],ind[3]], axis=0)
