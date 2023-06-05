@@ -21,7 +21,7 @@ from thermo_functions import density_moist
 # #### Main settings
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -29,8 +29,8 @@ figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
 
 # Tests to read and compare
 if storm == 'haiyan':
-    tests = ['ctl','ncrf36h']
-    # tests = [tests[1],'crfon60h']
+    # tests = ['ctl','ncrf36h']
+    tests = ['STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
@@ -110,7 +110,7 @@ def write_vars(datdir,nt,nz,nx1,nx2,rho):
 
 # Main read loops for 3D (dependent) variables
 
-ntest=2
+ntest=len(tests)
 
 for ktest in range(ntest):
 

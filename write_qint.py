@@ -25,7 +25,7 @@ main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 # Tests to read and compare
 if storm == 'haiyan':
     tests = ['ctl','ncrf36h']
-    # tests = [tests[1],'crfon60h']
+    tests = ['STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
@@ -87,7 +87,7 @@ def write_vars(datdir,q_int):
 
 # #### Main loops and calculations
 
-ntest=2
+ntest=len(tests)
 
 for ktest in range(ntest):
 
@@ -97,8 +97,7 @@ for ktest in range(ntest):
 
     # Loop over ensemble members
 
-    # for imemb in range(nmem):
-    for imemb in range(2,3):
+    for imemb in range(nmem):
 
         print('Running imemb: ',memb_all[imemb])
     

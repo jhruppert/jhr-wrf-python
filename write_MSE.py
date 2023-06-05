@@ -23,15 +23,15 @@ import sys
 pres_top = 100
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
 # Tests to read and compare
 if storm == 'haiyan':
-    tests = ['ctl','ncrf36h']
-    # tests = [tests[1],'crfon60h']
+    # tests = ['ctl','ncrf36h']
+    tests = ['STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
@@ -198,7 +198,7 @@ z_b = var_read(datdir,varname,ikread) # m
 
 # Main read loops for 3D (dependent) variables
 
-ntest=2
+ntest=len(tests)
 
 for ktest in range(ntest):
 
