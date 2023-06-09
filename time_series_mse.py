@@ -51,7 +51,7 @@ formula='vadv'#'hflux'#'converg'#
 # istrat_all=[0,1,2] # 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
 nrain=6 # np.size(istrat_all)
 # krain = 
-    # 0 = conv+strat points
+    # 0 = conv + congestus + strat + anvil
     # 1 = conv points
     # 2 = strat points
     # 3 = rainfall rate threshold
@@ -253,6 +253,8 @@ for itest in range(ntest):
         if formula == 'vadv':
             grad_s = varfil_main.variables['grad_s_vadv'][:,:,:] # J/m^2/s
             grad_h = varfil_main.variables['grad_h_vadv'][:,:,:] # J/m^2/s
+            # These are calculated in the Lagrangian perspective, hence positive values
+            # correspond to divergence
         elif formula == 'hflux':
             grad_s = varfil_main.variables['grad_s_hflux'][:,:,:] # J/m^2/s
             grad_h = varfil_main.variables['grad_h_hflux'][:,:,:] # J/m^2/s
@@ -312,8 +314,8 @@ for itest in range(ntest):
 
                     if krain == 0:
                     # all raining points
-                        # ind_rain = ((strat_it == 1) | (strat_it == 2)).nonzero()
-                        ind_rain = (strat_it > 0).nonzero()
+                        ind_rain = ((strat_it == 1) | (strat_it == 2) | (strat_it == 4) | (strat_it == 5)).nonzero()
+                        # ind_rain = (strat_it > 0).nonzero()
                     elif krain == 1:
                     # conv points
                         ind_rain = (strat_it == 1).nonzero()
