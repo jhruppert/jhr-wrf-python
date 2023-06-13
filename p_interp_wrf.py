@@ -1,4 +1,4 @@
-# Purpose: Vertically interpolate your WRF datasets!
+# Purpose: Vertically interpolate your WRF datasets and then make it into its own .nc file!
 
 # Input:
     # input_file: The stitched WRFout file path
@@ -17,16 +17,18 @@
         # variables that are too big to load into one variable.
 # Tip:
     # You'd want to run this function for each domain file you have because input_file currently takes one path.
-## EXAMPLE ##
+######## EXAMPLE ########
 # i.e. if I want to interpolate zonal winds on pressure coordinates on 50hPa , I would run this: 
 # parent_dir = '/this/is/where/my/data/lives'
 # input_file_d01 = parent_dir + '/raw/d01'  # Path to the raw input netCDF file
 # input_file_d02 = parent_dir + '/raw/d02'  # Path to the raw input netCDF file
-# output_dir = parent_dir + '/L2/'  # Path to the directory with interpolated files
-# variable_name = ['U']             # Declare the variables you want to interpolate
+# output_dir = parent_dir + '/L2/'          # Path to the directory with interpolated files
+# variable_name = ['U']                     # Declare the variables you want to interpolate
 # vertical_levels = np.arange(1000,0,-50)   # Pressure heights you want to interpolate at
 # Call the function:
 # interp_variable(input_file_d01, variable_name, output_dir, vertical_levels)
+
+##############################################################################
 # 
 # Hrag Najarian, University of Oklahoma
 # 1 June 2023
@@ -43,6 +45,7 @@ def interp_variable(input_file, variable_name, output_dir, vertical_levels):
     else: levels = len(vertical_levels)
 
     for i in variable_name:
+        # Zonal Wind
         if i == 'U':
             # Create new .nc file we can write to and name it appropriately
             if levels == 1:
@@ -61,14 +64,30 @@ def interp_variable(input_file, variable_name, output_dir, vertical_levels):
             # Create the variable, set attributes, and start filling the variable into the new nc file
             output_variable = output_dataset.createVariable(i, 'f4', temp)  # 'f4' == float32
             temp_atts = dataset.variables['U'].__dict__
-            temp_atts.update({'stagger': ''})
+            temp_atts.update({'stagger': '','coordinates': 'XLONG XLAT XTIME'})
             output_variable.setncatts(temp_atts)
             for t in range(dataset.dimensions['Time'].size):
                 variable = wrf.getvar(dataset, 'ua', timeidx=t, meta=False)
                 pressure_heights = wrf.getvar(dataset, 'pressure', timeidx=t, meta=False)
-                interp_variable = wrf.interplevel(variable,pressure_heights,vertical_levels,meta=False)
+                interp_variable = wrf.interplevel(variable, pressure_heights, vertical_levels, meta=False)
                 output_variable[t,...] = interp_variable[:]
             # Make sure you close the input and output files at the end
             output_dataset.close()
     dataset.close()
     return
+
+parent_dir = '/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/hragnajarian/wrfout.files/6day-2015-11-22-12--28-12'
+input_file_d01 = parent_dir + '/raw/d01'  # Path to the raw input netCDF file
+input_file_d02 = parent_dir + '/raw/d02'  # Path to the input netCDF file
+# Output to level 2 directory:
+output_dir = parent_dir + '/L2/'  # Path to the input netCDF file
+# Declare variables needed:
+variable_name = ['U']
+
+# Declare the vertial levels you want to interpolate:
+# vertical_levels = np.arange(1000,0,-50)
+vertical_levels = np.array(850)
+
+# Call the function:
+interp_variable(input_file_d01, variable_name, output_dir, vertical_levels)
+# interp_variable(input_file_d02, variable_name, output_dir, vertical_levels)
