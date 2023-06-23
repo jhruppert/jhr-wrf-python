@@ -14,7 +14,8 @@ from thermo_functions import density_moist, theta_equiv, theta_virtual, relh
 
 
 def mask_edges(array):
-    # Last dimensions of array must be x1,x2
+    # Returns a masked array with edges masked
+    # Last dimensions of input array must be x1,x2
     #   It is otherwise versatile
     buffer=80
     array = np.ma.array(array, mask=False, copy=False)
