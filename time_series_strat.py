@@ -22,6 +22,7 @@ import sys
 import os
 import pandas as pd
 from precip_class import precip_class
+from cfads_functions import mask_edges
 
 
 # #### Storm selection
@@ -30,18 +31,6 @@ storms=['haiyan','maria']
 # storms=['maria']
 storms=['haiyan']
 
-
-def mask_edges(array):
-    # Last dimensions of array must be x1,x2
-    #   It is otherwise versatile
-    buffer=80
-    array = np.ma.array(array, mask=False, copy=True)
-    array.mask[...,0:buffer,:]=True
-    array.mask[...,-buffer:,:]=True
-    array.mask[...,:,0:buffer]=True
-    array.mask[...,:,-buffer:]=True
-    # array = np.ma.filled(array, fill_value=np.nan)
-    return array
 
 def get_tshift(itest):
     if itest == 'ctl':
