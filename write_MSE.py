@@ -160,7 +160,7 @@ def var_metadata():
     
     var_names = [
         # 'dse',
-        # 'mse',
+        'mse',
         # 'mse_vint',
         # 'grad_s_vadv',
         # 'grad_h_vadv',
@@ -171,7 +171,7 @@ def var_metadata():
     ]
     long_names = [
         # 'dry static energy, calculated as cpT + gz',
-        # 'moist static energy, calculated as cpT + gz + L_v*q',
+        'moist static energy, calculated as cpT + gz + L_v*q',
         # 'integrated moist static energy, calculated as 1/g*integral(mse)dp up to 100 hPa',
         # 'integrated VADV of DSE (up to 100 hPa)',
         # 'integrated VADV of MSE (up to 100 hPa)',
@@ -182,7 +182,7 @@ def var_metadata():
     ]
 
     units = [
-        # 'J/kg',
+        'J/kg',
         # 'J/kg',
         # 'J/m^2',
         # 'J/m^2/s',
@@ -223,7 +223,7 @@ def new_write_vars(file_out, var_list, var_names, long_names, units):
         writevar = ncfile.createVariable(var_names[ivar], np.single, dimsout)
         writevar.units = units[ivar]
         writevar.long_name = long_names[ivar]
-        writevar[:,:,:,:] = var_list[ivar][:,:,:,:]
+        writevar[...] = var_list[ivar]
 
     ncfile.close()
 
@@ -330,9 +330,7 @@ for ktest in range(1,2):
         mse_int = vert_int(mse, dp, g) # J/m^2
 
         # Diagnostics for Gross Moist Stability
-
         rho = density_moist(tmpk,qv,pres[np.newaxis,0:ikread+1,np.newaxis,np.newaxis,]*1e2) # kg/m3
-        print("Density: ",rho[2,:,100,100])
         w = var_read(datdir,'W',ikread) # m/s
         grad_s_vadv = calc_vadv(w, rho, dse, dp, g)
         grad_h_vadv = calc_vadv(w, rho, mse, dp, g)
@@ -349,6 +347,7 @@ for ktest in range(1,2):
         ### Write out variables ##############################################
 
         var_list=[]
+        var_list.append(mse)
         var_list.append(grad_s_hflux)
         var_list.append(grad_h_hflux)
         var_list.append(grad_s_converg)
