@@ -145,9 +145,9 @@ for ktest in range(ntest):
         w = var_read(datdir,varname) # m/s
         nt,nz,nx1,nx2 = w.shape
         # Mask for Up/Dn
-        wu = np.ma.masked_where((w <= 0), w, copy=True)
+        wu = np.ma.masked_where((w < 0), w, copy=True)
+        wd = np.ma.masked_where((w > 0), w, copy=True)
         # wu = np.ma.filled(wu, fill_value=np.nan)
-        wd = np.ma.masked_where((w >= 0), w, copy=True)
         # wd = np.ma.filled(wd, fill_value=np.nan)
 
         # Microphysics (MP) latent heating
