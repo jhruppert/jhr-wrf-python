@@ -122,20 +122,20 @@ def var_ncdf_metadata():
         'density of moist air',
         'dry static energy, calculated as cpT + gz',
         'moist static energy, calculated as cpT + gz + L_v*q',
-        'integrated moist static energy, calculated as 1/g*integral(mse)dp up to 100 hPa',
-        'integrated VADV of DSE (up to 100 hPa)',
-        'integrated VADV of MSE (up to 100 hPa)',
-        'integrated HADV of DSE (up to 100 hPa)',
-        'integrated HADV of MSE (up to 100 hPa)',
-        'integrated DSE*(del.V) (up to 100 hPa)',
-        'integrated MSE*(del.V) (up to 100 hPa)',
-        'integrated del.(DSE*V) (up to 100 hPa)',
-        'integrated del.(MSE*V) (up to 100 hPa)',
+        'vertically int moist static energy, calculated as 1/g*integral(mse)dp up to 100 hPa',
+        'vertically int VADV of DSE (up to 100 hPa)',
+        'vertically int VADV of MSE (up to 100 hPa)',
+        'vertically int HADV of DSE (up to 100 hPa)',
+        'vertically int HADV of MSE (up to 100 hPa)',
+        'vertically int DSE*(del.V) (up to 100 hPa)',
+        'vertically int MSE*(del.V) (up to 100 hPa)',
+        'vertically int del.(DSE*V) (up to 100 hPa)',
+        'vertically int del.(MSE*V) (up to 100 hPa)',
         'water vapor integrated over full column from postproc data'
         'saturation water vapor integrated over full column from postproc data'
         'upward-masked mass flux vertically integrated (up to 100 hPa)'
         'downward-masked mass flux vertically integrated (up to 100 hPa)'
-        'condensation heating from H_DIABATIC vertically integrated (up to 100 hPa), converted to rainfall units',
+        'condensation heating from H_DIABATIC vertically int (up to 100 hPa), converted to rainfall units',
     ]
     units = [
         'kg/m^3',
@@ -162,6 +162,8 @@ def var_ncdf_metadata():
         dims3d,
         dims3d,
         dims3d,
+        dims2d,
+        dims2d,
         dims2d,
         dims2d,
         dims2d,
