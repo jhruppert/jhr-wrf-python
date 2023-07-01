@@ -7,18 +7,19 @@
 #   - file_out: path+name of NetCDF file to write out
 #   - var_list: list containing the variables to write out
 #   METADATA:
-#   - var_names:  list of string variable names
-#   - long_names: list of strings containing variable descriptions
-#   - units:      list of strings containing dimensions
-#   - dim_names:  list of variable dimensions
+#   - var_names:    list of string variable names
+#   - descriptions: list of strings containing variable descriptions
+#   - units:        list of strings containing units for each variable
+#   - dim_names:    list of variable dimensions, i.e., one list or tuple
+#                       of dimension strings per variable
 # 
-# See example code at bottom of script for more info, including an important
+# See example code below function for more info, including an important
 # stipulation about the variable dimensions.
 
 from netCDF4 import Dataset
 import numpy as np
 
-def write_ncfile(file_out, var_list, var_names, long_names, units, dim_names):
+def write_ncfile(file_out, var_list, var_names, descriptions, units, dim_names):
 
     dims_val = var_list[0].shape
 
@@ -31,19 +32,23 @@ def write_ncfile(file_out, var_list, var_names, long_names, units, dim_names):
     for ivar in range(nvar):
         writevar = ncfile.createVariable(var_names[ivar], np.single, dim_names[ivar])
         writevar.units = units[ivar]
-        writevar.long_name = long_names[ivar]
+        writevar.description = descriptions[ivar]
         writevar[...] = var_list[ivar]
 
     ncfile.close()
     
     return None
 
-# # Example code that's been tested
+# Example code that's been tested
 
-# # A stipulation on the variable list:
-# #   All dimensions must appear in the first variable of var_list should,
-# #   and any subsequent variables can contain any subcombination of them.
-# #   (This could probably be made more flexible...)
+# A stipulation on the variable list:
+#   All dimensions must appear in the first variable of var_list should,
+#   and any subsequent variables can contain any subcombination of them.
+#   (This could probably be made more flexible...)
+
+####################################
+## Uncomment below #################
+####################################
 
 # file_out='./test.nc'
 
@@ -57,8 +62,8 @@ def write_ncfile(file_out, var_list, var_names, long_names, units, dim_names):
 # var_list.append(pw)
 
 # var_names=['rho','rain','pw']
-# long_names=['density of moist air','rainfall rate','precipitable water']
+# descriptions=['density of moist air','rainfall rate','precipitable water']
 # units=['kg/m^3', 'mm/day', 'mm']
 # dim_names=[('nt', 'nz', 'ny', 'nx'), ('nt', 'ny', 'nx'), ('nt', 'ny', 'nx')]
 
-# write_ncfile(file_out, var_list, var_names, long_names, units, dim_names)
+# write_ncfile(file_out, var_list, var_names, descriptions, units, dim_names)

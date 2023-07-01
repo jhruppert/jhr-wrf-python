@@ -116,7 +116,7 @@ def var_ncdf_metadata():
         'dse_fluxdiverg_vint',
         'mse_fluxdiverg_vint',
     ]
-    long_names = [
+    descriptions = [
         'density of moist air',
         'water vapor integrated over full column from postproc data',
         'saturation water vapor integrated over full column from postproc data',
@@ -175,11 +175,11 @@ def var_ncdf_metadata():
         dims2d,
         dims2d,
     ]
-    len1=len(var_names); len2=len(long_names); len3=len(units); len4=len(dim_names)
+    len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dim_names)
     if (len1 != len2) or (len1 != len3) or (len1 != len4):
         raise ValueError("Variable info counts are off")
 
-    return var_names, long_names, units, dim_names
+    return var_names, descriptions, units, dim_names
 
 ##### MSE & DSE functions ################################
 
@@ -341,8 +341,13 @@ for ktest in range(ntest):
 
         var_list=[]
         var_list.append(rho)
-        var_list.append(mse)
+        var_list.append(pw)
+        var_list.append(pw_sat)
+        var_list.append(vmfu)
+        var_list.append(vmfd)
+        var_list.append(condh)
         var_list.append(dse)
+        var_list.append(mse)
         var_list.append(mse_vint)
         var_list.append(vadv_dse_vint)
         var_list.append(vadv_mse_vint)
@@ -352,14 +357,10 @@ for ktest in range(ntest):
         var_list.append(mse_diverg_vint)
         var_list.append(dse_fluxdiverg_vint)
         var_list.append(mse_fluxdiverg_vint)
-        var_list.append(pw)
-        var_list.append(pw_sat)
-        var_list.append(vmfu)
-        var_list.append(vmfd)
 
         ### Write out variables ##############################################
 
-        var_names, long_names, units, dim_names = var_ncdf_metadata()
+        var_names, descriptions, units, dim_names = var_ncdf_metadata()
 
         file_out = datdir+'mse_diag.nc'
-        write_ncfile(file_out, var_list, var_names, long_names, units, dim_names)
+        write_ncfile(file_out, var_list, var_names, descriptions, units, dim_names)

@@ -85,11 +85,10 @@ def density_moist(T, qv, pres):
     T+=T0
     
     rd=287.04
-    rv=461.5
-    eps_r=rv/rd
-    # virt_corr = (1. + qv*eps_r)/(1.+qv)
-    virt_corr = (1. + 0.61*qv)
-    return pres / ( rd * T * virt_corr )
+    # rv=461.5
+    # eps_r=rv/rd
+    # return pres / ( rd * T * (1. + qv*eps_r)/(1.+qv) )
+    return pres / ( rd * T * (1. + 0.61*qv) )
 
 
 ## Density dry ######################################################
