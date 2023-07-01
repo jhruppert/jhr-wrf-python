@@ -1,29 +1,27 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Python script to write out moist static energy and its
-#       vertical integral from TC output.
+# Python script to calculate multiple diagnostics from WRF output, including
+# MSE budget terms, and write them out.
 # 
 # James Ruppert  
 # jruppert@ou.edu  
 # 2/24/23
 
-
-# NOTE: Using copied tracking from CTL for NCRF tests
-
 from netCDF4 import Dataset
 import numpy as np
 import os
 from thermo_functions import density_moist, esat, mixr_from_e
+from write_ncfile import write_ncfile
 import sys
 
 
 #### Main settings
 
-msetop = 100 # top for MSE integrals
-
 storm = 'haiyan'
 # storm = 'maria'
+
+msetop = 100 # top for MSE integrals
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -39,7 +37,7 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-nmem = 1
+# nmem = 1
 
 ######################################################################
 
@@ -101,6 +99,11 @@ def var_ncdf_metadata():
     
     var_names = [
         'rho',
+        'pw',
+        'pw_sat',
+        'vmfu',
+        'vmfd',
+        'condh',
         'dse',
         'mse',
         'mse_vint',
@@ -112,14 +115,14 @@ def var_ncdf_metadata():
         'mse_diverg_vint',
         'dse_fluxdiverg_vint',
         'mse_fluxdiverg_vint',
-        'pw',
-        'pw_sat',
-        'vmfu',
-        'vmfd',
-        'condh',
     ]
     long_names = [
         'density of moist air',
+        'water vapor integrated over full column from postproc data',
+        'saturation water vapor integrated over full column from postproc data',
+        'upward-masked mass flux vertically integrated (up to 100 hPa)',
+        'downward-masked mass flux vertically integrated (up to 100 hPa)',
+        'condensation heating from H_DIABATIC vertically int (up to 100 hPa), converted to rainfall units',
         'dry static energy, calculated as cpT + gz',
         'moist static energy, calculated as cpT + gz + L_v*q',
         'vertically int moist static energy, calculated as 1/g*integral(mse)dp up to 100 hPa',
@@ -131,14 +134,14 @@ def var_ncdf_metadata():
         'vertically int MSE*(del.V) (up to 100 hPa)',
         'vertically int del.(DSE*V) (up to 100 hPa)',
         'vertically int del.(MSE*V) (up to 100 hPa)',
-        'water vapor integrated over full column from postproc data'
-        'saturation water vapor integrated over full column from postproc data'
-        'upward-masked mass flux vertically integrated (up to 100 hPa)'
-        'downward-masked mass flux vertically integrated (up to 100 hPa)'
-        'condensation heating from H_DIABATIC vertically int (up to 100 hPa), converted to rainfall units',
     ]
     units = [
         'kg/m^3',
+        'mm',
+        'mm',
+        'kg/m/s',
+        'kg/m/s',
+        'mm/day',
         'J/kg',
         'J/kg',
         'J/m^2',
@@ -150,23 +153,18 @@ def var_ncdf_metadata():
         'J/m^2/s',
         'J/m^2/s',
         'J/m^2/s',
-        'mm',
-        'mm',
-        'kg/m/s',
-        'kg/m/s',
-        'mm/day',
     ]
     dims2d = ('nt','nx1','nx2')
     dims3d = ('nt','nz','nx1','nx2')
-    dims = [
-        dims3d,
-        dims3d,
+    dim_names = [
         dims3d,
         dims2d,
         dims2d,
         dims2d,
         dims2d,
         dims2d,
+        dims3d,
+        dims3d,
         dims2d,
         dims2d,
         dims2d,
@@ -177,37 +175,11 @@ def var_ncdf_metadata():
         dims2d,
         dims2d,
     ]
-    len1=len(var_names); len2=len(long_names); len3=len(units); len4=len(dims)
+    len1=len(var_names); len2=len(long_names); len3=len(units); len4=len(dim_names)
     if (len1 != len2) or (len1 != len3) or (len1 != len4):
         raise ValueError("Variable info counts are off")
 
-    return var_names, long_names, units, dims
-
-#### NetCDF variable write function
-
-def new_write_vars(file_out, var_list, var_names, long_names, units, dims):
-
-    # One key stipulation:
-    # Assumes dimensions are common across variables and assumes that first
-    # variable in var_list contains all of them.
-
-    nt, nz, nx1, nx2 = var_list[0].shape
-
-    ncfile = Dataset(file_out,mode='w', clobber=True)
-
-    time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
-    z_dim = ncfile.createDimension('nz', nz)
-    x1_dim = ncfile.createDimension('nx1', nx1)
-    x2_dim = ncfile.createDimension('nx2', nx2)
-
-    nvar = len(var_list)
-    for ivar in range(nvar):
-        writevar = ncfile.createVariable(var_names[ivar], np.single, dims[ivar])
-        writevar.units = units[ivar]
-        writevar.long_name = long_names[ivar]
-        writevar[...] = var_list[ivar]
-
-    ncfile.close()
+    return var_names, long_names, units, dim_names
 
 ##### MSE & DSE functions ################################
 
@@ -268,8 +240,8 @@ z_b = var_read(datdir,varname,nz) # m
 # Main read loops for 3D (dependent) variables
 
 ntest=len(tests)
-# for ktest in range(ntest):
-for ktest in range(1,2):
+for ktest in range(ntest):
+# for ktest in range(1,2):
 
     test_str=tests[ktest]
 
@@ -321,22 +293,27 @@ for ktest in range(1,2):
         mse = dse + lv*qv
         mse_vint = vert_int(mse[:,0:kmsetop+1,:,:], dp, g) # J/m^2
 
-        # Vertical advection of X, vertically integrated
+        # Calculate advection/divergence terms and vertically integrate
+        
+        # Vertical advection
         vadv_dse_vint = vadv_vint(w[:,0:kmsetop+1,:,:], rho[:,0:kmsetop+1,:,:],
                                   dse[:,0:kmsetop+1,:,:], dp, g)
         vadv_mse_vint = vadv_vint(w[:,0:kmsetop+1,:,:], rho[:,0:kmsetop+1,:,:],
                                   mse[:,0:kmsetop+1,:,:], dp, g)
-        # Vertical advection of X, vertically integrated
+        
+        # Horizontal advection
         hadv_dse_vint = hadv_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                   dse[:,0:kmsetop+1,:,:], dp, g)
         hadv_mse_vint = hadv_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                   mse[:,0:kmsetop+1,:,:], dp, g)
-        # Mass divergence of X, vertically integrated
+        
+        # Mass divergence
         dse_diverg_vint = diverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                       dse[:,0:kmsetop+1,:,:], dp, g)
         mse_diverg_vint = diverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                       mse[:,0:kmsetop+1,:,:], dp, g)
-        # Horizontal flux divergence of X, vertically integrated
+        
+        # Horizontal flux divergence
         dse_fluxdiverg_vint = tot_fdiverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                                dse[:,0:kmsetop+1,:,:], dp, g)
         mse_fluxdiverg_vint = tot_fdiverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
@@ -347,7 +324,8 @@ for ktest in range(1,2):
         # Calculate r-star (sat mixing ratio)
         e_sat = esat(tmpk) # Pa
         qv_sat = mixr_from_e(e_sat, (pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/kg
-         # Integrate over full column
+        
+        # Integrate over full column
         pw = vert_int(qv, dp, g) # mm
         pw_sat = vert_int(qv_sat, dp, g) # mm
 
@@ -381,7 +359,7 @@ for ktest in range(1,2):
 
         ### Write out variables ##############################################
 
-        var_names, long_names, units, dims = var_ncdf_metadata()
+        var_names, long_names, units, dim_names = var_ncdf_metadata()
 
         file_out = datdir+'mse_diag.nc'
-        new_write_vars(file_out, var_list, var_names, long_names, units, dims)
+        write_ncfile(file_out, var_list, var_names, long_names, units, dim_names)
