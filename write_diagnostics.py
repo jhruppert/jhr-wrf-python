@@ -272,14 +272,14 @@ for ktest in range(ntest):
 
         # Dry static energy (DSE)
         g=9.81 # m/s2
+        cp=1004. # J/K/kg
         dse = cp*tmpk + g*z # J/kg
         del z
 
         # Density
         rho = density_moist(tmpk,qv,pres[np.newaxis,:,np.newaxis,np.newaxis,]*1e2) # kg/m3
-        # Moist Static Energy (MSE) and related diagnostics
 
-        # Calculate r-star (sat mixing ratio)
+        # Calculate PW and PW_SAT for saturation fraction
         e_sat = esat(tmpk) # Pa
         qv_sat = mixr_from_e(e_sat, (pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/kg
         del e_sat
@@ -288,19 +288,20 @@ for ktest in range(ntest):
         pw_sat = vert_int(qv_sat, dp, g) # mm
         del qv_sat
 
-        # ;LATENT HEAT OF VAPORIZATION
+        # Latent heat of vaporization
         cp=1004.  # J/K/kg
         cpl=4186. # J/k/kg
         cpv=1885. # J/K/kg
         lv0=2.5e6 # J/kg
         lv = lv0 - (cpl-cpv)*(tmpk-273.15)
         del tmpk
-        del lv
 
+        # Moist static energy (MSE)
         g=9.81 # m/s2
         mse = dse + lv*qv # J/kg
-        mse_vint = vert_int(mse[:,0:kmsetop+1,:,:], dp, g) # J/m^2
+        del lv
         del qv
+        mse_vint = vert_int(mse[:,0:kmsetop+1,:,:], dp, g) # J/m^2
 
         # Winds
         w = var_read(datdir,'W',nz) # m/s
@@ -344,8 +345,11 @@ for ktest in range(ntest):
         # Mask for Up/Dn
         wu = np.ma.masked_where((w < 0), w, copy=True)
         wd = np.ma.masked_where((w > 0), w, copy=True)
+        del w
         vmfu = vert_int(wu[:,0:kmsetop,:,:], dp, g) # kg/m/s
         vmfd = vert_int(wd[:,0:kmsetop,:,:], dp, g) # kg/m/s
+        del wu
+        del wd
 
         ### Add variables to list ##############################################
 
@@ -367,6 +371,10 @@ for ktest in range(ntest):
         var_list.append(mse_diverg_vint)
         var_list.append(dse_fluxdiverg_vint)
         var_list.append(mse_fluxdiverg_vint)
+
+        del rho
+        del dse
+        del mse
 
         ### Write out variables ##############################################
 
