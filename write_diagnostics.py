@@ -269,17 +269,24 @@ for ktest in range(ntest):
         varname='Z'
         z = var_read(datdir,varname,nz) # m2/s2
         z += z_b
-        # Vertical motion
-        w = var_read(datdir,'W',nz) # m/s
+
+        # Dry static energy (DSE)
+        g=9.81 # m/s2
+        dse = cp*tmpk + g*z # J/kg
+        del z
+
         # Density
         rho = density_moist(tmpk,qv,pres[np.newaxis,:,np.newaxis,np.newaxis,]*1e2) # kg/m3
-        # Winds
-        u = var_read(datdir,'U',nz)
-        v = var_read(datdir,'V',nz)
-        # Microphysics (MP) latent heating
-        lh = var_read(datdir,'H_DIABATIC',nz) # K/s
-
         # Moist Static Energy (MSE) and related diagnostics
+
+        # Calculate r-star (sat mixing ratio)
+        e_sat = esat(tmpk) # Pa
+        qv_sat = mixr_from_e(e_sat, (pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/kg
+        del e_sat
+        # Integrate over full column
+        pw = vert_int(qv, dp, g) # mm
+        pw_sat = vert_int(qv_sat, dp, g) # mm
+        del qv_sat
 
         # ;LATENT HEAT OF VAPORIZATION
         cp=1004.  # J/K/kg
@@ -287,32 +294,39 @@ for ktest in range(ntest):
         cpv=1885. # J/K/kg
         lv0=2.5e6 # J/kg
         lv = lv0 - (cpl-cpv)*(tmpk-273.15)
+        del tmpk
+        del lv
 
         g=9.81 # m/s2
-        dse = cp*tmpk + g*z
-        mse = dse + lv*qv
+        mse = dse + lv*qv # J/kg
         mse_vint = vert_int(mse[:,0:kmsetop+1,:,:], dp, g) # J/m^2
+        del qv
+
+        # Winds
+        w = var_read(datdir,'W',nz) # m/s
+        u = var_read(datdir,'U',nz)
+        v = var_read(datdir,'V',nz)
 
         # Calculate advection/divergence terms and vertically integrate
-        
+
         # Vertical advection
         vadv_dse_vint = vadv_vint(w[:,0:kmsetop+1,:,:], rho[:,0:kmsetop+1,:,:],
                                   dse[:,0:kmsetop+1,:,:], dp, g)
         vadv_mse_vint = vadv_vint(w[:,0:kmsetop+1,:,:], rho[:,0:kmsetop+1,:,:],
                                   mse[:,0:kmsetop+1,:,:], dp, g)
-        
+
         # Horizontal advection
         hadv_dse_vint = hadv_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                   dse[:,0:kmsetop+1,:,:], dp, g)
         hadv_mse_vint = hadv_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                   mse[:,0:kmsetop+1,:,:], dp, g)
-        
+
         # Mass divergence
         dse_diverg_vint = diverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                       dse[:,0:kmsetop+1,:,:], dp, g)
         mse_diverg_vint = diverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                       mse[:,0:kmsetop+1,:,:], dp, g)
-        
+
         # Horizontal flux divergence
         dse_fluxdiverg_vint = tot_fdiverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
                                                dse[:,0:kmsetop+1,:,:], dp, g)
@@ -321,13 +335,10 @@ for ktest in range(ntest):
 
         ### Additional diagnostics to save ##############################################
 
-        # Calculate r-star (sat mixing ratio)
-        e_sat = esat(tmpk) # Pa
-        qv_sat = mixr_from_e(e_sat, (pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/kg
-        
-        # Integrate over full column
-        pw = vert_int(qv, dp, g) # mm
-        pw_sat = vert_int(qv_sat, dp, g) # mm
+        # Microphysics (MP) latent heating
+        lh = var_read(datdir,'H_DIABATIC',nz) # K/s
+        condh = vert_int(lh[:,0:kmsetop,:,:], dp, g) # kg/*K/m2/s
+        del lh
 
         # Vertical mass flux
         # Mask for Up/Dn
@@ -335,7 +346,6 @@ for ktest in range(ntest):
         wd = np.ma.masked_where((w > 0), w, copy=True)
         vmfu = vert_int(wu[:,0:kmsetop,:,:], dp, g) # kg/m/s
         vmfd = vert_int(wd[:,0:kmsetop,:,:], dp, g) # kg/m/s
-        condh = vert_int(lh[:,0:kmsetop,:,:], dp, g) # kg/*K/m2/s
 
         ### Add variables to list ##############################################
 
