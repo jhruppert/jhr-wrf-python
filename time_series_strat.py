@@ -14,12 +14,8 @@ import numpy as np
 import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
-# import matplotlib.colors as colors
-from matplotlib import ticker, cm
-import subprocess
-from mask_tc_track import mask_tc_track
+# from mask_tc_track import mask_tc_track
 import sys
-import os
 import pandas as pd
 from precip_class import precip_class
 from cfads_functions import mask_edges
@@ -57,8 +53,6 @@ for istorm in range(nstorm):
     nmem = 10 # number of ensemble members
     # nmem = 2
     # nmem = 1
-    # Starting member to read
-    memb0=1
 
     # TC tracking
     # ptrack='600' # tracking pressure level
@@ -72,6 +66,7 @@ for istorm in range(nstorm):
     figdir = "/home/jamesrup/figures/tc/ens/strat_class/"
     main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
+    memb0=1 # Starting member to read
     nums=np.arange(memb0,nmem+memb0,1)
     nums=nums.astype(str)
     nustr = np.char.zfill(nums, 2)
@@ -117,6 +112,10 @@ for istorm in range(nstorm):
     # lon1d=lon[0,:]
     # lat1d=lat[:,0]
 
+    frac_strat_all_t1 = []
+    frac_conv_all_t1 = []
+    frac_strat_all_t2 = []
+    frac_conv_all_t2 = []
 
     for imemb in range(nmem):
 
@@ -150,6 +149,11 @@ for istorm in range(nstorm):
         # count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
         # count_total = np.ma.count(strat, axis=(1,2))
 
+        # Mask out edges intead
+        strat = mask_edges(strat)
+        # Update count_total based on unmasked cells
+        count_total = np.ma.count(strat[0, ...])
+
         # Count strat/conv cells
         # strat_ind = np.ma.masked_where((strat != 2), strat)
         # conv_ind = np.ma.masked_where((strat != 1), strat)
@@ -165,12 +169,9 @@ for istorm in range(nstorm):
         # plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
         #     label=nustr[imemb], color=color_t1, linestyle='solid')
 
-        if imemb == 0:
-            frac_strat_all_t1 = np.reshape(frac_strat, (nt1,1))
-            frac_conv_all_t1 = np.reshape(frac_conv, (nt1,1))
-        else:
-            frac_strat_all_t1 = np.append(frac_strat_all_t1, np.reshape(frac_strat, (nt1,1)), axis=1)
-            frac_conv_all_t1 = np.append(frac_conv_all_t1, np.reshape(frac_conv, (nt1,1)), axis=1)
+        # Save to list
+        frac_strat_all_t1.append(frac_strat)
+        frac_conv_all_t1.append(frac_conv)
 
 
         # Second test
@@ -207,6 +208,11 @@ for istorm in range(nstorm):
         # count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
         # count_total = np.ma.count(strat, axis=(1,2))
 
+        # Mask out edges intead
+        strat = mask_edges(strat)
+        # Update count_total based on unmasked cells
+        count_total = np.ma.count(strat[0, ...])
+
         # Count strat/conv cells
         # strat_ind = np.ma.masked_where((strat != 2), strat)
         # conv_ind = np.ma.masked_where((strat != 1), strat)
@@ -222,12 +228,16 @@ for istorm in range(nstorm):
         # plt.plot(range(t0_test1+tshift1,t1_test1+tshift1), frac_strat, linewidth=1, 
         #     label=nustr[imemb], color=color_t1, linestyle='solid')
 
-        if imemb == 0:
-            frac_strat_all_t2 = np.reshape(frac_strat, (nt,1))
-            frac_conv_all_t2 = np.reshape(frac_conv, (nt,1))
-        else:
-            frac_strat_all_t2 = np.append(frac_strat_all_t2, np.reshape(frac_strat, (nt,1)), axis=1)
-            frac_conv_all_t2 = np.append(frac_conv_all_t2, np.reshape(frac_conv, (nt,1)), axis=1)
+        # Save to list
+        frac_strat_all_t2.append(frac_strat)
+        frac_conv_all_t2.append(frac_conv)
+
+
+    # Concatenate each list into single numpy array
+    frac_strat_all_t1 = np.stack(frac_strat_all_t1, axis=0)
+    frac_conv_all_t1 = np.stack(frac_conv_all_t1, axis=0)
+    frac_strat_all_t2 = np.stack(frac_strat_all_t2, axis=0)
+    frac_conv_all_t2 = np.stack(frac_conv_all_t2, axis=0)
 
 
 
@@ -253,10 +263,11 @@ for istorm in range(nstorm):
             pvar1 = frac_conv_all_t1 / frac_strat_all_t1
             pvar2 = frac_conv_all_t2 / frac_strat_all_t2
 
+        # Use Pandas to smooth via running mean
         pvar_pd1 = pd.DataFrame(pvar1)
-        pvar1_smooth = pvar_pd1.rolling(window=3, center=True, closed='both', axis=0).mean()
+        pvar1_smooth = pvar_pd1.rolling(window=3, center=True, closed='both', axis=1).mean()
         pvar_pd2 = pd.DataFrame(pvar2)
-        pvar2_smooth = pvar_pd2.rolling(window=3, center=True, closed='both', axis=0).mean()
+        pvar2_smooth = pvar_pd2.rolling(window=3, center=True, closed='both', axis=1).mean()
 
         font = {'family' : 'sans-serif',
                 'weight' : 'normal',
@@ -265,12 +276,10 @@ for istorm in range(nstorm):
         matplotlib.rc('font', **font)
 
 
-        # ### Combined plot: STRAT ##############################################
+        # ### Create plot ##############################################
 
-        # create figure
         fig = plt.figure(figsize=(9,5))
         ax = fig.add_subplot(111)
-
 
         ax.set_title(storm.capitalize()+': '+strattag)#, fontsize=20)
         ax.set_ylabel('Fraction')
@@ -298,10 +307,9 @@ for istorm in range(nstorm):
         color_t1 = 'red'
         color_t2 = 'blue'
 
-        # Plot means
-
-        frac_mean_t1 = np.nanmean(pvar1_smooth, axis=1)
-        frac_std_t1 = np.nanstd(pvar1_smooth, axis=1)
+        # Ensemble mean and stddev
+        frac_mean_t1 = np.nanmean(pvar1_smooth, axis=0)
+        frac_std_t1 = np.nanstd(pvar1_smooth, axis=0)
 
         tshift1 = get_tshift(tests[0])
         xdim = range(t0_test1 + tshift1, t1_test1 + tshift1)
@@ -311,9 +319,9 @@ for istorm in range(nstorm):
         plt.fill_between(xdim, frac_mean_t1 + frac_std_t1,
             frac_mean_t1 - frac_std_t1, alpha=0.2, color=color_t1)
 
-
-        frac_mean_t2 = np.nanmean(pvar2_smooth, axis=1)
-        frac_std_t2 = np.nanstd(pvar2_smooth, axis=1)
+        # Ensemble mean and stddev
+        frac_mean_t2 = np.nanmean(pvar2_smooth, axis=0)
+        frac_std_t2 = np.nanstd(pvar2_smooth, axis=0)
 
         tshift2 = get_tshift(tests[1])
         xdim = range(t0_test2 + tshift2, t1_test2 + tshift2)
