@@ -13,13 +13,17 @@ import numpy as np
 import os
 from thermo_functions import density_moist, esat, mixr_from_e
 from write_ncfile import write_ncfile
+import time
 import sys
+
 
 
 #### Main settings
 
 storm = 'haiyan'
 # storm = 'maria'
+
+filename_out='mse_diag.nc' # this is for ALL variables in the 
 
 msetop = 100 # top for MSE integrals
 
@@ -250,9 +254,11 @@ for ktest in range(ntest):
     # Loop over ensemble members
 
     for imemb in range(nmem):
-    
+
+        start = time.time()
+
         print('Running imemb: ',memb_all[imemb])
-    
+
         datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
         print(datdir)
 
@@ -380,5 +386,8 @@ for ktest in range(ntest):
 
         var_names, descriptions, units, dim_names = var_ncdf_metadata()
 
-        file_out = datdir+'mse_diag.nc'
-        write_ncfile(file_out, var_list, var_names, descriptions, units, dim_names)
+        write_ncfile(datdir+filename_out, var_list, var_names, descriptions, units, dim_names)
+
+        end = time.time()
+        time_elapsed = end - start
+        print("Time elapsed for member: ", time_elapsed)
