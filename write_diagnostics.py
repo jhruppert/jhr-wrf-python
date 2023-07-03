@@ -13,7 +13,7 @@ import numpy as np
 import os
 from thermo_functions import density_moist, esat, mixr_from_e
 from write_ncfile import write_ncfile
-import time
+from time import time as runtimer
 import sys
 
 
@@ -23,7 +23,7 @@ import sys
 storm = 'haiyan'
 # storm = 'maria'
 
-filename_out='mse_diag.nc' # this is for ALL variables in the 
+filename_out='mse_diag.nc' # this is for ALL variables in the var_names list
 
 msetop = 100 # top for MSE integrals
 
@@ -244,18 +244,19 @@ z_b = var_read(datdir,varname,nz) # m
 # Main read loops for 3D (dependent) variables
 
 ntest=len(tests)
-for ktest in range(ntest):
-# for ktest in range(1,2):
+# for ktest in range(ntest):
+for ktest in range(1,2):
 
     test_str=tests[ktest]
 
+    print()
     print('Running test: ',test_str)
 
     # Loop over ensemble members
 
     for imemb in range(nmem):
 
-        start = time.time()
+        start = runtimer()
 
         print('Running imemb: ',memb_all[imemb])
 
@@ -388,6 +389,6 @@ for ktest in range(ntest):
 
         write_ncfile(datdir+filename_out, var_list, var_names, descriptions, units, dim_names)
 
-        end = time.time()
+        end = runtimer()
         time_elapsed = end - start
         print("Time elapsed for member: ", time_elapsed)

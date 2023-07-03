@@ -27,6 +27,9 @@ nwindow=int(xwindow/dx)
 storm = 'haiyan'
 # storm = 'maria'
 
+filename_read='mse_diag.nc' # this is for ALL variables in the var_names list
+filename_out='msevars_smooth.nc' # this is for ALL MSE variables
+
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 datdir2 = 'post/d02/'
@@ -42,7 +45,7 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-nmem = 1
+# nmem = 1
 
 ######################################################################
 
@@ -74,45 +77,35 @@ ncfile.close()
 # Address dateline issue
 lon[(lon < 0)] += 360
 
-######################################################################
-
-#### NetCDF variable read functions
-
-def var_read(filename,varname):
-    varfil_main = Dataset(filename)
-    var = varfil_main.variables[varname][...]
-    varfil_main.close()
-    return var
-
 ##### Main loops and calculations ######################################
 
 # var_names, long_names, units, dim_names = var_ncdf_metadata()
 
 var_names = [
     'rho',
-    # 'pw',
-    # 'pw_sat',
-    # 'vmfu',
-    # 'vmfd',
-    # 'condh',
-    # 'dse',
-    # 'mse',
-    # 'mse_vint',
-    # 'vadv_dse_vint',
-    # 'vadv_mse_vint',
-    # 'hadv_dse_vint',
-    # 'hadv_mse_vint',
-    # 'dse_diverg_vint',
-    # 'mse_diverg_vint',
-    # 'dse_fluxdiverg_vint',
-    # 'mse_fluxdiverg_vint',
+    'pw',
+    'pw_sat',
+    'vmfu',
+    'vmfd',
+    'condh',
+    'dse',
+    'mse',
+    'mse_vint',
+    'vadv_dse_vint',
+    'vadv_mse_vint',
+    'hadv_dse_vint',
+    'hadv_mse_vint',
+    'dse_diverg_vint',
+    'mse_diverg_vint',
+    'dse_fluxdiverg_vint',
+    'mse_fluxdiverg_vint',
 ]
 
 # Main read loops for 3D (dependent) variables
 
 ntest=len(tests)
-# for ktest in range(ntest):
-for ktest in range(0,1):
+for ktest in range(ntest):
+# for ktest in range(0,1):
 
     test_str=tests[ktest]
 
@@ -121,12 +114,12 @@ for ktest in range(0,1):
     # Loop over ensemble members
 
     for imemb in range(nmem):
-    
+
+        start = runtimer()
+
         print('Running imemb: ',memb_all[imemb])
     
         datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
-        filename = datdir+'mse_diag.nc'
-        print(datdir)
 
         # Variable list to process
 
@@ -136,17 +129,13 @@ for ktest in range(0,1):
         dim_names=[]
 
         for ivar in range(len(var_names)):
-            # var = var_read(filename, var_names[ivar])
-            ncfile = Dataset(datdir+'PW.nc')
-            var = ncfile.variables['PW']
+            ncfile = Dataset(datdir+filename_read)
+            var = ncfile.variables[var_names[ivar]]
             descriptions.append(var.description)
             units.append(var.units)
             dim_names.append(var.dimensions)
             var = var[...]
             ncfile.close()
-
-            # WONT NEED THIS LATER
-            # var = np.squeeze(var)
 
             # Variable settings
             nt=var.shape[0]
@@ -158,7 +147,7 @@ for ktest in range(0,1):
 
             # print("STARTING SMOOTHING")
             # start = runtimer()
-            var_smooth = da.rolling({"lat":nwindow, "lon":nwindow}, center=True).mean()
+            var_smooth = da.rolling({dim_names[ivar][-2]:nwindow, dim_names[ivar][-1]:nwindow}, center=True).mean()
             # print("DONE SMOOTHING")
             # end = runtimer()
             # print(end - start) # Time in seconds, e.g. 5.38091952400282
@@ -169,5 +158,8 @@ for ktest in range(0,1):
 
         ### Write out variables ##############################################
 
-        file_out = datdir+'msevars_smooth.nc'
-        # write_ncfile(file_out, var_smooth_list, var_names, long_names, units, dim_names)
+        write_ncfile(datdir+filename_out, var_smooth_list, var_names, descriptions, units, dim_names)
+
+        end = runtimer()
+        time_elapsed = end - start
+        print("Time elapsed for member: ", time_elapsed)
