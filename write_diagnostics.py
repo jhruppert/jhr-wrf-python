@@ -244,6 +244,8 @@ z_b = var_read(datdir,varname,nz) # m
 
 # Main read loops for 3D (dependent) variables
 
+print('Running storm: ',storm)
+
 ntest=len(tests)
 for ktest in range(ntest):
 #for ktest in range(1,2):

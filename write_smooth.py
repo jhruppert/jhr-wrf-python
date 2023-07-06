@@ -103,12 +103,15 @@ var_names = [
 
 # Main read loops for 3D (dependent) variables
 
+print('Running storm: ',storm)
+
 ntest=len(tests)
 for ktest in range(ntest):
 # for ktest in range(1,2):
 
     test_str=tests[ktest]
 
+    print()
     print('Running test: ',test_str)
 
     # Loop over ensemble members
