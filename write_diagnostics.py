@@ -21,7 +21,7 @@ import sys
 #### Main settings
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 filename_out='mse_diag.nc' # this is for ALL variables in the var_names list
 
@@ -33,11 +33,12 @@ main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 # Tests to read and compare
 if storm == 'haiyan':
     tests = ['ctl','ncrf36h']
-    # tests = ['STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
+    tests = ['crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
+    tests = ['STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
-    # tests = ['ctl','ncrf36h']
-    tests = ['ctl','ncrf48h']
-    # tests = [tests[1],'crfon72h']
+    tests = ['ctl','ncrf48h']#'ncrf36h']
+    tests = [tests[1],'crfon72h']
+    tests = ['crfon72h']
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -244,8 +245,8 @@ z_b = var_read(datdir,varname,nz) # m
 # Main read loops for 3D (dependent) variables
 
 ntest=len(tests)
-# for ktest in range(ntest):
-for ktest in range(1,2):
+for ktest in range(ntest):
+#for ktest in range(1,2):
 
     test_str=tests[ktest]
 
@@ -255,6 +256,7 @@ for ktest in range(1,2):
     # Loop over ensemble members
 
     for imemb in range(nmem):
+#    for imemb in range(0,3):
 
         start = runtimer()
 

@@ -24,11 +24,11 @@ dx=3 # km
 xwindow=30 # km
 nwindow=int(xwindow/dx)
 
-storm = 'haiyan'
-# storm = 'maria'
+# storm = 'haiyan'
+storm = 'maria'
 
 filename_read='mse_diag.nc' # this is for ALL variables in the var_names list
-filename_out='msevars_smooth.nc' # this is for ALL MSE variables
+filename_out='mse_diag_smooth.nc' # this is for ALL MSE variables
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -37,11 +37,11 @@ datdir2 = 'post/d02/'
 # Tests to read and compare
 if storm == 'haiyan':
     tests = ['ctl','ncrf36h']
-    # tests = ['STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
+    tests = ['crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
-    # tests = ['ctl','ncrf36h']
-    tests = ['ctl','ncrf48h']
-    # tests = [tests[1],'crfon72h']
+    tests = ['ctl','ncrf48h']#'ncrf36h']
+    tests = [tests[1],'crfon72h']
+    tests = ['crfon72h']
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -82,14 +82,14 @@ lon[(lon < 0)] += 360
 # var_names, long_names, units, dim_names = var_ncdf_metadata()
 
 var_names = [
-    'rho',
+    # 'rho',
     'pw',
     'pw_sat',
     'vmfu',
     'vmfd',
     'condh',
-    'dse',
-    'mse',
+    # 'dse',
+    # 'mse',
     'mse_vint',
     'vadv_dse_vint',
     'vadv_mse_vint',
@@ -105,7 +105,7 @@ var_names = [
 
 ntest=len(tests)
 for ktest in range(ntest):
-# for ktest in range(0,1):
+# for ktest in range(1,2):
 
     test_str=tests[ktest]
 
@@ -114,11 +114,12 @@ for ktest in range(ntest):
     # Loop over ensemble members
 
     for imemb in range(nmem):
+    # for imemb in range(7,nmem):
 
         start = runtimer()
 
         print('Running imemb: ',memb_all[imemb])
-    
+
         datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
 
         # Variable list to process
