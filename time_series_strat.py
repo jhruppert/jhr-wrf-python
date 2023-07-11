@@ -99,8 +99,6 @@ for istorm in range(nstorm):
     pres = varfil_main.variables['pres'][:] # hPa
     varfil_main.close()
 
-    count_total = nx1*nx2
-
     # process = subprocess.Popen(['ls '+datdir+'/wrfout_d02_*'],shell=True,
     #     stdout=subprocess.PIPE,universal_newlines=True)
     # output = process.stdout.readline()
@@ -146,12 +144,10 @@ for istorm in range(nstorm):
 
         # Mask out around TC center
         # strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test1, t1_test1)
-        # count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
-        # count_total = np.ma.count(strat, axis=(1,2))
-
         # Mask out edges intead
         strat = mask_edges(strat)
-        # Update count_total based on unmasked cells
+
+        # Normalization factor to get area fraction, based on n-unmasked cells
         count_total = np.ma.count(strat[0, ...])
 
         # Count strat/conv cells
@@ -205,12 +201,10 @@ for istorm in range(nstorm):
 
         # Mask out around TC center
         # strat = mask_tc_track(track_file, rmax, strat, lon, lat, t0_test2, t1_test2)
-        # count_total = np.ma.MaskedArray.count(strat, axis=(1,2,3))
-        # count_total = np.ma.count(strat, axis=(1,2))
-
         # Mask out edges intead
         strat = mask_edges(strat)
-        # Update count_total based on unmasked cells
+
+        # Normalization factor to get area fraction, based on n-unmasked cells
         count_total = np.ma.count(strat[0, ...])
 
         # Count strat/conv cells
