@@ -219,8 +219,8 @@ def get_condavg_settings():
         'deepcong', # deep + cong
         'stratanv', # strat + anv
         'allrain',  # deep + cong + strat + anv
-        'upward',   # upward-motion-weighted
-        'downward', # downward-motion-weighted
+        # 'upward',   # upward-motion-weighted
+        # 'downward', # downward-motion-weighted
         ]
 
     condavg_title = [
@@ -234,8 +234,8 @@ def get_condavg_settings():
         'Dc+Cg',
         'St+An',  
         'Dp+Cg+St+An',
-        'Upward',
-        'Downward',
+        # 'Upward',
+        # 'Downward',
         ]
 
     return condavg_label, condavg_title
@@ -309,19 +309,19 @@ def conditional_avg(strat, vmfu, vmfd, var_stack):
 
     # Weighting function
 
-    kcond+=1
-    # upward-weighted
-    # vmfu_extend = np.repeat(vmfu[np.newaxis, :, np.newaxis, ...], nvar, axis=0)
-    vmfu_extend = np.repeat(vmfu[:, np.newaxis, ...], nz, axis=1)
-    vmfu_extend = np.repeat(vmfu_extend[np.newaxis, ...], nvar, axis=0)
-    var_avg[kcond, ...] = weighted_avg(var_stack, weights=vmfu_extend)
+    # kcond+=1
+    # # upward-weighted
+    # # vmfu_extend = np.repeat(vmfu[np.newaxis, :, np.newaxis, ...], nvar, axis=0)
+    # vmfu_extend = np.repeat(vmfu[:, np.newaxis, ...], nz, axis=1)
+    # vmfu_extend = np.repeat(vmfu_extend[np.newaxis, ...], nvar, axis=0)
+    # var_avg[kcond, ...] = weighted_avg(var_stack, weights=vmfu_extend)
 
-    kcond+=1
-    # downward-weighted
-    # vmfd_extend = np.repeat(vmfd[np.newaxis, ...], nvar, axis=0)
-    vmfd_extend = np.repeat(vmfd[:, np.newaxis, ...], nz, axis=1)
-    vmfd_extend = np.repeat(vmfd_extend[np.newaxis, ...], nvar, axis=0)
-    var_avg[kcond, ...] = weighted_avg(var_stack, weights=vmfd_extend)
+    # kcond+=1
+    # # downward-weighted
+    # # vmfd_extend = np.repeat(vmfd[np.newaxis, ...], nvar, axis=0)
+    # vmfd_extend = np.repeat(vmfd[:, np.newaxis, ...], nz, axis=1)
+    # vmfd_extend = np.repeat(vmfd_extend[np.newaxis, ...], nvar, axis=0)
+    # var_avg[kcond, ...] = weighted_avg(var_stack, weights=vmfd_extend)
 
     return var_avg
 
