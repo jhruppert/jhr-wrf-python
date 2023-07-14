@@ -21,6 +21,10 @@ import numpy as np
 
 def write_ncfile(file_out, var_list, var_names, descriptions, units, dim_names):
 
+    len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dim_names)
+    if (len1 != len2) or (len1 != len3) or (len1 != len4):
+        raise ValueError("Variable info counts are off")
+
     dims_val = var_list[0].shape
 
     ncfile = Dataset(file_out,mode='w', clobber=True)

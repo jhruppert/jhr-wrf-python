@@ -41,6 +41,8 @@ def precip_class(q_int):
     IWP = q_int[2] + q_int[3] + q_int[4]    # Ice water path = ice + snow + graupel
     TWP = LWP + IWP                         # Total water path [mm]
 
+    IWP = np.ma.masked_where((LWP == 0), IWP, copy=False)
+
     # Threshold p]arameters
     twp_thresh = 1e-1
     cr_thresh = 2

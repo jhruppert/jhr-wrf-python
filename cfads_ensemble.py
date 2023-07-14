@@ -165,7 +165,7 @@ for ivar in range(nvar):
         fig_tag+='_tp'
         fig_title+=' (tp)'
 
-    # Shift starting-read time step for CRFON comparison
+    # Starting-read time step for model "restart" sensitivity tests
     t0_test=0
 
 
@@ -219,7 +219,7 @@ for ivar in range(nvar):
         elif itest == 'ncrf48h':
           t0=t0_test
         elif itest == 'crfon':
-          t0=0
+          t0=t0_test
 
         if do_prm_inc == 0:
           t0+=1 # add one time step since NCRF(t=0) = CTL
