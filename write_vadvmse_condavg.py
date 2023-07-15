@@ -31,7 +31,7 @@ it_start = -1
 it_end   = 1
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 filename_out='vadv_mse.nc' # this is for ALL variables in the var_names list
 
@@ -182,24 +182,28 @@ def var_ncdf_metadata():
     
     var_names = [
         'mse',
+        'w',
         'vadv_mse',
         # 'hadv_mse',
         # 'mse_diverg',
     ]
     descriptions = [
         'moist static energy, calculated as cpT + gz + L_v*q',
+        'vertical motion',
         'VADV of MSE',
         # 'HADV of MSE',
         # 'MSE*(del.V)',
     ]
     units = [
         'J/kg',
+        'm/s',
         'J/kg/s',
         # 'J/kg/s',
         # 'J/kg/s',
     ]
     dims = ('navg', 'nt', 'nz')
     dim_names = [
+        dims,
         dims,
         dims,
         # dims,
@@ -432,7 +436,8 @@ for ktest in range(ntest):
         ### Make new list ##############################################
 
         var_list=[]
-        var_list.append(var_avg[:,0,...])
+        var_list.append(var_avg[:,0,...]) # MSE
+        var_list.append(var_avg[:,2,...]) # w
         var_list.append(vadv_mse)
         del var_avg
         del vadv_mse
