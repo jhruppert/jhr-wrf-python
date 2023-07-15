@@ -31,7 +31,7 @@ it_start = -1
 it_end   = 1
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 filename_out='vadv_mse.nc' # this is for ALL variables in the var_names list
 
