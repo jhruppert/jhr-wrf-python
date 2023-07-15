@@ -31,7 +31,7 @@ it_start = -1
 it_end   = 1
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 filename_out='vadv_mse.nc' # this is for ALL variables in the var_names list
 
@@ -42,10 +42,14 @@ main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
 # Tests to read and compare
 if storm == 'haiyan':
+    # tests = ['ctl','ncrf36h']
+    # ALL TESTS
     tests = ['ctl','ncrf36h','crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
     # tests = ['crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
     # tests = ['STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
+    # tests = ['ctl','ncrf48h']
+    # ALL TESTS
     tests = ['ctl','ncrf48h','crfon72h']#'ncrf36h']
     # tests = [tests[1],'crfon72h']
     # tests = ['crfon72h']
@@ -442,31 +446,3 @@ for ktest in range(ntest):
         end = runtimer()
         time_elapsed = end - start
         print("Time elapsed for member: ", time_elapsed)
-
-
-
-
-##################################################################################
-### Function to read in these files ##############################################
-##################################################################################
-
-def read_vadvmse_condh(datdir, filename_out): #, it0, it1):
-
-    def tidy_up(var):
-        var = np.squeeze(var)
-        var = np.ma.masked_invalid(var, copy=False)
-        var = mask_edges(var)
-        # Can swap in masking by TC track here
-        var = np.ma.filled(var, fill_value=np.nan) # Abandon masking, replace mask with NaNs
-        return var
-
-    condavg_label, condavg_title = get_condavg_settings()
-
-    readfile = Dataset(datdir+filename_out)
-    var_list = []
-    for varname in var_names:
-        var = readfile.variables[varname][... ]#[:,it0:it1+1,...]
-        var = tidy_up(var)
-        var_list.append(var)
-    readfile.close()
-    return var_list, condavg_label, condavg_title, var_names, descriptions, units, dim_names
