@@ -19,18 +19,20 @@
 from netCDF4 import Dataset
 import numpy as np
 
-def write_ncfile(file_out, var_list, var_names, descriptions, units, dim_names):
+def write_ncfile(file_out, var_list, var_names, descriptions, units, dim_names, dims_set):
 
     len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dim_names)
     if (len1 != len2) or (len1 != len3) or (len1 != len4):
         raise ValueError("Variable info counts are off")
 
-    dims_val = var_list[0].shape
+    # dims_val = var_list[0].shape
 
     ncfile = Dataset(file_out,mode='w', clobber=True)
 
-    for idim in range(len(dims_val)):
-        dim = ncfile.createDimension(dim_names[0][idim], dims_val[idim]) # unlimited axis (can be appended to).
+    # for idim in range(len(dims_val)):
+    #     dim = ncfile.createDimension(dim_names[0][idim], dims_val[idim]) # unlimited axis (can be appended to).
+    for idim in range(len(dims_set[0])):
+        dim = ncfile.createDimension(dims_set[0][idim], dims_set[1][idim]) # unlimited axis (can be appended to).
 
     nvar = len(var_list)
     for ivar in range(nvar):
