@@ -16,6 +16,7 @@ matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 # from mask_tc_track import mask_tc_track
 import sys
+from scipy import stats
 import pandas as pd
 from precip_class import precip_class
 from cfads_functions import mask_edges
@@ -25,7 +26,7 @@ from cfads_functions import mask_edges
 
 storms=['haiyan','maria']
 # storms=['maria']
-storms=['haiyan']
+# storms=['haiyan']
 
 
 def get_tshift(itest):
@@ -36,6 +37,17 @@ def get_tshift(itest):
     elif itest == 'ncrf48h':
         tshift=48
     return tshift
+
+# Confidence interval using T-test and assuming 95% significance
+def mean_confidence_interval(data, confidence=0.95):
+    a = 1.0 * np.array(data)
+    # n = len(a)
+    n = a.shape[0]
+    m, se = np.mean(a, axis=0), stats.sem(a, axis=0)
+    num = stats.t.ppf((1 + confidence) / 2., n-1)
+    h = se * stats.t.ppf((1 + confidence) / 2., n-1)
+    return m, m-h, m+h
+conf_set=0.95 # Confidence interval to apply throughout
 
 nstorm = np.size(storms)
 for istorm in range(nstorm):
@@ -253,9 +265,10 @@ for istorm in range(nstorm):
             pvar2 = frac_conv_all_t2
         elif iplot == 2:
             fig_extra='ratio'
-            strattag='Convective/Stratiform'
-            pvar1 = frac_conv_all_t1 / frac_strat_all_t1
-            pvar2 = frac_conv_all_t2 / frac_strat_all_t2
+            # strattag='Convective/Stratiform'
+            strattag='Stratiform/Convective'
+            pvar1 = frac_strat_all_t1 / frac_conv_all_t1
+            pvar2 = frac_strat_all_t2 / frac_conv_all_t2
 
         # Use Pandas to smooth via running mean
         pvar_pd1 = pd.DataFrame(pvar1)
@@ -302,28 +315,32 @@ for istorm in range(nstorm):
         color_t2 = 'blue'
 
         # Ensemble mean and stddev
-        frac_mean_t1 = np.nanmean(pvar1_smooth, axis=0)
-        frac_std_t1 = np.nanstd(pvar1_smooth, axis=0)
+        # frac_mean_t1 = np.nanmean(pvar1_smooth, axis=0)
+        # frac_std_t1 = np.nanstd(pvar1_smooth, axis=0)
+        mean, low, high = mean_confidence_interval(pvar1_smooth, confidence=conf_set)
 
         tshift1 = get_tshift(tests[0])
         xdim = range(t0_test1 + tshift1, t1_test1 + tshift1)
 
-        plt.plot(xdim, frac_mean_t1, 
+        plt.fill_between(xdim, high, low, alpha=0.2, color=color_t1)
+        plt.plot(xdim, mean, 
             linewidth=2, label=tests[0].upper(), color=color_t1, linestyle='solid')
-        plt.fill_between(xdim, frac_mean_t1 + frac_std_t1,
-            frac_mean_t1 - frac_std_t1, alpha=0.2, color=color_t1)
+        # plt.fill_between(xdim, frac_mean_t1 + frac_std_t1,
+        #     frac_mean_t1 - frac_std_t1, alpha=0.2, color=color_t1)
 
         # Ensemble mean and stddev
-        frac_mean_t2 = np.nanmean(pvar2_smooth, axis=0)
-        frac_std_t2 = np.nanstd(pvar2_smooth, axis=0)
+        # frac_mean_t2 = np.nanmean(pvar2_smooth, axis=0)
+        # frac_std_t2 = np.nanstd(pvar2_smooth, axis=0)
+        mean, low, high = mean_confidence_interval(pvar2_smooth, confidence=conf_set)
 
         tshift2 = get_tshift(tests[1])
         xdim = range(t0_test2 + tshift2, t1_test2 + tshift2)
 
-        plt.plot(xdim, frac_mean_t2, 
+        plt.fill_between(xdim, high, low, alpha=0.2, color=color_t2)
+        plt.plot(xdim, mean, 
             linewidth=2, label=tests[1].upper(), color=color_t2, linestyle='--')
-        plt.fill_between(xdim, frac_mean_t2 + frac_std_t2,
-            frac_mean_t2 - frac_std_t2, alpha=0.2, color=color_t2)
+        # plt.fill_between(xdim, frac_mean_t2 + frac_std_t2,
+        #     frac_mean_t2 - frac_std_t2, alpha=0.2, color=color_t2)
 
         plt.grid()
 

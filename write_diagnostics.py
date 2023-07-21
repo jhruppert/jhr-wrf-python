@@ -349,7 +349,7 @@ for ktest in range(ntest):
 
         # Microphysics (MP) latent heating
         lh = var_read(datdir,'H_DIABATIC',nz) # K/s
-        condh = vert_int(lh[:,0:kmsetop,:,:], dp, g) # kg/*K/m2/s
+        condh = vert_int(lh[:,0:kmsetop,:,:], dp, g) # kg*K/(m2*s) [needs *cp to get W/m2]
         del lh
 
         # Vertical mass flux
