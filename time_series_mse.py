@@ -639,10 +639,6 @@ for ivar in range(1):
 # ##### Time series comparing condavg categories
 
 # %%
-icond_dc=2 # condavg index of Deep Con
-print(stratfrac_sav[0, 0, icond_dc, :])
-
-# %%
 # Plot variable settings
 
 def plot_var_settings():
