@@ -19,12 +19,15 @@ from object_track import object_track
 ptrack  = 600 # tracking pressure level
 istorm  = 'haiyan'
 # itest   = 'ctl'
-itest   = 'ncrf36h'
+# itest   = 'ncrf36h'
 # itest   = 'crfon60h'
+itest   = 'STRAT_OFF'
+itest   = 'STRATANVIL_OFF'
+itest   = 'STRATANVIL_ON'
 
 # itest   = 'ctl'
-istorm  = 'maria'
-itest   = 'ncrf48h'
+# istorm  = 'maria'
+# itest   = 'ncrf48h'
 # itest   = 'crfon72h'
 
 var_tag = 'rvor'
@@ -52,7 +55,10 @@ else:
 if itest == 'ncrf36h':
     test_basis='ctl'
     it_basis=36
-elif itest == 'ncrf48h':
+elif (itest == 'ncrf48h'):
+    test_basis='ctl'
+    it_basis=48
+elif (itest == 'STRAT_OFF') or (itest == 'STRATANVIL_ON') or (itest == 'STRATANVIL_OFF'):
     test_basis='ctl'
     it_basis=48
 elif itest == 'crfon60h':
@@ -66,7 +72,6 @@ elif itest == 'crfon72h':
 else:
     test_basis=''
 
-#top = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 top = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
 # LonLat
