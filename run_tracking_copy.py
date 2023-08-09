@@ -19,7 +19,7 @@ from object_track import object_track
 ptrack  = 600 # tracking pressure level
 istorm  = 'haiyan'
 # itest   = 'ctl'
-# itest   = 'ncrf36h'
+itest   = 'ncrf36h'
 # itest   = 'crfon60h'
 itest   = 'STRAT_OFF'
 itest   = 'STRATANVIL_OFF'
@@ -55,10 +55,11 @@ else:
 if itest == 'ncrf36h':
     test_basis='ctl'
     it_basis=36
-elif (itest == 'ncrf48h'):
-    test_basis='ctl'
-    it_basis=48
 elif (itest == 'STRAT_OFF') or (itest == 'STRATANVIL_ON') or (itest == 'STRATANVIL_OFF'):
+    # Haiyan
+    test_basis='ctl'
+    it_basis=36
+elif (itest == 'ncrf48h'):
     test_basis='ctl'
     it_basis=48
 elif itest == 'crfon60h':
@@ -147,8 +148,8 @@ for imemb in range(nmem):
     if i_senstest:
         track_file = main+'../'+test_basis+'/track_'+var_tag+'_'+str(round(pres[ikread]))+'hPa.nc'
         ncfile = Dataset(track_file,mode='r')
-        clon_ctl = ncfile.variables['clon'][it_basis:nt+it_basis] # deg
-        clat_ctl = ncfile.variables['clat'][it_basis:nt+it_basis] # deg
+        clon_ctl = ncfile.variables['clon'][it_basis:it_basis+nt] # deg
+        clat_ctl = ncfile.variables['clat'][it_basis:it_basis+nt] # deg
         ncfile.close()
         # basis = [clon, clat]
 

@@ -17,7 +17,7 @@ import numpy as np
 # #### Main settings
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -27,6 +27,7 @@ if storm == 'haiyan':
     tests = ['ctl','ncrf36h']
     # tests = ['STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
     tests = ['ncrf36h']
+    tests = ['crfon60h']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
