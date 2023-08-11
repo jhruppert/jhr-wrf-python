@@ -52,10 +52,12 @@ nmem = 10 # number of ensemble members (1-10 have NCRF)
 
 # #### Classification selection
 
-# 0-non-raining, 1-conv, 2-strat, 3-other/anvil, (-1 for off)
+# 0-non-raining, 1-conv, 2-strat, 3-Precipitating (excluding shallow), (-1 for off)
 # kclass=[0,1,2,3]
 kclass=[1,2]
 kclass=[3]
+  # Depending on kclass, algorithm will look for various combinations
+  # of icloud (e.g., for kclass=3, looks for where icloud != 0 and 3)
       #   0: non-precipitating
       # Convective:
       #   1: deep convective
@@ -361,6 +363,7 @@ for ivar in range(nvar):
             # ind = (strat_all[ktest] > 4).nonzero()
             ind = (strat_all[ktest] == 4).nonzero()
           elif istrat == 3:
+            # Precip: exclude non-precipitating and shallow convection
             ind = ((strat_all[ktest] != 0) & (strat_all[ktest] != 3)).nonzero()
 
           var_test = var_all[ktest]
