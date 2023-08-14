@@ -113,12 +113,12 @@ def object_track(f, lon, lat, sens_test, basis):
 
         radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
 
-    # Mask beyond specified radius at surrounding time steps
+    # Mask beyond specified radius at 2 neighboring time steps
     for it in range( np.maximum(itmax-1,0) , np.minimum(itmax+1,nt-1)+1 ):
 
         f_masked[it,:,:] = np.ma.masked_where(radius > r_max, f_masked[it,:,:], copy=False)
 
-    # Iterate downward from itmax
+    # Do the same iterating all the way backward from itmax
     for it in range( np.maximum(itmax-1,0), 0, -1):
 
         fmax = np.max(f_masked[it,:,:])
@@ -129,7 +129,7 @@ def object_track(f, lon, lat, sens_test, basis):
         radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
         f_masked[it-1,:,:] = np.ma.masked_where(radius > r_max, f_masked[it-1,:,:], copy=False)
 
-    # Iterate upward from itmax
+    # Do the same iterating all the way forward from itmax
     for it in range(itmax+1,nt-1):
 
         fmax = np.max(f_masked[it,:,:])
@@ -144,7 +144,7 @@ def object_track(f, lon, lat, sens_test, basis):
 
     # TRACKING
 
-    # Track maxima in time as the centroid
+    # Track maxima in time as the centroid = mean of latitude/longitude weighted by f
     clon = np.average(lon3d,axis=(1,2),weights=f_masked)
     clat = np.average(lat3d,axis=(1,2),weights=f_masked)
 

@@ -35,6 +35,7 @@ ivar_all = ['wpthp','wpthep','vmf','thv','the']
 ivar_all = ['wpthp','wpthep']
 ivar_all = ['lq','lh','thv','the']
 ivar_all = ['vmf','thv','lq','qrad']
+ivar_all = ['vmf']
 nvar=np.size(ivar_all)
 
 # #### Time selection
@@ -43,7 +44,7 @@ nvar=np.size(ivar_all)
 # ntall=[1,3,6,12]
 # ntall=[1,6,12]
 ntall=[1,3,6]
-ntall=[3]
+ntall=[1]
 
 # How many ensemble members
 
@@ -56,6 +57,7 @@ nmem = 10 # number of ensemble members (1-10 have NCRF)
 # kclass=[0,1,2,3]
 kclass=[1,2]
 kclass=[3]
+kclass=[2]
   # Depending on kclass, algorithm will look for various combinations
   # of icloud (e.g., for kclass=3, looks for where icloud != 0 and 3)
       #   0: non-precipitating
@@ -77,7 +79,8 @@ storm_all=['haiyan']
 nstorm=np.size(storm_all)
 
 # TC tracking
-do_tc_track=False # Localize to TC track? Use whole domain otherwise
+do_tc_track=True
+# False # Localize to TC track? Use whole domain otherwise
 ptrack='600' # tracking pressure level
 var_track = 'rvor' # variable
 # rmax = 8 # radius (deg) limit for masking around TC center
