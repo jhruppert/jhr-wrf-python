@@ -279,7 +279,7 @@ def cfads_var_calc(ivar_plot, datdir, pres, t0, t1):
       
       # Latent energy, calculated as MSE - DSE
       
-      varfil_main = Dataset(datdir+'mse.nc')
+      varfil_main = Dataset(datdir+'mse_diag.nc')
       mse = varfil_main.variables['mse'][t0:t1,:,:,:] # J/kg
       dse = varfil_main.variables['dse'][t0:t1,:,:,:] # J/kg
       varfil_main.close()
