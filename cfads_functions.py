@@ -283,13 +283,13 @@ def cfads_var_calc(ivar_plot, datdir, pres, t0, t1):
       mse = varfil_main.variables['mse'][t0:t1,:,:,:] # J/kg
       dse = varfil_main.variables['dse'][t0:t1,:,:,:] # J/kg
       varfil_main.close()
-      # var = mse - dse
+      var = mse - dse
       
-      nt, nz, nx1, nx2 = mse.shape
-      nz+=1
-      var = np.zeros([nt,nz,nx1,nx2])
-      var[:,nz-1,:,:]=np.nan
-      var[:,0:nz-1,:,:]=mse-dse
+      # nt, nz, nx1, nx2 = mse.shape
+      # nz+=1
+      # var = np.zeros([nt,nz,nx1,nx2])
+      # var[:,nz-1,:,:]=np.nan
+      # var[:,0:nz-1,:,:]=mse-dse
     
     elif ivar_plot == 'qv': 
       
