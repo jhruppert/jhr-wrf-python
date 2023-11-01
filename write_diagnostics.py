@@ -297,9 +297,6 @@ for ktest in range(ntest):
         varname='QVAPOR'
         qv = var_read(datdir,varname,nz) # kg/kg
         nt,nz,nx1,nx2 = qv.shape
-        dims3d=(nt,nz,nx1,nx2)
-        var_names, descriptions, units, dims_set = var_ncdf_metadata(dims3d=(nt,nz,nx1,nx2))
-        sys.exit()
         # Temperature
         varname='T'
         tmpk = var_read(datdir,varname,nz) # K
