@@ -21,20 +21,21 @@ import sys
 #### Main settings
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 filename_out='mse_diag.nc' # this is for ALL variables in the var_names list
 
 msetop = 100 # top for MSE integrals
 
-# main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
-main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
+main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+# main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
 # Tests to read and compare
 if storm == 'haiyan':
-    tests = ['ctl','ncrf36h']
-    tests = ['crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
-    tests = ['STRATANVIL_OFF','STRAT_OFF']
+    # tests = ['ctl','ncrf36h']
+    # tests = ['crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
+    # tests = ['STRATANVIL_OFF','STRAT_OFF']
+    tests = ['ctl']
 elif storm == 'maria':
     tests = ['ctl','ncrf48h']#'ncrf36h']
     tests = [tests[1],'crfon72h']
@@ -42,6 +43,7 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
+nmem = 20
 # nmem = 1
 
 ######################################################################
@@ -100,7 +102,7 @@ def var_read(datdir,varname,ikread):
 
 #### NetCDF variable metadata
 
-def var_ncdf_metadata():
+def var_ncdf_metadata(dims3d=dims3d):
     
     var_names = [
         'rho',
@@ -159,32 +161,54 @@ def var_ncdf_metadata():
         'J/m^2/s',
         'J/m^2/s',
     ]
-    dims2d = ('nt','nx1','nx2')
-    dims3d = ('nt','nz','nx1','nx2')
-    dim_names = [
-        dims3d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims3d,
-        dims3d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims2d,
-        dims2d,
+    nt,nz,nx1,nx2 = dims3d.shape
+    dims2d = (nt,nx1,nx2)
+    dims2d_names = ('nt','nx1','nx2')
+    dims3d_names = ('nt','nz','nx1','nx2')
+    # dim_names = [
+    #     dims3d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims3d,
+    #     dims3d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    #     dims2d,
+    # ]
+    dims_set = [
+        [dims3d_names,dims3d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims3d_names,dims3d],
+        [dims3d_names,dims3d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
+        [dims2d_names,dims2d],
     ]
+
     len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dim_names)
     if (len1 != len2) or (len1 != len3) or (len1 != len4):
         raise ValueError("Variable info counts are off")
 
-    return var_names, descriptions, units, dim_names
+    return var_names, descriptions, units, dims_set #, dim_names
 
 ##### MSE & DSE functions ################################
 
@@ -389,9 +413,9 @@ for ktest in range(ntest):
 
         ### Write out variables ##############################################
 
-        var_names, descriptions, units, dim_names = var_ncdf_metadata()
+        var_names, descriptions, units, dims_set = var_ncdf_metadata(dims3d=(nt,nz,nx1,nx2))
 
-        write_ncfile(datdir+filename_out, var_list, var_names, descriptions, units, dim_names)
+        write_ncfile(datdir+filename_out, var_list, var_names, descriptions, units, dims_set)
 
         end = runtimer()
         time_elapsed = end - start
