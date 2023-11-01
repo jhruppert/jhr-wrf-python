@@ -102,7 +102,7 @@ def var_read(datdir,varname,ikread):
 
 #### NetCDF variable metadata
 
-def var_ncdf_metadata(dims3d=dims3d):
+def var_ncdf_metadata(dims3d):
     
     var_names = [
         'rho',
@@ -161,7 +161,7 @@ def var_ncdf_metadata(dims3d=dims3d):
         'J/m^2/s',
         'J/m^2/s',
     ]
-    nt,nz,nx1,nx2 = dims3d.shape
+    nt,nz,nx1,nx2 = dims3d
     dims2d = (nt,nx1,nx2)
     dims2d_names = ('nt','nx1','nx2')
     dims3d_names = ('nt','nz','nx1','nx2')
@@ -204,7 +204,7 @@ def var_ncdf_metadata(dims3d=dims3d):
         [dims2d_names,dims2d],
     ]
 
-    len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dim_names)
+    len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dims_set) #len4=len(dim_names)
     if (len1 != len2) or (len1 != len3) or (len1 != len4):
         raise ValueError("Variable info counts are off")
 
@@ -297,6 +297,9 @@ for ktest in range(ntest):
         varname='QVAPOR'
         qv = var_read(datdir,varname,nz) # kg/kg
         nt,nz,nx1,nx2 = qv.shape
+        dims3d=(nt,nz,nx1,nx2)
+        var_names, descriptions, units, dims_set = var_ncdf_metadata(dims3d=(nt,nz,nx1,nx2))
+        sys.exit()
         # Temperature
         varname='T'
         tmpk = var_read(datdir,varname,nz) # K

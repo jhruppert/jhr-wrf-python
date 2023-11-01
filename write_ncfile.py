@@ -15,8 +15,8 @@
 #   - dims_set:     list of paired lists as:
 #                       dims_set = dims_set(n-variable)
 #                       dims_set[0] is dims_set[0](2, n-dimension)
-#                       dims_set[0][0] is tuple of dimension values
-#                       dims_set[0][1] is tuple of dimension string names
+#                       dims_set[0][0] is tuple of dimension string names
+#                       dims_set[0][1] is tuple of dimension values
 # 
 # See example code below function for more info, including an important
 # stipulation about the variable dimensions.
@@ -26,7 +26,7 @@ import numpy as np
 
 def write_ncfile(file_out, var_list, var_names, descriptions, units, dims_set): #, dim_names
 
-    len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dim_names)
+    len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dims_set) #len4=len(dim_names)
     if (len1 != len2) or (len1 != len3) or (len1 != len4):
         raise ValueError("Variable info counts are off")
 
@@ -41,7 +41,7 @@ def write_ncfile(file_out, var_list, var_names, descriptions, units, dims_set): 
 
     nvar = len(var_list)
     for ivar in range(nvar):
-        writevar = ncfile.createVariable(var_names[ivar], np.single, dim_names[ivar])
+        writevar = ncfile.createVariable(var_names[ivar], np.single, dims_set[ivar][0]) #dim_names[ivar])
         writevar.units = units[ivar]
         writevar.description = descriptions[ivar]
         writevar[...] = var_list[ivar]
