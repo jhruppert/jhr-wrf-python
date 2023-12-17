@@ -52,7 +52,11 @@ def precip_class(q_int):
     rain_thresh_strat = 1e-2
 
     # Initialize output array
-    c_type = np.zeros(shape_out)
+    if np.ma.is_masked(q_int):
+        c_type = np.ma.zeros(shape_out)
+        domask=True
+    else:
+        c_type = np.zeros(shape_out)
 
     cr = IWP/LWP
 
@@ -78,5 +82,9 @@ def precip_class(q_int):
     c_type[( ((LWP != 0) & (TWP > twp_thresh)) &
             (cr > cr_thresh) &
             (q_int[1] < rain_thresh_strat) ).nonzero() ] = 5
+
+    # Fill in mask of original array if it exists
+    if domask:
+        c_type.mask = q_int.mask[0,...]
 
     return c_type
