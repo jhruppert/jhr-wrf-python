@@ -5,6 +5,8 @@ from cfads_functions import mask_edges
 import numpy as np
 import subprocess
 
+###### Functions for getting file specs #########################
+
 def get_file_dims(datdir):
     varfil_main = Dataset(datdir+'T.nc')
     nz = varfil_main.dimensions['level'].size
@@ -27,6 +29,9 @@ def get_wrf_filelist(datdir):
     varfil_main.close()
     return wrffiles, lat, lon
 
+
+###### Functions for reading variables #########################
+
 def var_read_3d(datdir,varname,t0,t1):
     varfil_main = Dataset(datdir+varname+'.nc')
     var = varfil_main.variables[varname][t0:t1,:,:,:]
@@ -39,13 +44,14 @@ def var_read_2d(datdir,varname,t0,t1):
     varfil_main.close()
     return mask_edges(np.squeeze(var))
 
+
+###### Special variable reads ###################################
+
 def read_qcloud(datdir,t0,t1):
     varfil_main = Dataset(datdir+'q_int.nc')
     q_int = varfil_main.variables['q_int'][:,t0:t1,:,:]
     varfil_main.close()
     return mask_edges(np.squeeze(q_int))
-
-# MSE and ACRE terms
 
 def read_mse(datdir,t0,t1):
     varfil_main = Dataset(datdir+'mse.nc')
