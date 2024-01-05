@@ -57,6 +57,7 @@ def precip_class(q_int):
         domask=True
     else:
         c_type = np.zeros(shape_out)
+        domask=False
 
     cr = IWP/LWP
 
