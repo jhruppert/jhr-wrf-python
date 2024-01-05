@@ -1,7 +1,6 @@
 # Functions to read in and process variables
 
 from netCDF4 import Dataset
-from cfads_functions import mask_edges
 import numpy as np
 import subprocess
 
@@ -23,11 +22,27 @@ def get_wrf_filelist(datdir):
         stdout=subprocess.PIPE,universal_newlines=True)
     output = process.stdout.readline()
     wrffiles = output.strip() #[3]
-    varfil_main = Dataset(wrffiles)
+    varfil_main = Dataset(wrffiles[0])
     lat = varfil_main.variables['XLAT'][:][0] # deg
     lon = varfil_main.variables['XLONG'][:][0] # deg
     varfil_main.close()
     return wrffiles, lat, lon
+
+
+###### Function to mask edges #########################
+
+def mask_edges(array):
+    # Returns a masked array with edges masked
+    # Last dimensions of input array must be x1,x2
+    #   It is otherwise versatile
+    buffer=80
+    array = np.ma.array(array, mask=False, copy=False)
+    array[...,0:buffer,:]=np.ma.masked
+    array[...,-buffer:,:]=np.ma.masked
+    array[...,:,0:buffer]=np.ma.masked
+    array[...,:,-buffer:]=np.ma.masked
+    # array = np.ma.filled(array, fill_value=np.nan)
+    return array
 
 
 ###### Functions for reading variables #########################

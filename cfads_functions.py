@@ -12,21 +12,6 @@ from netCDF4 import Dataset
 import numpy as np
 from thermo_functions import density_moist, theta_equiv, theta_virtual, relh
 
-
-def mask_edges(array):
-    # Returns a masked array with edges masked
-    # Last dimensions of input array must be x1,x2
-    #   It is otherwise versatile
-    buffer=80
-    array = np.ma.array(array, mask=False, copy=False)
-    array[...,0:buffer,:]=np.ma.masked
-    array[...,-buffer:,:]=np.ma.masked
-    array[...,:,0:buffer]=np.ma.masked
-    array[...,:,-buffer:]=np.ma.masked
-    # array = np.ma.filled(array, fill_value=np.nan)
-    return array
-
-
 # Variable settings
 
 def cfads_var_settings(ivar_plot):
