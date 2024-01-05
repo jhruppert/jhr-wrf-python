@@ -75,11 +75,20 @@ def read_qcloud(datdir,t0,t1,drop=False):
     varfil_main.close()
     return mask_edges(np.squeeze(q_int),drop)
 
-def read_mse(datdir,t0,t1,drop=False):
-    varfil_main = Dataset(datdir+'mse.nc')
-    mse = varfil_main.variables['mse_int'][t0:t1,:,:] # J/m2
+# def read_mse(datdir,t0,t1,drop=False):
+#     varfil_main = Dataset(datdir+'mse.nc')
+#     mse = varfil_main.variables['mse_int'][t0:t1,:,:] # J/m2
+#     varfil_main.close()
+#     return mask_edges(mse,drop)
+
+def read_mse_diag(datdir,varname,idim,t0,t1,drop=False):
+    varfil_main = Dataset(datdir+'mse_diag.nc')
+    if idim == 2:
+        var = varfil_main.variables[varname][t0:t1,:,:]
+    elif idim == 3:
+        var = varfil_main.variables[varname][t0:t1,:,:,:]
     varfil_main.close()
-    return mask_edges(mse,drop)
+    return mask_edges(np.squeeze(var),drop)
 
 def read_lwnet(datdir,t0,t1,drop=False):
     lw_t = var_read_2d(datdir,'LWUPT',t0,t1) - var_read_2d(datdir,'LWDNT',t0,t1) # W/m2
