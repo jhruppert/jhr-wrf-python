@@ -18,10 +18,11 @@ def get_file_dims(datdir):
     return nt, nz, nx1, nx2, pres
 
 def get_wrf_filelist(datdir):
-    process = subprocess.Popen(['ls '+datdir+'/wrfout_d02_*'],shell=True,
+    process = subprocess.Popen(['ls '+datdir+'wrfout_d02_*'],shell=True,
         stdout=subprocess.PIPE,universal_newlines=True)
-    output = process.stdout.readline()
-    wrffiles = output.strip() #[3]
+    wrffiles = process.stdout.readlines()
+    for ifil in range(len(wrffiles)):
+        wrffiles[ifil] = wrffiles[ifil].strip()
     varfil_main = Dataset(wrffiles[0])
     lat = varfil_main.variables['XLAT'][:][0] # deg
     lon = varfil_main.variables['XLONG'][:][0] # deg
