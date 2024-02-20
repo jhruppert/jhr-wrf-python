@@ -14,12 +14,14 @@
 #                       of dimension strings per variable
 #   - dims_set:     list of paired lists as:
 #                       dims_set = dims_set(n-variable)
-#                       dims_set[0] is dims_set[0](2, n-dimension)
-#                       dims_set[0][0] is tuple of dimension string names
-#                       dims_set[0][1] is tuple of dimension values
+#                       dims_set[0] = dims_set[0](2, n-dimension)
+#                       dims_set[0][0] = tuple of dimension string names
+#                       dims_set[0][1] = tuple of dimension values
 # 
-# See example code below function for more info, including an important
-# stipulation about the variable dimensions.
+# See example code below function for more info.
+# 
+# Author: James Ruppert
+# Date: 07/2023
 
 from netCDF4 import Dataset
 import numpy as np
@@ -34,13 +36,18 @@ def write_ncfile(file_out, var_list, var_names, descriptions, units, dims_set): 
 
     ncfile = Dataset(file_out,mode='w', clobber=True)
 
-    # for idim in range(len(dims_val)):
+    # Add dimensions to file
+    # Will iterate over entire variable dimension list but will only attempt to add each once
+    dim_added = [] # List to track dimensions that have been added already
+    for idimset in range(len(dims_set)):
     #     dim = ncfile.createDimension(dim_names[0][idim], dims_val[idim]) # unlimited axis (can be appended to).
-    for idim in range(len(dims_set[0][0])):
-        dim = ncfile.createDimension(dims_set[0][0][idim], dims_set[0][1][idim]) # unlimited axis (can be appended to).
+        for idim in range(len(dims_set[idimset][0])):
+            if dims_set[idimset][0][idim] in dim_added:
+                continue
+            dim = ncfile.createDimension(dims_set[idimset][0][idim], dims_set[idimset][1][idim]) # unlimited axis (can be appended to).
+            dim_added.append(dims_set[idimset][0][idim])
 
-    nvar = len(var_list)
-    for ivar in range(nvar):
+    for ivar in range(len(var_list)):
         writevar = ncfile.createVariable(var_names[ivar], np.single, dims_set[ivar][0]) #dim_names[ivar])
         writevar.units = units[ivar]
         writevar.description = descriptions[ivar]
@@ -51,11 +58,6 @@ def write_ncfile(file_out, var_list, var_names, descriptions, units, dims_set): 
     return None
 
 # Example code that's been tested
-
-# A stipulation on the variable list:
-#   All dimensions must appear in the first variable of var_list should,
-#   and any subsequent variables can contain any subcombination of them.
-#   (This could probably be made more flexible...)
 
 ####################################
 ## Uncomment below #################

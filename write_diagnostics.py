@@ -21,14 +21,14 @@ import sys
 #### Main settings
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 filename_out='mse_diag.nc' # this is for ALL variables in the var_names list
 
 msetop = 100 # top for MSE integrals
 
-main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
-# main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
+# main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
+main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
 # Tests to read and compare
 if storm == 'haiyan':
@@ -40,6 +40,7 @@ elif storm == 'maria':
     tests = ['ctl','ncrf48h']#'ncrf36h']
     tests = [tests[1],'crfon72h']
     tests = ['crfon72h']
+    tests = ['ncrf36h']
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
