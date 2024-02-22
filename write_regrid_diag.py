@@ -240,7 +240,7 @@ for ktest in range(ntest):
 
         # Rain rate
         varname = 'rainrate'
-        rain = var_read_2d(datdir,varname,t0,t1,mask=False) # mm/hr
+        rain = var_read_2d(datdir,varname,t0,t1,mask=False) # mm/d
 
         # QINT (including QRAIN) column integrated
         qcloud  = q_int[0] # mm

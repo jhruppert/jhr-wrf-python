@@ -43,7 +43,7 @@ time_neglect=12 # time steps from start to neglect
 
 # Number of sample time steps
 nt=200 # will be chopped down to max available
-# nt=24
+nt=48
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -75,8 +75,8 @@ strat_all  = np.ma.zeros(dims)
 cwv_1hr    = np.ma.zeros(dims)
 lwacre_1hr = np.ma.zeros(dims)
 qrain_1hr  = np.ma.zeros(dims)
-vmfu_1hr  = np.ma.zeros(dims)
-condh_1hr  = np.ma.zeros(dims)
+# vmfu_1hr  = np.ma.zeros(dims)
+# condh_1hr  = np.ma.zeros(dims)
 
 # This has been tested for corresponding time steps:
 #   t0=37,1 are the first divergent time steps in CTL,NCRF
@@ -123,8 +123,8 @@ for imemb in range(nmem):
     qrain_1hr[imemb,:,:,:]  = q_int[1] # mm
     cwv_1hr[imemb,:,:,:]    = cwv
     lwacre_1hr[imemb,:,:,:] = read_lwacre(datdir,t0,t1,drop=True) # W/m2
-    vmfu_1hr[imemb,:,:,:]   = read_mse_diag(datdir,'vmfu',2,t0,t1,drop=True) # kg/m/s
-    condh_1hr[imemb,:,:,:]  = read_mse_diag(datdir,'condh',2,t0,t1,drop=True) # mm/day
+    # vmfu_1hr[imemb,:,:,:]   = read_mse_diag(datdir,'vmfu',2,t0,t1,drop=True) # kg/m/s
+    # condh_1hr[imemb,:,:,:]  = read_mse_diag(datdir,'condh',2,t0,t1,drop=True) # mm/day
 
 
 # Smoothing function
@@ -150,29 +150,31 @@ def get_kstrat_cells(var_in, strat):
 qrain_indexed_1hr    = get_kstrat_cells(qrain_1hr, strat_all)
 cwv_indexed_1hr      = get_kstrat_cells(cwv_1hr, strat_all)
 lwacre_indexed_1hr   = get_kstrat_cells(lwacre_1hr, strat_all)
-vmfu_indexed_1hr     = get_kstrat_cells(vmfu_1hr, strat_all)
-condh_indexed_1hr    = get_kstrat_cells(condh_1hr, strat_all)
-lwfeedb1_indexed_1hr = get_kstrat_cells(np.absolute(lwacre_1hr)/qrain_1hr, strat_all)
-lwfeedb2_indexed_1hr = get_kstrat_cells(np.absolute(lwacre_1hr)/vmfu_1hr , strat_all)
-lwfeedb3_indexed_1hr = get_kstrat_cells(np.absolute(lwacre_1hr)/condh_1hr, strat_all)
+# vmfu_indexed_1hr     = get_kstrat_cells(vmfu_1hr, strat_all)
+# condh_indexed_1hr    = get_kstrat_cells(condh_1hr, strat_all)
+# lwfeedb1_indexed_1hr = get_kstrat_cells(np.absolute(lwacre_1hr)/qrain_1hr, strat_all)
+# lwfeedb2_indexed_1hr = get_kstrat_cells(np.absolute(lwacre_1hr)/vmfu_1hr , strat_all)
+# lwfeedb3_indexed_1hr = get_kstrat_cells(np.absolute(lwacre_1hr)/condh_1hr, strat_all)
+lwfeedb1_indexed_1hr = get_kstrat_cells(lwacre_1hr/qrain_1hr, strat_all)
+# lwfeedb2_indexed_1hr = get_kstrat_cells(lwacre_1hr/vmfu_1hr , strat_all)
+# lwfeedb3_indexed_1hr = get_kstrat_cells(lwacre_1hr/condh_1hr, strat_all)
 
 # Mask out where values go infinite
 nvars = np.size(lwfeedb1_indexed_1hr)
 for ivar in range(nvars):
-    lwfeedb1_indexed_1hr[ivar] = np.ma.masked_where(np.bitwise_or((lwacre_indexed_1hr[ivar] == 0), (qrain_indexed_1hr[ivar] == 0)),
-        lwfeedb1_indexed_1hr[ivar], copy=False)
+    # lwfeedb1_indexed_1hr[ivar] = np.ma.masked_where(np.bitwise_or((lwacre_indexed_1hr[ivar] == 0), (qrain_indexed_1hr[ivar] == 0)),
+    #     lwfeedb1_indexed_1hr[ivar], copy=False)
+    lwfeedb1_indexed_1hr[ivar] = np.ma.masked_where((qrain_indexed_1hr[ivar] == 0), lwfeedb1_indexed_1hr[ivar], copy=False)
 
-# %%
-# Mask out where values go infinite
-for ivar in range(nvars):
-    lwfeedb2_indexed_1hr[ivar] = np.ma.masked_where(np.bitwise_or((lwacre_indexed_1hr[ivar] == 0), (vmfu_indexed_1hr[ivar] == 0)),
-        lwfeedb2_indexed_1hr[ivar], copy=False)
+# # Mask out where values go infinite
+# for ivar in range(nvars):
+#     lwfeedb2_indexed_1hr[ivar] = np.ma.masked_where(np.bitwise_or((lwacre_indexed_1hr[ivar] == 0), (vmfu_indexed_1hr[ivar] == 0)),
+#         lwfeedb2_indexed_1hr[ivar], copy=False)
 
-# %%
-# Mask out where values go infinite
-for ivar in range(nvars):
-    lwfeedb2_indexed_1hr[ivar] = np.ma.masked_where(np.bitwise_or((lwacre_indexed_1hr[ivar] == 0), (condh_indexed_1hr[ivar] <= 0)),
-        lwfeedb2_indexed_1hr[ivar], copy=False)
+# # Mask out where values go infinite
+# for ivar in range(nvars):
+#     lwfeedb2_indexed_1hr[ivar] = np.ma.masked_where(np.bitwise_or((lwacre_indexed_1hr[ivar] == 0), (condh_indexed_1hr[ivar] <= 0)),
+#         lwfeedb2_indexed_1hr[ivar], copy=False)
 
 # ---
 # ### Plotting routines
@@ -228,10 +230,10 @@ create_boxplot(lwacre_indexed_1hr, title_tag, fig_tag, units)
 print("DONE")
 print("RUNNING VMFup")
 
-units = "kg/m/s"
-title_tag = "VMFup"
-fig_tag = "vmfu"
-create_boxplot(vmfu_indexed_1hr, title_tag, fig_tag, units, yscale='log')
+# units = "kg/m/s"
+# title_tag = "VMFup"
+# fig_tag = "vmfu"
+# create_boxplot(vmfu_indexed_1hr, title_tag, fig_tag, units, yscale='log')
 
 # print("DONE")
 # print("RUNNING CONDH")
@@ -287,13 +289,13 @@ create_boxplot_noclear(lwfeedb1_indexed_1hr, title_tag, fig_tag, units, yscale="
 print("DONE")
 print("RUNNING LWFB2")
 
-# Local LW Feedback
-units = "W/m$^2$ / kg/m/s"
-title_tag = "LWACRE/VMFup"
-fig_tag = "lwfdb_vmfu"
-create_boxplot_noclear(lwfeedb2_indexed_1hr, title_tag, fig_tag, units, yscale="log")
+# # Local LW Feedback
+# units = "W/m$^2$ / kg/m/s"
+# title_tag = "LWACRE/VMFup"
+# fig_tag = "lwfdb_vmfu"
+# create_boxplot_noclear(lwfeedb2_indexed_1hr, title_tag, fig_tag, units, yscale="log")
 
-print("DONE")
+# print("DONE")
 # print("RUNNING QRAIN")
 
 # Local LW Feedback

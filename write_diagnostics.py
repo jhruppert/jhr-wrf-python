@@ -44,7 +44,7 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-nmem = 20
+# nmem = 20
 # nmem = 1
 
 ######################################################################
