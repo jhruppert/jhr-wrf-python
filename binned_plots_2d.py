@@ -27,7 +27,7 @@ storm = 'haiyan'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
-figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
+figdir = "/home/jamesrup/figures/tc/ens/binned/"
 datdir2 = 'post/d02/'
 
 # Time selection
@@ -130,32 +130,33 @@ def binvar_settings(ivar_select, pw_all, satfrac_all, rain_all, lwacre_all):
     if ivar_select == 'pw':
         ivar_all = pw_all
         fmin=35;fmax=80 # mm
-        step=1
-        bins=np.arange(fmin,fmax+step,step)
+        # step=1
+        bins=np.linspace(fmin,fmax,num=40)
         xlabel='Column Water Vapor [mm]'
         log_x='linear'
     # Column saturation fraction
     elif ivar_select == 'sf':
         ivar_all = satfrac_all
         fmin=30;fmax=102 # %
-        step=2
-        bins=np.arange(fmin,fmax+step,step)
+        # step=2
+        bins=np.linspace(fmin,fmax,num=40)
         xlabel='Saturation Fraction [%]'
         log_x='linear'
     # Rainfall rate
     elif ivar_select == 'rain':
         ivar_all = rain_all
         # bins=10.**(np.arange(1,8,0.3)-4)
-        bins=10.**(np.arange(0,8,0.3)-4)
+        # bins=10.**(np.arange(0,8,0.3)-4)
+        bins=np.logspace(-4,2.5,num=40)
         xlabel='Rainfall Rate [mm/hr]'
         log_x='log'
     # LW-ACRE
     elif ivar_select == 'lwacre':
         ivar_all = lwacre_all
         fmin=-50; fmax=200 # W/m2
-        step=5
-        bins=np.arange(fmin,fmax+step,step)
-        xlabel='LW-ACRE [W/m**2]'
+        # step=5
+        bins=np.linspace(fmin,fmax,num=40)
+        xlabel='LW-ACRE [W/m$^2$]'
         log_x='linear'
     # Stratiform area fraction
     # elif ivar_select == 'strat_area':
@@ -249,7 +250,7 @@ font = {'family' : 'sans-serif',
 matplotlib.rc('font', **font)
 
 
-def plot_pclass_area(bins, pclass_area, tests, xlabel, log_x):
+def plot_pclass_area(bins, pclass_area, binvartag, tests, xlabel, log_x):
         test_str=tests[ktest]
         fig_title = 'Precip Class Area Fraction ('+test_str.upper()+')'
         # create figure
@@ -274,43 +275,43 @@ def plot_pclass_area(bins, pclass_area, tests, xlabel, log_x):
         # ax2=ax.twinx()
         # ax2.plot(bins[0:nbins-1], acre_binned, "-k", label="ACRE", linewidth=2)
         # ax2.set_ylabel('ACRE [W/m$^2$]')
-        #     plt.savefig(figdir+'binnedcross_convstrat_ens'+enstag+'m_'+ivar_select+'_'+test_str+'.png',dpi=200, facecolor='white', \
-        #                 bbox_inches='tight', pad_inches=0.2)
+        plt.savefig(figdir+'pclass_frac_'+binvartag+'_'+test_str+'.png',dpi=200, facecolor='white', \
+                    bbox_inches='tight', pad_inches=0.2)
         plt.show()
         plt.close()
 
 
-def plot_cbinned_acre(bins, lwacre_class, tests, xlabel, log_x):
+def plot_cbinned_var(bins, binvar, vartag, units, binvartag, tests, xlabel, log_x):
         test_str=tests[ktest]
-        fig_title = 'LW-ACRE Binned by Precip Class ('+test_str.upper()+')'
+        fig_title = vartag.upper()+' Binned by Precip Class ('+test_str.upper()+')'
         # create figure
         fig = plt.figure(figsize=(14,4))
         ax = fig.add_subplot(111)
         ax.set_title(fig_title)
         ax.set_xlabel(xlabel)
         ax.set_xscale(log_x)
-        ax.set_ylabel('LW-ACRE [W/m$^2$]')
+        ax.set_ylabel(vartag.upper()+' ['+units+']')
         nbins = np.size(bins)
         # plt.plot(bins[0:nbins-1], pclass_area[:,0] \
         #         , ".k", label="Non-raining")
-        plt.plot(bins[0:nbins-1], lwacre_class[:,1], "-r", label="Deep")
-        plt.plot(bins[0:nbins-1], lwacre_class[:,2], "--r", label="Cong")
-        plt.plot(bins[0:nbins-1], lwacre_class[:,3], ":r", label="Shallow")
-        plt.plot(bins[0:nbins-1], lwacre_class[:,4], "-b", label="Strat")
-        plt.plot(bins[0:nbins-1], lwacre_class[:,5], "--b", label="Anvil")
+        plt.plot(bins[0:nbins-1], binvar[:,1], "-r", label="Deep")
+        plt.plot(bins[0:nbins-1], binvar[:,2], "--r", label="Cong")
+        plt.plot(bins[0:nbins-1], binvar[:,3], ":r", label="Shallow")
+        plt.plot(bins[0:nbins-1], binvar[:,4], "-b", label="Strat")
+        plt.plot(bins[0:nbins-1], binvar[:,5], "--b", label="Anvil")
         plt.xlim(np.min(bins), np.max(bins))
         # plt.ylim(0, 0.020)
         # plt.legend(loc="upper left")
         # ax2=ax.twinx()
         # ax2.plot(bins[0:nbins-1], acre_binned, "-k", label="ACRE", linewidth=2)
         # ax2.set_ylabel('ACRE [W/m$^2$]')
-        #     plt.savefig(figdir+'binnedcross_convstrat_ens'+enstag+'m_'+ivar_select+'_'+test_str+'.png',dpi=200, facecolor='white', \
-        #                 bbox_inches='tight', pad_inches=0.2)
+        plt.savefig(figdir+'cbinned_'+vartag+'_'+binvartag+'_'+test_str+'.png',dpi=200, facecolor='white', \
+                    bbox_inches='tight', pad_inches=0.2)
         plt.show()
         plt.close()
 
 
-def plot_rain_acre(bins, rain_binned, acre_binned, tests, xlabel, log_x):
+def plot_rain_acre(bins, rain_binned, acre_binned, binvartag, tests, xlabel, log_x):
         test_str=tests[ktest]
         fig_title = test_str.upper()
         # create figure
@@ -330,13 +331,13 @@ def plot_rain_acre(bins, rain_binned, acre_binned, tests, xlabel, log_x):
         ax2=ax.twinx()
         ax2.plot(bins[0:nbins-1], acre_binned, "-r")#, linewidth=2)
         ax2.set_ylabel('LW-ACRE [W/m$^2$]')
-        #     plt.savefig(figdir+'binnedcross_convstrat_ens'+enstag+'m_'+ivar_select+'_'+test_str+'.png',dpi=200, facecolor='white', \
-        #                 bbox_inches='tight', pad_inches=0.2)
+        plt.savefig(figdir+'rain_acre_'+binvartag+'_'+test_str+'.png',dpi=200, facecolor='white', \
+                    bbox_inches='tight', pad_inches=0.2)
         plt.show()
         plt.close()
 
 
-def plot_bin_freq(bins, bin_freq, tests, xlabel, log_x):
+def plot_bin_freq(bins, bin_freq, binvartag, tests, xlabel, log_x):
         test_str=tests[ktest]
         fig_title = test_str.upper()
         # create figure
@@ -351,8 +352,8 @@ def plot_bin_freq(bins, bin_freq, tests, xlabel, log_x):
         total = np.nansum(bin_freq)
         plt.plot(bins[0:nbins-1], 100*bin_freq/total, "-k")
         plt.xlim(np.min(bins), np.max(bins))
-        #     plt.savefig(figdir+'binnedcross_convstrat_ens'+enstag+'m_'+ivar_select+'_'+test_str+'.png',dpi=200, facecolor='white', \
-        #                 bbox_inches='tight', pad_inches=0.2)
+        plt.savefig(figdir+'binfreq_'+binvartag+'_'+test_str+'.png',dpi=200, facecolor='white', \
+                    bbox_inches='tight', pad_inches=0.2)
         plt.show()
         plt.close()
 
@@ -363,7 +364,8 @@ def plot_bin_freq(bins, bin_freq, tests, xlabel, log_x):
 # Select variable (2D; independent var)
 # ivar_select = 'strat_area' # Don't think this will work
 
-ivars=['sf', 'pw', 'rain']
+ivars=['sf', 'pw', 'rain', 'lwacre']
+# ivars=['rain', 'lwacre']
 
 for ivar_select in ivars:
 
@@ -373,12 +375,13 @@ for ivar_select in ivars:
     ivar_all, bins, bin_axis, xlabel, log_x = binvar_settings(ivar_select, pw_all, satfrac_all, rain_all, lwacre_all)
     binned_vars = run_binning(pclass_all, bins, ivar_all, pw_all, satfrac_all, lwacre_all, rain_all)
 
-    nbins = np.size(bins)
-
-    plot_bin_freq(bins, binned_vars['bin_freq'], tests, xlabel, log_x)
-    plot_pclass_area(bins, binned_vars['pclass_area'], tests, xlabel, log_x)
-    plot_cbinned_acre(bins, binned_vars['lwacre_class'], tests, xlabel, log_x)
-    plot_rain_acre(bins, binned_vars['rain_binned'], binned_vars['lwacre_binned'], tests, xlabel, log_x)
+    plot_bin_freq(bins, binned_vars['bin_freq'], ivar_select, tests, xlabel, log_x)
+    plot_pclass_area(bins, binned_vars['pclass_area'], ivar_select, tests, xlabel, log_x)
+    plot_cbinned_var(bins, binned_vars['pw_class'], 'cwv', 'mm', ivar_select, tests, xlabel, log_x)
+    plot_cbinned_var(bins, binned_vars['satfrac_class'], 'satfrac', '%', ivar_select, tests, xlabel, log_x)
+    plot_cbinned_var(bins, binned_vars['lwacre_class'], 'lwacre', 'W/m$^2$', ivar_select, tests, xlabel, log_x)
+    plot_cbinned_var(bins, binned_vars['rain_class'], 'rain', 'mm/hr', ivar_select, tests, xlabel, log_x)
+    plot_rain_acre(bins, binned_vars['rain_binned'], binned_vars['lwacre_binned'], ivar_select, tests, xlabel, log_x)
 
     print()
     print()

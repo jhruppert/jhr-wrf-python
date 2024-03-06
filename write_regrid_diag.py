@@ -32,10 +32,11 @@ if storm == 'haiyan':
     # tests = ['ctl']
     # tests = ['ctl','ncrf36h']
     tests = ['crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
+    tests = ['ctl','ncrf36h','crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
     tests = ['ctl','ncrf36h']
     tests = ['ncrf36h']
-    # tests = ['ctl','ncrf48h']#'ncrf36h']
+    tests = ['ctl','ncrf48h','ncrf36h']
     # tests = [tests[1],'crfon72h']
     # tests = ['crfon72h']
 
@@ -178,12 +179,15 @@ def get_pclass_area(pclass, nt, nx1_new, nx2_new, x1ind, x2ind, nxx, hnxx):
 
     pclass_area = np.zeros((nt,6,nx1_new,nx2_new))
 
+    nxsqd = np.square(nxx)
     for it in range(nt):
         for ix1 in range(nx1_new):
             for ix2 in range(nx2_new):
+                x1loc=x1ind[ix1]
+                x2loc=x2ind[ix2]
                 for ipclass in range(6):
-                    indices_pclass = (pclass[:, x1ind[ix1]-hnxx:x1ind[ix1]+hnxx, x2ind[ix2]-hnxx:x2ind[ix2]+hnxx] == ipclass).nonzero()
-                    pclass_area[it,ipclass,ix1,ix2] = indices_pclass[0].shape[0]/(nxx**2)
+                    indices_pclass = (pclass[it, x1loc-hnxx:x1loc+hnxx, x2loc-hnxx:x2loc+hnxx] == ipclass).nonzero()
+                    pclass_area[it,ipclass,ix1,ix2] = 100*indices_pclass[0].shape[0]/nxsqd
 
     return pclass_area
 
