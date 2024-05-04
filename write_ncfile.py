@@ -48,6 +48,7 @@ def write_ncfile(file_out, var_list, var_names, descriptions, units, dims_set): 
             dim_added.append(dims_set[idimset][0][idim])
 
     for ivar in range(len(var_list)):
+        print("  Writing var: ",var_names[ivar])
         writevar = ncfile.createVariable(var_names[ivar], np.single, dims_set[ivar][0]) #dim_names[ivar])
         writevar.units = units[ivar]
         writevar.description = descriptions[ivar]

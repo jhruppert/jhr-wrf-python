@@ -93,11 +93,12 @@ regridder = xe.Regridder(grid_in, grid_out, "conservative")
 ################################################
 #### NetCDF variable metadata
 
-def var_regrid_metadata(nt,nx1_new,nx2_new):
+def var_regrid_metadata(nt,nz,nx1_new,nx2_new):
     
     var_names = [
         'lat_new',
         'lon_new',
+        'pres',
         'pclass_area',
         'rain',
         'qrain',
@@ -111,10 +112,14 @@ def var_regrid_metadata(nt,nx1_new,nx2_new):
         'mse_vint',
         'lwacre',
         'swacre',
+        'theta_e',
+        'w',
+        'rho',
     ]
     descriptions = [
         'latitude of new grid',
         'longitude of new grid',
+        'pressure',
         'precip class area',
         'rain rate (centered diff)',
         'column integrated rain water mixr',
@@ -128,10 +133,14 @@ def var_regrid_metadata(nt,nx1_new,nx2_new):
         'vertically int moist static energy, calculated as 1/g*integral(mse)dp up to 100 hPa',
         'LW column ACRE',
         'SW column ACRE',
+        'equivalent potential temperature',
+        'vertical motion',
+        'density',
     ]
     units = [
         'deg',
         'deg',
+        'hPa',
         '%',
         'mm/day',
         'mm',
@@ -145,12 +154,18 @@ def var_regrid_metadata(nt,nx1_new,nx2_new):
         'J/kg',
         'W/m^2',
         'W/m^2',
+        'K',
+        'm/s',
+        'kg/m^3',
     ]
     dims2d = (nt,nx1_new,nx2_new)
+    dims3d = (nt,nz,nx1_new,nx2_new)
     dim_names = ('nt','nx1_new','nx2_new')
+    dim_names3d = ('nt','nz','nx1_new','nx2_new')
     dims_set = [
         [('nx1_new',),(nx1_new,)],
         [('nx2_new',),(nx2_new,)],
+        [('nz',),(nz,)],
         [(dim_names[0],'pclass',dim_names[1],dim_names[2]), (dims2d[0],6,dims2d[1],dims2d[2])],
         [dim_names,dims2d],
         [dim_names,dims2d],
@@ -164,6 +179,9 @@ def var_regrid_metadata(nt,nx1_new,nx2_new):
         [dim_names,dims2d],
         [dim_names,dims2d],
         [dim_names,dims2d],
+        [dim_names3d,dims3d],
+        [dim_names3d,dims3d],
+        [dim_names3d,dims3d],
     ]
 
     len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dims_set) #len4=len(dim_names)
@@ -193,6 +211,7 @@ def get_pclass_area(pclass, nt, nx1_new, nx2_new, x1ind, x2ind, nxx, hnxx):
 
 ##### Main loops and calculations ######################################
 
+print()
 print('Running storm: ',storm)
 
 ntest=len(tests)
@@ -205,8 +224,8 @@ for ktest in range(ntest):
 
     # Loop over ensemble members
 
-    # for imemb in range(7,nmem):
     for imemb in range(nmem):
+    # for imemb in range(1,nmem):
 
         start = runtimer()
 
@@ -225,7 +244,7 @@ for ktest in range(ntest):
         t0=0
         t1=nt
 
-        var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nx1_new,nx2_new)
+        var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nz,nx1_new,nx2_new)
 
         # Stratiform ID
         q_int = read_qcloud(datdir,t0,t1,mask=False) # mm
@@ -263,6 +282,20 @@ for ktest in range(ntest):
         lwacre = read_lwacre(datdir,t0,t1,mask=False) # W/m2
         swacre = read_swacre(datdir,t0,t1,mask=False) # W/m2
 
+        # Equiv potential temp
+        varname = 'QVAPOR'
+        qv = var_read_3d(datdir,varname,t0,t1,mask=False) # kg/kg
+        varname = 'T'
+        tmpk = var_read_3d(datdir,varname,t0,t1,mask=False) # K
+        theta_e = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+
+        # Density
+        rho = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+
+        # Vertical motion
+        varname = 'W'
+        w = var_read_3d(datdir,varname,t0,t1,mask=False) # m/s
+
         # ### Interpolate variable ##############################################
 
         print("Running regridding...")
@@ -270,6 +303,7 @@ for ktest in range(ntest):
         var_list=[]
         var_list.append(lat_new)
         var_list.append(lon_new)
+        var_list.append(pres)
 
         print("  ... running pclass area")
         pclass_area = get_pclass_area(pclass, nt, nx1_new, nx2_new, x1ind, x2ind, nxx, hnxx)
@@ -287,6 +321,9 @@ for ktest in range(ntest):
         var_list.append(regridder(mse.data))
         var_list.append(regridder(lwacre.data))
         var_list.append(regridder(swacre.data))
+        var_list.append(regridder(theta_e.data))
+        var_list.append(regridder(w.data))
+        var_list.append(regridder(rho.data))
 
         # ### Write out variables ##############################################
 
