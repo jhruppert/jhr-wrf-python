@@ -55,6 +55,8 @@ def write_ncfile(file_out, var_list, var_names, descriptions, units, dims_set): 
         writevar[...] = var_list[ivar]
 
     ncfile.close()
+
+    print("Done writing!")
     
     return None
 

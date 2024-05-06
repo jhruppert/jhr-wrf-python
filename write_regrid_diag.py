@@ -20,7 +20,7 @@ nxx = 15 # n-points in both horizontal dimensions
 buffer = 80 # equal to buffer used for other routines
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 filename_out='regrid_diag_nx'+str(nxx)+'.nc'
 
