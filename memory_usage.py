@@ -16,9 +16,11 @@ def memory_usage():
     active   = np.round(mem[5]*togb, nround)
     inactive = np.round(mem[6]*togb, nround)
 
+    print()
     print("Total:     ",total,"GB")
     print("Avail:     ",avail,"GB")
     print("Used:      ",used,"GB")
     print("Free:      ",free,"GB")
     print("Active:    ",active,"GB")
     print("Inactive:  ",inactive,"GB")
+    print()

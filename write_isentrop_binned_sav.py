@@ -9,6 +9,9 @@
 # jruppert@ou.edu  
 # 4/23/22
 
+
+# NOTE: Using copied tracking from CTL for NCRF tests
+
 # from netCDF4 import Dataset
 import numpy as np
 # import subprocess
@@ -20,20 +23,12 @@ from precip_class import *
 from memory_usage import *
 from mpi4py import MPI
 
-## NOTE: Using copied tracking from CTL for NCRF tests
 # from mask_tc_track import mask_tc_track
-
-# Parallelization notes:
-#   Using mpi4py to distribute the work of reading and processing
-#   large-dimensional numpy arrays. The processed results are passed
-#   back to the rank-0 node, which does the netcdf write-out.
 
 comm = MPI.COMM_WORLD
 
-if comm.rank == 0:
-    print()
-    print("Using ",comm.Get_size()," MPI processes")
-    print()
+print(comm.rank)
+print()
 
 # #### Main settings
 
@@ -166,23 +161,20 @@ bins=np.linspace(fmin,fmax,num=nbins)
 
 # #### Main loops and compositing
 
-for ktest in range(ntest):
-# for ktest in range(1):
+# for ktest in range(ntest):
+for ktest in range(1):
 
     test_str=tests[ktest]
 
-    if comm.rank == 0:
-        print()
-        print('Running test: ',test_str)
+    print()
+    print('Running test: ',test_str)
 
     # Loop over ensemble members
 
-    for imemb in range(nmem):
-    # for imemb in range(1):
+    # for imemb in range(nmem):
+    for imemb in range(1):
 
-        if comm.rank == 0:
-            print()
-            print('Running imemb: ',memb_all[imemb])
+        print('Running imemb: ',memb_all[imemb])
 
         datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
 
@@ -203,7 +195,7 @@ for ktest in range(ntest):
         nx2-=buffer*2
 
         t0=0
-        # nt=2
+        nt=2
         t1=nt
 
         # Create single multi-dimensional variable to accommodate masking
@@ -227,19 +219,30 @@ for ktest in range(ntest):
         qv = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
         theta_e = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
 
-        proc_var_list = ['H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W', ' ']
-        nproc = comm.Get_size()
-        if nproc != len(proc_var_list):
-            print("Reduce nproc!")
-            sys.exit()
+        if comm.rank != 6:
+            del qv, tmpk
 
-        # Distributing variable processing onto all ranks [0:6], with rank [0] receiving from others and doing all write-out.
-        if comm.rank < 6:
-            invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
-        else:
+        if comm.rank == 0:
+            varname = 'H_DIABATIC'
+            invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K/s
+        elif comm.rank == 1:
+            varname = 'RTHRATLW'
+            invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K/s
+        elif comm.rank == 2:
+            varname = 'RTHRATLWC'
+            invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K/s
+        elif comm.rank == 3:
+            varname = 'RTHRATSW'
+            invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K/s
+        elif comm.rank == 4:
+            varname = 'RTHRATSWC'
+            invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K/s
+        elif comm.rank == 5:
+            varname = 'W'
+            invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K/s
+        elif comm.rank == 6:
             invar = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
-
-        del qv, tmpk
+            del qv, tmpk
 
         ### Process and save variable ##############################################
 
@@ -258,12 +261,10 @@ for ktest in range(ntest):
         # Normalization factor: equal for all classes
         # ncell = np.ma.MaskedArray.count(ivar[0,0,:,:])
 
-        for ipclass in range(npclass):
-        # for ipclass in range(1):
+        # for ipclass in range(npclass):
+        for ipclass in range(1):
 
-            if comm.rank == 0:
-                print()
-                print("Running ipclass: ",pclass_name[ipclass])
+            print("Running ipclass: ",pclass_name[ipclass])
 
             # Mask out based on precipitation class
             if (ipclass > 0):
@@ -280,53 +281,71 @@ for ktest in range(ntest):
             # var_tmp  = np.ma.filled(var_tmp, fill_value=0)
             # ivar_tmp = np.ma.filled(ivar_tmp, fill_value=np.nan)
 
-            # Bin the variables from (x,y) --> (bin)
-
-            dims = (nt,nz,nbins-1)
-            invar_binned = np.full(dims, np.nan)
-
-            nmin = 3 # minimum points to average
-
-            for it in range(nt):
-                for iz in range(nz):
-                    for ibin in range(nbins-1):
-                        indices = ((theta_e_masked[it,iz,:,:] >= bins[ibin]) & (theta_e_masked[it,iz,:,:] < bins[ibin+1])).nonzero()
-                        # Mean across ID'd cells
-                        if indices[0].shape[0] > nmin:
-                            # allvars_binned[comm.rank, it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
-                            invar_binned[it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
-
-            del invar_masked
-
-            if comm.rank > 0:
-                req = comm.isend(invar_binned, dest=0, tag=comm.rank)
-                req.wait()
-                del theta_e_masked, invar_binned
-
-            if comm.rank == 0:
+            if comm.rank ==0:
 
                 theta_e_mean = np.ma.mean(theta_e_masked, axis=(2,3))
-                del theta_e_masked
 
                 var_list_write=[]
                 var_list_write.append(bins)
                 var_list_write.append(pres)
                 var_list_write.append(theta_e_mean)
 
-                # Save, delete 0-rank variable
-                var_list_write.append(invar_binned)
-                # print()
-                # print(invar_binned[1,:,30])
-                del invar_binned
+            ############# SET UP SHARED MEMORY DISTRIBUTION #############
 
-                for irank in range(1,nproc):
-                    req = comm.irecv(source=irank, tag=irank)
-                    invar_binned = req.wait()
-                    # check that the unique arrays are appearing on process 0
-                    # print()
-                    # print(invar_binned[1,:,30])
-                    var_list_write.append(invar_binned)
-                    del invar_binned
+            # Code grabbed from https://stackoverflow.com/questions/32485122/shared-memory-in-mpi4py
+            # on rank 0, create the shared block
+            # on rank 1 get a handle to it (known as a window in MPI speak)
+            dims = (7,nt,nz,nbins-1)
+            size = np.prod(dims)
+            itemsize = MPI.DOUBLE.Get_size() 
+            if comm.rank == 0:
+                nbytes = size * itemsize
+            else:
+                nbytes = 0
+
+            # on rank 0, create the shared block
+            # on rank 1 get a handle to it (known as a window in MPI speak)
+            win = MPI.Win.Allocate_shared(nbytes, itemsize, comm=comm) 
+
+            # create a numpy array whose data points to the shared mem
+            buf, itemsize = win.Shared_query(0) 
+            assert itemsize == MPI.DOUBLE.Get_size() 
+            allvars_binned = np.ndarray(buffer=buf, dtype='d', shape=dims)
+            allvars_binned[:] = np.nan
+
+            #############################################################
+
+            # Bin the variables from (x,y) --> (bin)
+
+            nmin = 2 # minimum points to average
+
+            for it in range(nt):
+                for iz in range(nz):
+                    for ibin in range(nbins-1):
+                        indices = ((theta_e_masked[0,it,iz,:,:] >= bins[ibin]) & (theta_e_masked[0,it,iz,:,:] < bins[ibin+1])).nonzero()
+                        # Mean across ID'd cells
+                        if indices[0].shape[0] > nmin:
+                            allvars_binned[comm.rank, it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
+
+            del theta_e_masked, invar_masked
+
+            # in process rank 1:
+            # write the numbers 0.0,1.0,..,4.0 to the first 5 elements of the array
+            # if comm.rank == 1:
+            #     ary[:5] = np.arange(5)
+
+            # wait in process rank 0 until process 1 has written to the array
+            comm.Barrier() 
+
+            # check that the array is actually shared and process 0 can see
+            # the changes made in the array by process 1
+            if comm.rank == 0: 
+                print(allvars_binned[:,1,:,30])
+
+            if comm.rank == 0:
+
+                for inode in range(7):
+                    var_list_write.append(allvars_binned[inode])
 
                 # Write out to netCDF file
 
