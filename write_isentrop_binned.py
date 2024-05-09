@@ -25,8 +25,8 @@ from mpi4py import MPI
 
 # Parallelization notes:
 #   Using mpi4py to distribute the work of reading and processing
-#   large-dimensional numpy arrays. The processed results are passed
-#   back to the rank-0 node, which does the netcdf write-out.
+#   large-dimensional numpy arrays. The processed results are then
+#   passed back to the rank-0 node, which does the netcdf write-out.
 
 comm = MPI.COMM_WORLD
 
@@ -96,43 +96,51 @@ lon = lon[0,:]
 ################################################
 #### NetCDF variable metadata
 
-def var_regrid_metadata(nt,nz,nbins,nbinsm1):
+def var_regrid_metadata(nt,nz,nbins):
+
+    nbinsm1 = nbins-1
 
     var_names = [
         'bins',
         'pres',
         'theta_e_mn',
+        'tmpk',
+        'qv',
+        'rho',
         'h_diabatic',
         'lw',
         'lwc',
         'sw',
         'swc',
         'w',
-        'rho',
     ]
     descriptions = [
         'equivalent potential temperature bins',
         'pressure',
         'mean equivalent potential temperature',
+        'temperature',
+        'water vapor mixing ratio',
+        'density',
         'H_DIABATIC',
         'LW heat tendency',
         'LW clear-sky heat tendency',
         'SW heat tendency',
         'SW clear-sky heat tendency',
         'vertical motion',
-        'density',
     ]
     units = [
         'K',
         'hPa',
         'K',
+        'K',
+        'kg/kg',
+        'kg/m^3',
         'K/s',
         'K/s',
         'K/s',
         'K/s',
         'K/s',
         'm/s',
-        'kg/m^3',
     ]
     dims_all = (nt,nz,nbinsm1)
     dim_names = ('nt','nz','nbinsm1')
@@ -140,6 +148,8 @@ def var_regrid_metadata(nt,nz,nbins,nbinsm1):
         [('nbins',),(nbins,)],
         [('nz',),(nz,)],
         [('nt','nz'),(nt,nz)],
+        [dim_names,dims_all],
+        [dim_names,dims_all],
         [dim_names,dims_all],
         [dim_names,dims_all],
         [dim_names,dims_all],
@@ -166,23 +176,23 @@ bins=np.linspace(fmin,fmax,num=nbins)
 
 # #### Main loops and compositing
 
-for ktest in range(ntest):
-# for ktest in range(1):
+# for ktest in range(ntest):
+for ktest in range(1):
 
     test_str=tests[ktest]
 
-    if comm.rank == 0:
-        print()
-        print('Running test: ',test_str)
+    # if comm.rank == 0:
+    #     print()
+    #     print('Running test: ',test_str)
 
     # Loop over ensemble members
 
-    for imemb in range(nmem):
-    # for imemb in range(1):
+    # for imemb in range(nmem):
+    for imemb in range(1):
 
-        if comm.rank == 0:
-            print()
-            print('Running imemb: ',memb_all[imemb])
+        # if comm.rank == 0:
+        #     print()
+        #     print('Running imemb: ',memb_all[imemb])
 
         datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
 
@@ -203,13 +213,8 @@ for ktest in range(ntest):
         nx2-=buffer*2
 
         t0=0
-        # nt=2
+        nt=3
         t1=nt
-
-        # Create single multi-dimensional variable to accommodate masking
-        # nvars=8
-        # all_vars = np.ma.zeros((nvars,nt,nz,nx1,nx2))
-        # all_vars = np.zeros((nvars,nt,nz,nx1,nx2))
 
         # SPLITTING VARIABLES ACROSS CPUs
         # ALL NODES REQUIRE: PCLASS, THETA_E
@@ -227,19 +232,33 @@ for ktest in range(ntest):
         qv = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
         theta_e = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
 
-        proc_var_list = ['H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W', ' ']
+        proc_var_list = ['tmpk', 'qv', 'rho', 'H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
+        nvars = len(proc_var_list)
         nproc = comm.Get_size()
-        if nproc != len(proc_var_list):
-            print("Reduce nproc!")
+        # Check for the right number of processors
+        if nproc < nvars:
+            print("Increase nproc!")
             sys.exit()
 
-        # Distributing variable processing onto all ranks [0:6], with rank [0] receiving from others and doing all write-out.
-        if comm.rank < 6:
-            invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
-        else:
-            invar = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+        # Distribute variable processing onto all ranks.
+        # Rank[0] receives all processed results and does write-out.
 
-        del qv, tmpk
+        if comm.rank == 0:
+            invar = tmpk # K
+            del qv
+        elif comm.rank == 1:
+            invar = qv # kg/kg
+            del tmpk
+        elif comm.rank == 2:
+            invar = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
+            del qv, tmpk
+        else:
+            del qv, tmpk
+            if comm.rank < nvars:
+                invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
+            else:
+                # A safety in case we have more procs than needed
+                continue
 
         ### Process and save variable ##############################################
 
@@ -258,8 +277,8 @@ for ktest in range(ntest):
         # Normalization factor: equal for all classes
         # ncell = np.ma.MaskedArray.count(ivar[0,0,:,:])
 
-        for ipclass in range(npclass):
-        # for ipclass in range(1):
+        # for ipclass in range(npclass):
+        for ipclass in range(1):
 
             if comm.rank == 0:
                 print()
@@ -271,14 +290,10 @@ for ktest in range(ntest):
                 theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
                 invar_masked = np.ma.masked_where(indices, invar, copy=True)
             else:
-                # Create simple memory references
+                # Create memory references
                 # Delete these at end of loop so that originals aren't overwritten
                 theta_e_masked = theta_e
                 invar_masked = invar
-
-            # Replace masked elements with zeros or NaNs
-            # var_tmp  = np.ma.filled(var_tmp, fill_value=0)
-            # ivar_tmp = np.ma.filled(ivar_tmp, fill_value=np.nan)
 
             # Bin the variables from (x,y) --> (bin)
 
@@ -293,17 +308,22 @@ for ktest in range(ntest):
                         indices = ((theta_e_masked[it,iz,:,:] >= bins[ibin]) & (theta_e_masked[it,iz,:,:] < bins[ibin+1])).nonzero()
                         # Mean across ID'd cells
                         if indices[0].shape[0] > nmin:
-                            # allvars_binned[comm.rank, it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
                             invar_binned[it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
 
             del invar_masked
 
+            print()
+            print("My rank: ",comm.rank)
+            print("invar_binned size: ",invar_binned.nbytes," bytes")
+
             if comm.rank > 0:
-                req = comm.isend(invar_binned, dest=0, tag=comm.rank)
-                req.wait()
+
+                print()
+                print("Sending data to rank 0")
+                comm.Send(invar_binned, dest=0, tag=comm.rank)
                 del theta_e_masked, invar_binned
 
-            if comm.rank == 0:
+            else:
 
                 theta_e_mean = np.ma.mean(theta_e_masked, axis=(2,3))
                 del theta_e_masked
@@ -315,18 +335,24 @@ for ktest in range(ntest):
 
                 # Save, delete 0-rank variable
                 var_list_write.append(invar_binned)
-                # print()
-                # print(invar_binned[1,:,30])
                 del invar_binned
 
-                for irank in range(1,nproc):
-                    req = comm.irecv(source=irank, tag=irank)
-                    invar_binned = req.wait()
+                for irank in range(1,nvars):
+                    print()
+                    print("Recieving data from rank ",irank)
+                    invar_binned = np.empty(dims)
+                    comm.Recv(invar_binned, source=irank, tag=irank)
                     # check that the unique arrays are appearing on process 0
                     # print()
                     # print(invar_binned[1,:,30])
                     var_list_write.append(invar_binned)
                     del invar_binned
+
+            print("My rank before: ",comm.rank)
+            comm.Barrier()
+            print("My rank after: ",comm.rank)
+
+            if comm.rank == 0:
 
                 # Write out to netCDF file
 
@@ -339,6 +365,6 @@ for ktest in range(ntest):
 
                 file_out = datdir+'binned_isentrop_'+strattag+'.nc'
 
-                var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nz,nbins,nbins-1)
+                var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nz,nbins)
 
                 write_ncfile(file_out, var_list_write, var_names, descriptions, units, dims_set)
