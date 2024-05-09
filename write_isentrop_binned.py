@@ -29,13 +29,18 @@ from mpi4py import MPI
 #   passed back to the rank-0 node, which does the netcdf write-out.
 
 comm = MPI.COMM_WORLD
-
-if comm.rank == 0:
-    print()
-    print("Using ",comm.Get_size()," MPI processes")
-    print()
+nproc = comm.Get_size()
 
 # #### Main settings
+
+proc_var_list = ['tmpk', 'qv', 'rho', 'H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
+nvars = len(proc_var_list)
+
+# Check for required number of processors
+if nproc != nvars:
+    print("Check NPROC (-n option)! Should be ",nvars)
+    print("Killing batch job")
+    sys.exit()
 
 storm = 'haiyan'
 # storm = 'maria'
@@ -70,11 +75,6 @@ nmem = 10 # number of ensemble members (1-5 have NCRF)
 # rmax = 6 # radius (deg) limit for masking around TC center
 # rmax = 3
 
-# Number of sample time steps
-# nt=12
-# nt=2
-# hr_tag = str(np.char.zfill(str(nt), 2))
-
 ################################################
 # Ensemble member info
 memb0=1 # Starting member to read
@@ -104,6 +104,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'bins',
         'pres',
         'theta_e_mn',
+        'frequency',
         'tmpk',
         'qv',
         'rho',
@@ -118,6 +119,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'equivalent potential temperature bins',
         'pressure',
         'mean equivalent potential temperature',
+        'frequency',
         'temperature',
         'water vapor mixing ratio',
         'density',
@@ -132,6 +134,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'K',
         'hPa',
         'K',
+        'n-cells',
         'K',
         'kg/kg',
         'kg/m^3',
@@ -148,6 +151,7 @@ def var_regrid_metadata(nt,nz,nbins):
         [('nbins',),(nbins,)],
         [('nz',),(nz,)],
         [('nt','nz'),(nt,nz)],
+        [dim_names,dims_all],
         [dim_names,dims_all],
         [dim_names,dims_all],
         [dim_names,dims_all],
@@ -176,23 +180,23 @@ bins=np.linspace(fmin,fmax,num=nbins)
 
 # #### Main loops and compositing
 
-# for ktest in range(ntest):
-for ktest in range(1):
+for ktest in range(ntest):
+# for ktest in range(1):
 
     test_str=tests[ktest]
 
-    # if comm.rank == 0:
-    #     print()
-    #     print('Running test: ',test_str)
+    if comm.rank == 0:
+        print()
+        print('Running test: ',test_str)
 
     # Loop over ensemble members
 
-    # for imemb in range(nmem):
-    for imemb in range(1):
+    for imemb in range(nmem):
+    # for imemb in range(1):
 
-        # if comm.rank == 0:
-        #     print()
-        #     print('Running imemb: ',memb_all[imemb])
+        if comm.rank == 0:
+            print()
+            print('Running imemb: ',memb_all[imemb])
 
         datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
 
@@ -213,7 +217,7 @@ for ktest in range(1):
         nx2-=buffer*2
 
         t0=0
-        nt=3
+        # nt=3
         t1=nt
 
         # SPLITTING VARIABLES ACROSS CPUs
@@ -232,16 +236,8 @@ for ktest in range(1):
         qv = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
         theta_e = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
 
-        proc_var_list = ['tmpk', 'qv', 'rho', 'H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
-        nvars = len(proc_var_list)
-        nproc = comm.Get_size()
-        # Check for the right number of processors
-        if nproc < nvars:
-            print("Increase nproc!")
-            sys.exit()
-
         # Distribute variable processing onto all ranks.
-        # Rank[0] receives all processed results and does write-out.
+        # Rank[0] then receives all processed results and does write-out.
 
         if comm.rank == 0:
             invar = tmpk # K
@@ -254,11 +250,7 @@ for ktest in range(1):
             del qv, tmpk
         else:
             del qv, tmpk
-            if comm.rank < nvars:
-                invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
-            else:
-                # A safety in case we have more procs than needed
-                continue
+            invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
 
         ### Process and save variable ##############################################
 
@@ -277,8 +269,8 @@ for ktest in range(1):
         # Normalization factor: equal for all classes
         # ncell = np.ma.MaskedArray.count(ivar[0,0,:,:])
 
-        # for ipclass in range(npclass):
-        for ipclass in range(1):
+        for ipclass in range(npclass):
+        # for ipclass in range(1):
 
             if comm.rank == 0:
                 print()
@@ -299,6 +291,7 @@ for ktest in range(1):
 
             dims = (nt,nz,nbins-1)
             invar_binned = np.full(dims, np.nan)
+            freq_binned = np.ndarray(dims, dtype=np.float64)
 
             nmin = 3 # minimum points to average
 
@@ -306,20 +299,18 @@ for ktest in range(1):
                 for iz in range(nz):
                     for ibin in range(nbins-1):
                         indices = ((theta_e_masked[it,iz,:,:] >= bins[ibin]) & (theta_e_masked[it,iz,:,:] < bins[ibin+1])).nonzero()
-                        # Mean across ID'd cells
-                        if indices[0].shape[0] > nmin:
+                        binfreq = indices[0].size
+                        freq_binned[it,iz,ibin] = np.array(binfreq, dtype=np.float64)
+                        # Take mean across ID'd cells
+                        if binfreq > nmin:
                             invar_binned[it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
 
             del invar_masked
 
-            print()
-            print("My rank: ",comm.rank)
-            print("invar_binned size: ",invar_binned.nbytes," bytes")
+            # Consolidate rebinned data onto Rank0 and write netCDF file
 
             if comm.rank > 0:
 
-                print()
-                print("Sending data to rank 0")
                 comm.Send(invar_binned, dest=0, tag=comm.rank)
                 del theta_e_masked, invar_binned
 
@@ -332,14 +323,14 @@ for ktest in range(1):
                 var_list_write.append(bins)
                 var_list_write.append(pres)
                 var_list_write.append(theta_e_mean)
+                var_list_write.append(freq_binned)
 
                 # Save, delete 0-rank variable
                 var_list_write.append(invar_binned)
                 del invar_binned
 
                 for irank in range(1,nvars):
-                    print()
-                    print("Recieving data from rank ",irank)
+                    dims = (nt,nz,nbins-1)
                     invar_binned = np.empty(dims)
                     comm.Recv(invar_binned, source=irank, tag=irank)
                     # check that the unique arrays are appearing on process 0
@@ -347,12 +338,6 @@ for ktest in range(1):
                     # print(invar_binned[1,:,30])
                     var_list_write.append(invar_binned)
                     del invar_binned
-
-            print("My rank before: ",comm.rank)
-            comm.Barrier()
-            print("My rank after: ",comm.rank)
-
-            if comm.rank == 0:
 
                 # Write out to netCDF file
 
