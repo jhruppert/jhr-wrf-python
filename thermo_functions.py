@@ -25,21 +25,22 @@ import numpy as np
 #   tmpk - temp [K]
 #   pres - pressure [Pa]
 def theta_dry(T, pres):
-    
+
+    p_fact=1
     if np.max(pres) < 1e4:
-        pres*=1e2 # Convert to Pa
-    
+        p_fact=1e2 # Convert to Pa
+
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:
         T0=0.
     T+=T0
-    
-    p0=1.e5 # Pa
+
+    p0=1e5 # Pa
     rd=287.04 # J/K/kg
     cp=1004. # J/K/kg
     rocp = rd/cp
-    return T * ( p0 / pres ) ** rocp
+    return T * ( p0 / (pres*p_fact) ) ** rocp
 
 
 ## Virtual potential temp ######################################################
@@ -49,22 +50,23 @@ def theta_dry(T, pres):
 #   qv   - vapor mixing ratio [kg/kg]
 #   pres - pressure [Pa]
 def theta_virtual(T, qv, pres):
-    
+
+    p_fact=1
     if np.max(pres) < 1e4:
-        pres*=1e2 # Convert to Pa
-    
+        p_fact=1e2 # Convert to Pa
+
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:
         T0=0.
     T+=T0
-    
-    p0=1.e5 # Pa
+
+    p0=1e5 # Pa
     rd=287.04 # J/K/kg
     cp=1004. # J/K/kg
     rocp = rd/cp
-    virt_corr = (1. + 0.61*qv)
-    return T * virt_corr * ( p0 / pres ) ** rocp
+    # virt_corr = (1. + 0.61*qv)
+    return T * (1. + 0.61*qv) * ( p0 / (pres*p_fact) ) ** rocp
 
 
 ## Density moist ######################################################
@@ -75,9 +77,10 @@ def theta_virtual(T, qv, pres):
 #   pres - pressure [Pa]
 def density_moist(T, qv, pres):
     
+    p_fact=1
     if np.max(pres) < 1e4:
-        pres*=1e2 # Convert to Pa
-    
+        p_fact=1e2 # Convert to Pa
+
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:
@@ -88,7 +91,7 @@ def density_moist(T, qv, pres):
     # rv=461.5
     # eps_r=rv/rd
     # return pres / ( rd * T * (1. + qv*eps_r)/(1.+qv) )
-    return pres / ( rd * T * (1. + 0.61*qv) )
+    return pres*p_fact / ( rd * T * (1. + 0.61*qv) )
 
 
 ## Density dry ######################################################
@@ -98,8 +101,9 @@ def density_moist(T, qv, pres):
 #   pres - pressure [Pa]
 def density_dry(T, pres):
     
+    p_fact=1
     if np.max(pres) < 1e4:
-        pres*=1e2 # Convert to Pa
+        p_fact=1e2 # Convert to Pa
     
     if np.min(T) < 105.: # degC or K?
         T0=273.16
@@ -108,7 +112,7 @@ def density_dry(T, pres):
     T+=T0
     
     rd=287.04
-    return pres / ( rd * T )
+    return pres*p_fact / ( rd * T )
 
 
 ############################################################################
@@ -138,8 +142,9 @@ def density_dry(T, pres):
 # 
 def theta_equiv(T, rv, rtot, pres):
     
+    p_fact=1
     if np.max(pres) < 1e4:
-        pres*=1e2 # Convert to Pa
+        p_fact=1e2 # Convert to Pa
     
     if np.min(T) < 105.: # degC or K?
         T0=273.16
@@ -148,7 +153,7 @@ def theta_equiv(T, rv, rtot, pres):
     T+=T0
     
   # ;CONSTANTS
-    R=287.    # J/K/kg
+    rd=287.    # J/K/kg
     lv0=2.5e6 # J/kg
     cp=1004.  # J/K/kg
     cpl=4186. # J/k/kg
@@ -156,15 +161,18 @@ def theta_equiv(T, rv, rtot, pres):
     eps=18.0160/28.9660 # Mw / Md (source: Brunner scripts)
 
   # ;LATENT HEAT OF VAPORIZATION
-    lv = lv0 - (cpl-cpv)*(T-273.15)
+    # lv = lv0 - (cpl-cpv)*(T-273.15)
 
   # ;DRY AIR PRESSURE
-    e = pres / ((eps/rv) + 1.)
-    p_d = pres-e
+    # e = pres / ((eps/rv) + 1.)
+    # p_d = pres - e
+    # p_d = (pres*p_fact) - ((pres*p_fact) / ((eps/rv) + 1.))
 
   # ;CALCULATE THETA-E
-    c_term = cp + cpl*rtot
-    th_e = T * (1e5/p_d)**(R/c_term) * np.exp( lv*rv / (c_term*T) )
+    p0=1e5 # Pa
+    # c_term = cp + cpl*rtot
+    th_e = T * (p0/ ((pres*p_fact) - ((pres*p_fact) / ((eps/rv) + 1.))) )**(rd/(cp + cpl*rtot)) \
+        * np.exp( (lv0 - (cpl-cpv)*(T-273.15))*rv / ((cp + cpl*rtot)*T) )
 
     return th_e
 
@@ -275,7 +283,7 @@ def esat(T):
     else:
         T0=0.
     T+=T0
-    
+
     # e1=101325.0
     TK=273.16
     # esat=e1*10**(10.79586*(1-TK/T)-5.02808*np.log10(T/TK)+
@@ -343,4 +351,29 @@ def eice(T):
     return eice
 
 
+## Saturation mixing ratio ######################################################
 
+# Just combining a couple chunks of code from other functions in this routine.
+# 
+# All input/output assumed SI units, June 2022
+# 
+# James Ruppert (jruppert@ou.edu)
+
+def rv_saturation(T, pres):
+
+    if np.min(T) < 105.: # degC or K?
+        T0=273.16
+    else:
+        T0=0.
+    T+=T0
+
+    TK=273.16
+
+    esat=611.2*np.exp(17.62*(T-TK)/(243.12+(T-TK))) # Pa
+
+    Mw=18.0160 # molecular weight of water
+    Md=28.9660 # molecular weight of dry air
+
+    rv_sat = Mw/Md * esat / (pres - esat) # kg/kg
+
+    return rv_sat

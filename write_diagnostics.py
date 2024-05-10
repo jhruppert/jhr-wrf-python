@@ -11,16 +11,22 @@
 from netCDF4 import Dataset
 import numpy as np
 import os
-from thermo_functions import density_moist, esat, mixr_from_e
+from thermo_functions import *
+from read_functions import *
 from write_ncfile import write_ncfile
 from time import time as runtimer
 import sys
 
 
-
 #### Main settings
 
-storm = 'haiyan'
+# Check for required number of processors
+# if nproc != nvars:
+#     print("Check NPROC (-n option)! Should be ",nvars)
+#     print("Killing batch job")
+#     sys.exit()
+
+# storm = 'haiyan'
 storm = 'maria'
 
 filename_out='mse_diag.nc' # this is for ALL variables in the var_names list
@@ -35,12 +41,13 @@ if storm == 'haiyan':
     # tests = ['ctl','ncrf36h']
     # tests = ['crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
     # tests = ['STRATANVIL_OFF','STRAT_OFF']
-    tests = ['ctl']
+    tests = ['ctl','ncrf36h','crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
     tests = ['ctl','ncrf48h']#'ncrf36h']
     tests = [tests[1],'crfon72h']
     tests = ['crfon72h']
-    tests = ['ncrf36h']
+    tests = ['ctl','ncrf48h','ncrf36h']
+ntest=len(tests)
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -62,14 +69,8 @@ datdir2 = 'post/d02/'
 
 datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
 datdir3d = datdir #+'v2/'
-varfil_main = Dataset(datdir3d+'T.nc')
-nz = varfil_main.dimensions['level'].size
-nx1 = varfil_main.dimensions['lat'].size
-nx2 = varfil_main.dimensions['lon'].size
-pres = varfil_main.variables['pres'][:] # hPa
+nt, nz, nx1, nx2, pres = get_file_dims(datdir)
 dp = (pres[0]-pres[1])*1e2 # Pa
-varfil_main.close()
-
 kmsetop = np.where(pres == msetop)[0][0]
 
 # Get Lat/Lon
@@ -106,7 +107,9 @@ def var_read(datdir,varname,ikread):
 def var_ncdf_metadata(dims3d):
     
     var_names = [
+        'pres',
         'rho',
+        'theta_e',
         'pw',
         'pw_sat',
         'vmfu',
@@ -125,7 +128,9 @@ def var_ncdf_metadata(dims3d):
         'mse_fluxdiverg_vint',
     ]
     descriptions = [
+        'pressure levels',
         'density of moist air',
+        'equivalent potential temperature',
         'water vapor integrated over full column from postproc data',
         'saturation water vapor integrated over full column from postproc data',
         'upward-masked mass flux vertically integrated (up to 100 hPa)',
@@ -144,7 +149,9 @@ def var_ncdf_metadata(dims3d):
         'vertically int del.(MSE*V) (up to 100 hPa)',
     ]
     units = [
+        'hPa',
         'kg/m^3',
+        'K',
         'mm',
         'mm',
         'kg/m/s',
@@ -166,26 +173,9 @@ def var_ncdf_metadata(dims3d):
     dims2d = (nt,nx1,nx2)
     dims2d_names = ('nt','nx1','nx2')
     dims3d_names = ('nt','nz','nx1','nx2')
-    # dim_names = [
-    #     dims3d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims3d,
-    #     dims3d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    #     dims2d,
-    # ]
     dims_set = [
+        [('nz',),(nz,)],
+        [dims3d_names,dims3d],
         [dims3d_names,dims3d],
         [dims2d_names,dims2d],
         [dims2d_names,dims2d],
@@ -210,6 +200,67 @@ def var_ncdf_metadata(dims3d):
         raise ValueError("Variable info counts are off")
 
     return var_names, descriptions, units, dims_set #, dim_names
+
+##### Various diagnostics ################################
+
+def get_3D_diagnostics(datdir, pres, dp, nz, z_b, g):
+
+    # Constants
+    cp=1004.  # J/K/kg
+    cpl=4186. # J/k/kg
+    cpv=1885. # J/K/kg
+    lv0=2.5e6 # J/kg
+
+    # Water vapor
+    varname='QVAPOR'
+    qv = var_read(datdir,varname,nz) # kg/kg
+    # nt,nz,nx1,nx2 = qv.shape
+    # Temperature
+    varname='T'
+    tmpk = var_read(datdir,varname,nz) # K
+
+    # Height
+    varname='Z'
+    z = var_read(datdir,varname,nz) # m2/s2
+    z += z_b
+    # Dry static energy (DSE)
+    dse = cp*tmpk + g*z # J/kg
+
+    # Density
+    rho = density_moist(tmpk,qv,pres[np.newaxis,:,np.newaxis,np.newaxis,]*1e2) # kg/m3
+    # Theta-e
+    theta_e = theta_equiv(tmpk,qv,qv,pres[np.newaxis,:,np.newaxis,np.newaxis,]*1e2) # kg/m3
+
+    # Calculate PW and PW_SAT for saturation fraction
+    qv_sat = rv_saturation(tmpk, (pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/kg
+    # Integrate over full column
+    pw = vert_int(qv, dp, g) # mm
+    pw_sat = vert_int(qv_sat, dp, g) # mm
+
+    # Latent heat of vaporization
+    lv = lv0 - (cpl-cpv)*(tmpk-273.15)
+
+    # Moist static energy (MSE)
+    g=9.81 # m/s2
+    mse = dse + lv*qv # J/kg
+    mse_vint = vert_int(mse[:,0:kmsetop+1,:,:], dp, g) # J/m^2
+
+    return rho, theta_e, dse, mse, pw, pw_sat, mse_vint
+
+def get_condh(datdir, dp, nz, g):
+    # Microphysics (MP) latent heating
+    lh = var_read(datdir,'H_DIABATIC',nz) # K/s
+    condh = vert_int(lh[:,0:kmsetop,:,:], dp, g) # kg*K/(m2*s) [needs *cp to get W/m2]
+    return condh
+
+# Vertical mass flux
+def get_vmf_updown(w, dp, g):
+    # Mask for Up/Dn
+    wu = np.ma.masked_where((w < 0), w, copy=True)
+    wd = np.ma.masked_where((w > 0), w, copy=True)
+    vmfu = vert_int(wu[:,0:kmsetop,:,:], dp, g) # kg/m/s
+    vmfd = vert_int(wd[:,0:kmsetop,:,:], dp, g) # kg/m/s
+    return vmfu, vmfd
 
 ##### MSE & DSE functions ################################
 
@@ -261,19 +312,103 @@ def tot_fdiverg_vint(u, v, x1d, y1d, invar, dp, g):
     flux_diverg_vint = vert_int(flux_diverg, dp, g)
     return flux_diverg_vint
 
-##### Main loops and calculations ######################################
+##### Main function ######################################
+
+g=9.81 # m/s2
 
 # Read base-state height once per storm
 varname='ZB'
 z_b = var_read(datdir,varname,nz) # m
 
+def main_routine(datdir):
+
+    # Get dimensions
+    nt, nz, nx1, nx2, pres = get_file_dims(datdir)
+
+    # Required variables
+
+    rho, theta_e, dse, mse, pw, pw_sat, mse_vint = get_3D_diagnostics(datdir, pres, dp, nz, z_b, g)
+
+    condh = get_condh(datdir, dp, nz, g) # kg*K/(m2*s) [needs *cp to get W/m2]
+
+    # Winds
+    w = var_read(datdir,'W',nz) # m/s
+    u = var_read(datdir,'U',nz)
+    v = var_read(datdir,'V',nz)
+
+    vmfu, vmfd = get_vmf_updown(w, dp, g)
+
+    # Calculate advection/divergence terms and vertically integrate
+
+    # Vertical advection
+    vadv_dse_vint = vadv_vint(w[:,0:kmsetop+1,:,:], rho[:,0:kmsetop+1,:,:],
+                            dse[:,0:kmsetop+1,:,:], dp, g)
+    vadv_mse_vint = vadv_vint(w[:,0:kmsetop+1,:,:], rho[:,0:kmsetop+1,:,:],
+                            mse[:,0:kmsetop+1,:,:], dp, g)
+
+    # Horizontal advection
+    hadv_dse_vint = hadv_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
+                            dse[:,0:kmsetop+1,:,:], dp, g)
+    hadv_mse_vint = hadv_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
+                            mse[:,0:kmsetop+1,:,:], dp, g)
+
+    # Mass divergence
+    dse_diverg_vint = diverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
+                                dse[:,0:kmsetop+1,:,:], dp, g)
+    mse_diverg_vint = diverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
+                                mse[:,0:kmsetop+1,:,:], dp, g)
+
+    # Horizontal flux divergence
+    dse_fluxdiverg_vint = tot_fdiverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
+                                        dse[:,0:kmsetop+1,:,:], dp, g)
+    mse_fluxdiverg_vint = tot_fdiverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
+                                        mse[:,0:kmsetop+1,:,:], dp, g)
+
+    ### Add variables to list ##############################################
+
+    var_list=[]
+    var_list.append(pres)
+    var_list.append(rho) # 3D
+    var_list.append(theta_e) # 3D
+    var_list.append(pw)
+    var_list.append(pw_sat)
+    var_list.append(vmfu)
+    var_list.append(vmfd)
+    var_list.append(condh)
+    var_list.append(dse) # 3D
+    var_list.append(mse) # 3D
+    var_list.append(mse_vint)
+    var_list.append(vadv_dse_vint)
+    var_list.append(vadv_mse_vint)
+    var_list.append(hadv_dse_vint)
+    var_list.append(hadv_mse_vint)
+    var_list.append(dse_diverg_vint)
+    var_list.append(mse_diverg_vint)
+    var_list.append(dse_fluxdiverg_vint)
+    var_list.append(mse_fluxdiverg_vint)
+
+    # del rho
+    # del theta_e
+    # del dse
+    # del mse
+
+    ### Write out variables ##############################################
+
+    var_names, descriptions, units, dims_set = var_ncdf_metadata(dims3d=(nt,nz,nx1,nx2))
+
+    write_ncfile(datdir+filename_out, var_list, var_names, descriptions, units, dims_set)
+
+    return
+
+
+##### Main loops and calculations ######################################
+
 # Main read loops for 3D (dependent) variables
 
 print('Running storm: ',storm)
 
-ntest=len(tests)
 for ktest in range(ntest):
-#for ktest in range(1,2):
+# for ktest in range(1):
 
     test_str=tests[ktest]
 
@@ -283,140 +418,16 @@ for ktest in range(ntest):
     # Loop over ensemble members
 
     for imemb in range(nmem):
-#    for imemb in range(0,3):
-
-        start = runtimer()
+    # for imemb in range(2,nmem):
 
         print('Running imemb: ',memb_all[imemb])
 
         datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
         print(datdir)
 
-        # Required variables
+        start = runtimer()
 
-        # Water vapor
-        varname='QVAPOR'
-        qv = var_read(datdir,varname,nz) # kg/kg
-        nt,nz,nx1,nx2 = qv.shape
-        # Temperature
-        varname='T'
-        tmpk = var_read(datdir,varname,nz) # K
-        # Height
-        varname='Z'
-        z = var_read(datdir,varname,nz) # m2/s2
-        z += z_b
-
-        # Dry static energy (DSE)
-        g=9.81 # m/s2
-        cp=1004. # J/K/kg
-        dse = cp*tmpk + g*z # J/kg
-        del z
-
-        # Density
-        rho = density_moist(tmpk,qv,pres[np.newaxis,:,np.newaxis,np.newaxis,]*1e2) # kg/m3
-
-        # Calculate PW and PW_SAT for saturation fraction
-        e_sat = esat(tmpk) # Pa
-        qv_sat = mixr_from_e(e_sat, (pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/kg
-        del e_sat
-        # Integrate over full column
-        pw = vert_int(qv, dp, g) # mm
-        pw_sat = vert_int(qv_sat, dp, g) # mm
-        del qv_sat
-
-        # Latent heat of vaporization
-        cp=1004.  # J/K/kg
-        cpl=4186. # J/k/kg
-        cpv=1885. # J/K/kg
-        lv0=2.5e6 # J/kg
-        lv = lv0 - (cpl-cpv)*(tmpk-273.15)
-        del tmpk
-
-        # Moist static energy (MSE)
-        g=9.81 # m/s2
-        mse = dse + lv*qv # J/kg
-        del lv
-        del qv
-        mse_vint = vert_int(mse[:,0:kmsetop+1,:,:], dp, g) # J/m^2
-
-        # Winds
-        w = var_read(datdir,'W',nz) # m/s
-        u = var_read(datdir,'U',nz)
-        v = var_read(datdir,'V',nz)
-
-        # Calculate advection/divergence terms and vertically integrate
-
-        # Vertical advection
-        vadv_dse_vint = vadv_vint(w[:,0:kmsetop+1,:,:], rho[:,0:kmsetop+1,:,:],
-                                  dse[:,0:kmsetop+1,:,:], dp, g)
-        vadv_mse_vint = vadv_vint(w[:,0:kmsetop+1,:,:], rho[:,0:kmsetop+1,:,:],
-                                  mse[:,0:kmsetop+1,:,:], dp, g)
-
-        # Horizontal advection
-        hadv_dse_vint = hadv_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
-                                  dse[:,0:kmsetop+1,:,:], dp, g)
-        hadv_mse_vint = hadv_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
-                                  mse[:,0:kmsetop+1,:,:], dp, g)
-
-        # Mass divergence
-        dse_diverg_vint = diverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
-                                      dse[:,0:kmsetop+1,:,:], dp, g)
-        mse_diverg_vint = diverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
-                                      mse[:,0:kmsetop+1,:,:], dp, g)
-
-        # Horizontal flux divergence
-        dse_fluxdiverg_vint = tot_fdiverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
-                                               dse[:,0:kmsetop+1,:,:], dp, g)
-        mse_fluxdiverg_vint = tot_fdiverg_vint(u[:,0:kmsetop+1,:,:], v[:,0:kmsetop+1,:,:], x1d, y1d,
-                                               mse[:,0:kmsetop+1,:,:], dp, g)
-
-        ### Additional diagnostics to save ##############################################
-
-        # Microphysics (MP) latent heating
-        lh = var_read(datdir,'H_DIABATIC',nz) # K/s
-        condh = vert_int(lh[:,0:kmsetop,:,:], dp, g) # kg*K/(m2*s) [needs *cp to get W/m2]
-        del lh
-
-        # Vertical mass flux
-        # Mask for Up/Dn
-        wu = np.ma.masked_where((w < 0), w, copy=True)
-        wd = np.ma.masked_where((w > 0), w, copy=True)
-        del w
-        vmfu = vert_int(wu[:,0:kmsetop,:,:], dp, g) # kg/m/s
-        vmfd = vert_int(wd[:,0:kmsetop,:,:], dp, g) # kg/m/s
-        del wu
-        del wd
-
-        ### Add variables to list ##############################################
-
-        var_list=[]
-        var_list.append(rho)
-        var_list.append(pw)
-        var_list.append(pw_sat)
-        var_list.append(vmfu)
-        var_list.append(vmfd)
-        var_list.append(condh)
-        var_list.append(dse)
-        var_list.append(mse)
-        var_list.append(mse_vint)
-        var_list.append(vadv_dse_vint)
-        var_list.append(vadv_mse_vint)
-        var_list.append(hadv_dse_vint)
-        var_list.append(hadv_mse_vint)
-        var_list.append(dse_diverg_vint)
-        var_list.append(mse_diverg_vint)
-        var_list.append(dse_fluxdiverg_vint)
-        var_list.append(mse_fluxdiverg_vint)
-
-        del rho
-        del dse
-        del mse
-
-        ### Write out variables ##############################################
-
-        var_names, descriptions, units, dims_set = var_ncdf_metadata(dims3d=(nt,nz,nx1,nx2))
-
-        write_ncfile(datdir+filename_out, var_list, var_names, descriptions, units, dims_set)
+        main_routine(datdir)
 
         end = runtimer()
         time_elapsed = end - start

@@ -86,11 +86,13 @@ def read_qcloud(datdir, t0, t1, mask=True, drop=False):
 #     varfil_main.close()
 #     return mask_edges(mse,drop)
 
-def read_mse_diag(datdir, varname, idim, t0, t1, mask=True, drop=False):
+def read_mse_diag(datdir, varname, t0, t1, mask=True, drop=False):
     varfil_main = Dataset(datdir+'mse_diag.nc')
-    if idim == 2:
+    dims = varfil_main.variables[varname].dimensions
+    ndims = len(dims)
+    if ndims == 3: # (t,y,x)
         var = varfil_main.variables[varname][t0:t1,:,:]
-    elif idim == 3:
+    elif ndims == 4: # (t,p,y,x)
         var = varfil_main.variables[varname][t0:t1,:,:,:]
     varfil_main.close()
     return mask_edges(np.squeeze(var),mask,drop)

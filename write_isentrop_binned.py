@@ -28,8 +28,15 @@ from mpi4py import MPI
 #   large-dimensional numpy arrays. The processed results are then
 #   passed back to the rank-0 node, which does the netcdf write-out.
 
+# Testing mode:
+#   all loops shortened to a single iteration and nt = 3
+# testing=True
+testing=False
+
 comm = MPI.COMM_WORLD
 nproc = comm.Get_size()
+
+
 
 # #### Main settings
 
@@ -67,13 +74,12 @@ npclass = len(pclass_name)
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-# nmem = 1
 
-# TC tracking
-# ptrack='600' # tracking pressure level
-# var_track = 'rvor' # variable
-# rmax = 6 # radius (deg) limit for masking around TC center
-# rmax = 3
+# Kill all loops after single iteration for testing mode
+if testing:
+    nmem = 1
+    ntest = 1
+    npclass = 1
 
 ################################################
 # Ensemble member info
@@ -170,6 +176,132 @@ def var_regrid_metadata(nt,nz,nbins):
     return var_names, descriptions, units, dims_set
 
 ############################################################################
+# Driver functions
+############################################################################
+
+def get_pclass(datdir, t0, t1):
+    # Precip classification
+    q_int = read_qcloud(datdir,t0,t1,mask=True,drop=True) # mm
+    pclass = precip_class(q_int)
+    pclass_z = np.repeat(pclass[:,np.newaxis,:,:], nz, axis=1)
+    return pclass_z
+
+################################
+
+def read_all_vars(datdir, t0, t1, proc_var_list):
+
+    varname = 'theta_e'
+    theta_e = read_mse_diag(datdir,varname,t0,t1,mask=True,drop=True) # K
+
+    pclass_z = get_pclass(datdir,t0,t1)
+
+    # Distribute variable processing onto all ranks.
+    # Rank[0] then receives all processed results and does write-out.
+
+    if comm.rank == 0:
+        varname = 'T'
+        invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K
+    elif comm.rank == 1:
+        varname = 'QVAPOR'
+        invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
+    elif comm.rank == 2:
+        varname = 'rho'
+        invar = read_mse_diag(datdir,varname,t0,t1,mask=True,drop=True) # kg/m3
+    else:
+        invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
+
+    return theta_e, pclass_z, invar
+
+################################
+
+def run_binning(ipclass, bins, theta_e, invar, pclass_z):
+
+    # Mask out based on precipitation class
+    if (ipclass > 0):
+        indices = (pclass_z != ipclass)
+        theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
+        invar_masked = np.ma.masked_where(indices, invar, copy=True)
+    else:
+        # Create memory references
+        # Delete these at end of loop so that originals aren't overwritten
+        theta_e_masked = theta_e
+        invar_masked = invar
+
+    theta_e_mean = np.ma.mean(theta_e_masked, axis=(2,3))
+
+    # Bin the variables from (x,y) --> (bin)
+
+    dims = (nt,nz,nbins-1)
+    invar_binned = np.full(dims, np.nan)
+    freq_binned = np.ndarray(dims, dtype=np.float64)
+
+    nmin = 3 # minimum points to average
+
+    if testing:
+        nt_loop = 3
+    else:
+        nt_loop = nt
+
+    for it in range(nt_loop):
+        for iz in range(nz):
+            for ibin in range(nbins-1):
+                indices = ((theta_e_masked[it,iz,:,:] >= bins[ibin]) & (theta_e_masked[it,iz,:,:] < bins[ibin+1])).nonzero()
+                binfreq = indices[0].size
+                freq_binned[it,iz,ibin] = np.array(binfreq, dtype=np.float64)
+                # Take mean across ID'd cells
+                if binfreq > nmin:
+                    invar_binned[it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
+
+    return freq_binned, invar_binned, theta_e_mean
+
+################################
+
+def pclass_loop_write_ncdf(datdir, bins, theta_e, invar, pclass_z):
+
+    for ipclass in range(npclass):
+
+        if comm.rank == 0:
+            print()
+            print("Running ipclass: ",pclass_name[ipclass])
+
+        freq_binned, invar_binned, theta_e_mean = run_binning(ipclass,bins,theta_e,invar,pclass_z)
+
+        # Consolidate rebinned data onto Rank0 and write netCDF file
+
+        if comm.rank > 0:
+
+            comm.Send(np.ascontiguousarray(invar_binned, dtype=np.float64), dest=0, tag=comm.rank)
+
+        else:
+
+            var_list_write=[]
+            var_list_write.append(bins)
+            var_list_write.append(pres)
+            var_list_write.append(theta_e_mean)
+            var_list_write.append(freq_binned)
+            var_list_write.append(invar_binned)
+
+            for irank in range(1,nvars):
+                dims = (nt,nz,nbins-1)
+                invar_binned = np.empty(dims)
+                comm.Recv(invar_binned, source=irank, tag=irank)
+                # check that the unique arrays are appearing on process 0
+                # print()
+                # print(invar_binned[1,:,30])
+                var_list_write.append(invar_binned)
+
+            # Write out to netCDF file
+
+            pclass_tag = pclass_name[ipclass]
+            file_out = datdir+'binned_isentrop_'+pclass_tag+'.nc'
+            var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nz,nbins)
+            write_ncfile(file_out, var_list_write, var_names, descriptions, units, dims_set)
+
+    return
+
+############################################################################
+# Top-level loop
+############################################################################
 
 # #### Index aka Bin variable settings
 
@@ -181,7 +313,7 @@ bins=np.linspace(fmin,fmax,num=nbins)
 # #### Main loops and compositing
 
 for ktest in range(ntest):
-# for ktest in range(1):
+# for ktest in range(1,2):
 
     test_str=tests[ktest]
 
@@ -198,20 +330,12 @@ for ktest in range(ntest):
             print()
             print('Running imemb: ',memb_all[imemb])
 
-        datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
-
-        # Localize to TC track
-        # NOTE: Using copied tracking from CTL for NCRF tests
-        # track_file = datdir+'../../track_'+var_track+'_'+ptrack+'hPa.nc'
-        # trackfil_ex=''
-        # if 'crf' in test_str:
-        #     trackfil_ex='_ctlcopy'
-        # track_file = datdir+'../../track_'+var_track+trackfil_ex+'_'+ptrack+'hPa.nc'
-
-        # Required variables
+        datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
 
         # Get dimensions
         nt, nz, nx1, nx2, pres = get_file_dims(datdir)
+
+        # Account for dropped edges
         buffer = 80
         nx1-=buffer*2
         nx2-=buffer*2
@@ -220,136 +344,7 @@ for ktest in range(ntest):
         # nt=3
         t1=nt
 
-        # SPLITTING VARIABLES ACROSS CPUs
-        # ALL NODES REQUIRE: PCLASS, THETA_E
+        theta_e, pclass_z, invar = read_all_vars(datdir,t0,t1,proc_var_list)
 
-        # Precip classification
-        q_int = read_qcloud(datdir,t0,t1,mask=True,drop=True) # mm
-        pclass = precip_class(q_int)
-        pclass_z = np.repeat(pclass[:,np.newaxis,:,:], nz, axis=1)
-        del q_int
-        del pclass
-
-        varname='T'
-        tmpk = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K
-        varname = 'QVAPOR'
-        qv = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
-        theta_e = theta_equiv(tmpk,qv,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-
-        # Distribute variable processing onto all ranks.
-        # Rank[0] then receives all processed results and does write-out.
-
-        if comm.rank == 0:
-            invar = tmpk # K
-            del qv
-        elif comm.rank == 1:
-            invar = qv # kg/kg
-            del tmpk
-        elif comm.rank == 2:
-            invar = density_moist(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # kg/m3
-            del qv, tmpk
-        else:
-            del qv, tmpk
-            invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
-
-        ### Process and save variable ##############################################
-
-        # Calculate var' as anomaly from x-y-average, using large-scale (large-radius) var avg
-        # if do_prm_xy == 1:
-        #     # radius_ls=3
-        #     # var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
-        #     var_ls = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-        #     var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
-        #     var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
-
-        # Localize to TC track
-        # var = mask_tc_track(track_file, rmax, var, lon, lat, t0, t1)
-        # ivar = mask_tc_track(track_file, rmax, ivar, lon, lat, t0, t1)
-
-        # Normalization factor: equal for all classes
-        # ncell = np.ma.MaskedArray.count(ivar[0,0,:,:])
-
-        for ipclass in range(npclass):
-        # for ipclass in range(1):
-
-            if comm.rank == 0:
-                print()
-                print("Running ipclass: ",pclass_name[ipclass])
-
-            # Mask out based on precipitation class
-            if (ipclass > 0):
-                indices = (pclass_z != ipclass)
-                theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
-                invar_masked = np.ma.masked_where(indices, invar, copy=True)
-            else:
-                # Create memory references
-                # Delete these at end of loop so that originals aren't overwritten
-                theta_e_masked = theta_e
-                invar_masked = invar
-
-            # Bin the variables from (x,y) --> (bin)
-
-            dims = (nt,nz,nbins-1)
-            invar_binned = np.full(dims, np.nan)
-            freq_binned = np.ndarray(dims, dtype=np.float64)
-
-            nmin = 3 # minimum points to average
-
-            for it in range(nt):
-                for iz in range(nz):
-                    for ibin in range(nbins-1):
-                        indices = ((theta_e_masked[it,iz,:,:] >= bins[ibin]) & (theta_e_masked[it,iz,:,:] < bins[ibin+1])).nonzero()
-                        binfreq = indices[0].size
-                        freq_binned[it,iz,ibin] = np.array(binfreq, dtype=np.float64)
-                        # Take mean across ID'd cells
-                        if binfreq > nmin:
-                            invar_binned[it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
-
-            del invar_masked
-
-            # Consolidate rebinned data onto Rank0 and write netCDF file
-
-            if comm.rank > 0:
-
-                comm.Send(invar_binned, dest=0, tag=comm.rank)
-                del theta_e_masked, invar_binned
-
-            else:
-
-                theta_e_mean = np.ma.mean(theta_e_masked, axis=(2,3))
-                del theta_e_masked
-
-                var_list_write=[]
-                var_list_write.append(bins)
-                var_list_write.append(pres)
-                var_list_write.append(theta_e_mean)
-                var_list_write.append(freq_binned)
-
-                # Save, delete 0-rank variable
-                var_list_write.append(invar_binned)
-                del invar_binned
-
-                for irank in range(1,nvars):
-                    dims = (nt,nz,nbins-1)
-                    invar_binned = np.empty(dims)
-                    comm.Recv(invar_binned, source=irank, tag=irank)
-                    # check that the unique arrays are appearing on process 0
-                    # print()
-                    # print(invar_binned[1,:,30])
-                    var_list_write.append(invar_binned)
-                    del invar_binned
-
-                # Write out to netCDF file
-
-                strattag = pclass_name[ipclass]
-                # ex_tag='t0'+str(t0)
-                # avgvar_tag = avgvar_select
-                # radstr = str(rmax)
-                # if (do_prm_xy == 1): avgvar_tag+='_xyp'
-                # file_out = datdir+'binned_'+main_tag+'_'+avgvar_tag+'_'+strattag+'_'+hr_tag+'hr_'+ex_tag+'_rmax'+radstr+'.nc'
-
-                file_out = datdir+'binned_isentrop_'+strattag+'.nc'
-
-                var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nz,nbins)
-
-                write_ncfile(file_out, var_list_write, var_names, descriptions, units, dims_set)
+        # Loop over pclass, bin data, write NetCDF
+        pclass_loop_write_ncdf(datdir,bins,theta_e,invar,pclass_z)
