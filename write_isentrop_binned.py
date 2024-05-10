@@ -90,16 +90,19 @@ nustr = np.char.zfill(memb_nums_str, 2)
 memb_all=np.char.add('memb_',nustr)
 
 # Get dimensions
-datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
-nt_ctl, nz, nx1, nx2, pres = get_file_dims(datdir)
+# datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
+# nt_ctl, nz, nx1, nx2, pres = get_file_dims(datdir)
 
-# Get WRF file list
-datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
-wrffiles, lat, lon = get_wrf_filelist(datdir)
-lat = lat[:,0]
-lon = lon[0,:]
+# # Get WRF file list
+# datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'
+# wrffiles, lat, lon = get_wrf_filelist(datdir)
+# lat = lat[:,0]
+# lon = lon[0,:]
 
-################################################
+############################################################################
+# Functions
+############################################################################
+
 #### NetCDF variable metadata
 
 def var_regrid_metadata(nt,nz,nbins):
@@ -175,9 +178,7 @@ def var_regrid_metadata(nt,nz,nbins):
 
     return var_names, descriptions, units, dims_set
 
-############################################################################
-# Driver functions
-############################################################################
+################################
 
 def get_pclass(datdir, t0, t1):
     # Precip classification
@@ -223,7 +224,6 @@ def run_binning(ipclass, bins, theta_e, invar, pclass_z):
         invar_masked = np.ma.masked_where(indices, invar, copy=True)
     else:
         # Create memory references
-        # Delete these at end of loop so that originals aren't overwritten
         theta_e_masked = theta_e
         invar_masked = invar
 
@@ -256,7 +256,10 @@ def run_binning(ipclass, bins, theta_e, invar, pclass_z):
 
 ################################
 
-def pclass_loop_write_ncdf(datdir, bins, theta_e, invar, pclass_z):
+def driver_loop_write_ncdf(datdir, bins, t0, t1, proc_var_list):
+
+    # Read variables
+    theta_e, pclass_z, invar = read_all_vars(datdir,t0,t1,proc_var_list)
 
     for ipclass in range(npclass):
 
@@ -335,16 +338,8 @@ for ktest in range(ntest):
         # Get dimensions
         nt, nz, nx1, nx2, pres = get_file_dims(datdir)
 
-        # Account for dropped edges
-        buffer = 80
-        nx1-=buffer*2
-        nx2-=buffer*2
-
         t0=0
         # nt=3
         t1=nt
 
-        theta_e, pclass_z, invar = read_all_vars(datdir,t0,t1,proc_var_list)
-
-        # Loop over pclass, bin data, write NetCDF
-        pclass_loop_write_ncdf(datdir,bins,theta_e,invar,pclass_z)
+        driver_loop_write_ncdf(datdir, bins, t0, t1, proc_var_list)
