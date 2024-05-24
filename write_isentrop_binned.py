@@ -37,11 +37,15 @@ comm = MPI.COMM_WORLD
 nproc = comm.Get_size()
 
 
-
 # #### Main settings
 
-proc_var_list = ['tmpk', 'qv', 'rho', 'H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
+# proc_var_list = ['tmpk', 'qv', 'rho', 'H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
+proc_var_list = ['tmpk', 'qv', 'rho', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
 nvars = len(proc_var_list)
+
+# Use high vertical resolution output?
+do_hires=True
+# do_hires=False
 
 # Check for required number of processors
 if nproc != nvars:
@@ -69,7 +73,8 @@ elif storm == 'maria':
     # tests = ['crfon72h']
 ntest = len(tests)
 
-pclass_name = ['all','noncloud','deepc','congest','shallowc','strat','anvil']
+# pclass_name = ['all','noncloud','deepc','congest','shallowc','strat','anvil']
+pclass_name = ['all','mcs','noncloud','deepc','congest','shallowc','strat','anvil']
 npclass = len(pclass_name)
 
 # Members
@@ -79,7 +84,7 @@ nmem = 10 # number of ensemble members (1-5 have NCRF)
 if testing:
     nmem = 1
     ntest = 1
-    npclass = 1
+    # npclass = 1
 
 ################################################
 # Ensemble member info
@@ -113,6 +118,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'bins',
         'pres',
         'theta_e_mn',
+        'pclass_frequency',
         'frequency',
         'tmpk',
         'qv',
@@ -128,6 +134,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'equivalent potential temperature bins',
         'pressure',
         'mean equivalent potential temperature',
+        'pclass frequency',
         'frequency',
         'temperature',
         'water vapor mixing ratio',
@@ -143,6 +150,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'K',
         'hPa',
         'K',
+        'n-cells',
         'n-cells',
         'K',
         'kg/kg',
@@ -160,6 +168,7 @@ def var_regrid_metadata(nt,nz,nbins):
         [('nbins',),(nbins,)],
         [('nz',),(nz,)],
         [('nt','nz'),(nt,nz)],
+        [('nt',),(nt,)],
         [dim_names,dims_all],
         [dim_names,dims_all],
         [dim_names,dims_all],
@@ -192,7 +201,15 @@ def get_pclass(datdir, t0, t1):
 def read_all_vars(datdir, t0, t1, proc_var_list):
 
     varname = 'theta_e'
-    theta_e = read_mse_diag(datdir,varname,t0,t1,mask=True,drop=True) # K
+    if do_hires:
+        # varname = 'T'
+        # tmpk = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # K
+        # varname = 'QVAPOR'
+        # qv = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # K
+        # theta_e = theta_equiv(tmpk, qv, qv, pres[np.newaxis, :, np.newaxis, np.newaxis]*1e2)
+        theta_e = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # K
+    else:
+        theta_e = read_mse_diag(datdir,varname,t0,t1,mask=True,drop=True) # K
 
     pclass_z = get_pclass(datdir,t0,t1)
 
@@ -201,15 +218,28 @@ def read_all_vars(datdir, t0, t1, proc_var_list):
 
     if comm.rank == 0:
         varname = 'T'
-        invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K
+        if do_hires:
+            invar = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # K
+        else:
+            invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K
     elif comm.rank == 1:
         varname = 'QVAPOR'
-        invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
+        if do_hires:
+            invar = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
+        else:
+            invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
     elif comm.rank == 2:
         varname = 'rho'
-        invar = read_mse_diag(datdir,varname,t0,t1,mask=True,drop=True) # kg/m3
+        if do_hires:
+            # invar = density_moist(tmpk, qv, pres[np.newaxis, :, np.newaxis, np.newaxis]*1e2)
+            invar = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
+        else:
+            invar = read_mse_diag(datdir,varname,t0,t1,mask=True,drop=True) # kg/m3
     else:
-        invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
+        if do_hires:
+            invar = var_read_3d_hires(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
+        else:
+            invar = var_read_3d(datdir,proc_var_list[comm.rank],t0,t1,mask=True,drop=True) # K/s or m/s
 
     return theta_e, pclass_z, invar
 
@@ -217,15 +247,31 @@ def read_all_vars(datdir, t0, t1, proc_var_list):
 
 def run_binning(ipclass, bins, theta_e, invar, pclass_z):
 
+    shape = theta_e.shape
+    nt = shape[0]
+    nz = shape[1]
+    nbins = bins.size
+
     # Mask out based on precipitation class
-    if (ipclass > 0):
-        indices = (pclass_z != ipclass)
+    if (ipclass == 0):
+        # Unmasked
+        theta_e_masked = theta_e
+        invar_masked = invar
+    elif (ipclass == 1):
+        # MCS = all but NONCLOUD and SHALLOW
+        indices = ((pclass_z != 0) & (pclass_z != 3))
         theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
         invar_masked = np.ma.masked_where(indices, invar, copy=True)
     else:
-        # Create memory references
-        theta_e_masked = theta_e
-        invar_masked = invar
+        # adjust by 2 to account for additional "all" category
+        indices = (pclass_z != (ipclass-2))
+        theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
+        invar_masked = np.ma.masked_where(indices, invar, copy=True)
+
+    # Frequency of cloud-type vs. time
+    pclass_count = np.ndarray(nt, dtype=np.float64)
+    for it in range(nt):
+        pclass_count[it] = np.ma.count(theta_e_masked[it,2,:,:])
 
     theta_e_mean = np.ma.mean(theta_e_masked, axis=(2,3))
 
@@ -237,12 +283,7 @@ def run_binning(ipclass, bins, theta_e, invar, pclass_z):
 
     nmin = 3 # minimum points to average
 
-    if testing:
-        nt_loop = 3
-    else:
-        nt_loop = nt
-
-    for it in range(nt_loop):
+    for it in range(nt):
         for iz in range(nz):
             for ibin in range(nbins-1):
                 indices = ((theta_e_masked[it,iz,:,:] >= bins[ibin]) & (theta_e_masked[it,iz,:,:] < bins[ibin+1])).nonzero()
@@ -252,22 +293,26 @@ def run_binning(ipclass, bins, theta_e, invar, pclass_z):
                 if binfreq > nmin:
                     invar_binned[it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
 
-    return freq_binned, invar_binned, theta_e_mean
+    return freq_binned, invar_binned, theta_e_mean, pclass_count
 
 ################################
 
-def driver_loop_write_ncdf(datdir, bins, t0, t1, proc_var_list):
+def driver_loop_write_ncdf(datdir, bins, dims, t0, t1, proc_var_list):
+
+    nt = dims[0]
+    nz = dims[1]
 
     # Read variables
     theta_e, pclass_z, invar = read_all_vars(datdir,t0,t1,proc_var_list)
 
     for ipclass in range(npclass):
+    # for ipclass in range(0,2):
 
         if comm.rank == 0:
             print()
             print("Running ipclass: ",pclass_name[ipclass])
 
-        freq_binned, invar_binned, theta_e_mean = run_binning(ipclass,bins,theta_e,invar,pclass_z)
+        freq_binned, invar_binned, theta_e_mean, pclass_count = run_binning(ipclass,bins,theta_e,invar,pclass_z)
 
         # Consolidate rebinned data onto Rank0 and write netCDF file
 
@@ -281,6 +326,7 @@ def driver_loop_write_ncdf(datdir, bins, t0, t1, proc_var_list):
             var_list_write.append(bins)
             var_list_write.append(pres)
             var_list_write.append(theta_e_mean)
+            var_list_write.append(pclass_count)
             var_list_write.append(freq_binned)
             var_list_write.append(invar_binned)
 
@@ -296,7 +342,10 @@ def driver_loop_write_ncdf(datdir, bins, t0, t1, proc_var_list):
             # Write out to netCDF file
 
             pclass_tag = pclass_name[ipclass]
-            file_out = datdir+'binned_isentrop_'+pclass_tag+'.nc'
+            if do_hires:
+                file_out = datdir+'binned_isentrop_'+pclass_tag+'_hires.nc'
+            else:
+                file_out = datdir+'binned_isentrop_'+pclass_tag+'.nc'
             var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nz,nbins)
             write_ncfile(file_out, var_list_write, var_names, descriptions, units, dims_set)
 
@@ -316,7 +365,8 @@ bins=np.linspace(fmin,fmax,num=nbins)
 # #### Main loops and compositing
 
 for ktest in range(ntest):
-# for ktest in range(1,2):
+# for ktest in range(1,ntest):
+# for ktest in range(1):
 
     test_str=tests[ktest]
 
@@ -337,9 +387,14 @@ for ktest in range(ntest):
 
         # Get dimensions
         nt, nz, nx1, nx2, pres = get_file_dims(datdir)
+        if do_hires:
+            pres = np.arange(1000,25,-25)
+            nz = pres.shape[0]
 
         t0=0
-        # nt=3
+        # nt=4
         t1=nt
 
-        driver_loop_write_ncdf(datdir, bins, t0, t1, proc_var_list)
+        dims = (t1-t0,nz)
+
+        driver_loop_write_ncdf(datdir, bins, dims, t0, t1, proc_var_list)

@@ -65,6 +65,12 @@ def var_read_3d(datdir, varname, t0, t1, mask=True, drop=False):
     varfil_main.close()
     return mask_edges(var,mask,drop)
 
+def var_read_3d_hires(datdir, varname, t0, t1, mask=True, drop=False):
+    varfil_main = Dataset(datdir+varname+'_HiRes.nc')
+    var = varfil_main.variables[varname][t0:t1,:,:,:]
+    varfil_main.close()
+    return mask_edges(var,mask,drop)
+
 def var_read_2d(datdir, varname, t0, t1, mask=True, drop=False):
     varfil_main = Dataset(datdir+varname+'.nc')
     var = varfil_main.variables[varname][t0:t1,:,:,:]

@@ -76,7 +76,7 @@ def theta_virtual(T, qv, pres):
 #   qv   - water vapor mixing ratio [kg/kg]
 #   pres - pressure [Pa]
 def density_moist(T, qv, pres):
-    
+
     p_fact=1
     if np.max(pres) < 1e4:
         p_fact=1e2 # Convert to Pa
@@ -86,7 +86,7 @@ def density_moist(T, qv, pres):
     else:
         T0=0.
     T+=T0
-    
+
     rd=287.04
     # rv=461.5
     # eps_r=rv/rd
@@ -230,7 +230,7 @@ def mixr_from_e(e,p):
 # ;
 # ;  RH (rel. hum.)    = e/esat(T)*100.
 
-def relh(MIXR,p,T,ice):
+def calc_relh(MIXR,p,T,ice=True):
     
     if np.min(T) < 105.: # degC or K?
         T0=273.16
@@ -239,8 +239,8 @@ def relh(MIXR,p,T,ice):
     T+=T0
     
     es=esat(T)
-    # if ice == 1:
-    #     es[(T < 273.16)]=eice(T[(T < 273.16)])
+    if ice:
+        es[(T < 273.16)]=eice(T[(T < 273.16)])
     
     Mw=18.0160 # molecular weight of water
     Md=28.9660 # molecular weight of dry air
