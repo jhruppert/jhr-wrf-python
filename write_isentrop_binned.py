@@ -54,7 +54,7 @@ if nproc != nvars:
     sys.exit()
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 datdir2 = 'post/d02/'
@@ -63,19 +63,21 @@ datdir2 = 'post/d02/'
 if storm == 'haiyan':
     # tests = ['ctl']
     # tests = ['ctl','ncrf36h']
-    # tests = ['crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
-    tests = ['ctl','ncrf36h','crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
+    # tests = ['ctl','ncrf36h','crfon60h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
+    tests = ['ctl','ncrf36h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
     tests = ['ctl','ncrf36h']
     tests = ['ncrf36h']
-    tests = ['ctl','ncrf48h','ncrf36h']
+    # tests = ['ctl','ncrf48h','ncrf36h']
+    tests = ['ctl','ncrf48h']
     # tests = [tests[1],'crfon72h']
     # tests = ['crfon72h']
 ntest = len(tests)
 
-# pclass_name = ['all','noncloud','deepc','congest','shallowc','strat','anvil']
-pclass_name = ['all','mcs','noncloud','deepc','congest','shallowc','strat','anvil']
+# pclass_name = ['noncloud','deepc','congest','shallowc','strat','anvil','mcs','all']
+pclass_name = ['noncloud','deepc','congest','shallowc','strat','anvil','all']
 npclass = len(pclass_name)
+npclass_orig = npclass-2
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -123,7 +125,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'tmpk',
         'qv',
         'rho',
-        'h_diabatic',
+        # 'h_diabatic',
         'lw',
         'lwc',
         'sw',
@@ -139,7 +141,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'temperature',
         'water vapor mixing ratio',
         'density',
-        'H_DIABATIC',
+        # 'H_DIABATIC',
         'LW heat tendency',
         'LW clear-sky heat tendency',
         'SW heat tendency',
@@ -155,7 +157,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'K',
         'kg/kg',
         'kg/m^3',
-        'K/s',
+        # 'K/s',
         'K/s',
         'K/s',
         'K/s',
@@ -178,7 +180,7 @@ def var_regrid_metadata(nt,nz,nbins):
         [dim_names,dims_all],
         [dim_names,dims_all],
         [dim_names,dims_all],
-        [dim_names,dims_all],
+        # [dim_names,dims_all],
     ]
 
     len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dims_set) #len4=len(dim_names)
@@ -253,20 +255,20 @@ def run_binning(ipclass, bins, theta_e, invar, pclass_z):
     nbins = bins.size
 
     # Mask out based on precipitation class
-    if (ipclass == 0):
-        # Unmasked
+    # pclass_name = ['noncloud','deepc','congest','shallowc','strat','anvil','mcs','all']
+    if ipclass <= 5:
+        indices = (pclass_z != ipclass)
+        theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
+        invar_masked = np.ma.masked_where(indices, invar, copy=True)
+    elif ipclass == 6:
+    #     # MCS = mask out NONCLOUD and SHALLOW
+    #     indices = ((pclass_z != 0) & (pclass_z != 3))
+    #     theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
+    #     invar_masked = np.ma.masked_where(indices, invar, copy=True)
+    # elif ipclass == 7:
+        # Unmasked for "ALL" category
         theta_e_masked = theta_e
         invar_masked = invar
-    elif (ipclass == 1):
-        # MCS = all but NONCLOUD and SHALLOW
-        indices = ((pclass_z != 0) & (pclass_z != 3))
-        theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
-        invar_masked = np.ma.masked_where(indices, invar, copy=True)
-    else:
-        # adjust by 2 to account for additional "all" category
-        indices = (pclass_z != (ipclass-2))
-        theta_e_masked = np.ma.masked_where(indices, theta_e, copy=True)
-        invar_masked = np.ma.masked_where(indices, invar, copy=True)
 
     # Frequency of cloud-type vs. time
     pclass_count = np.ndarray(nt, dtype=np.float64)
@@ -343,7 +345,7 @@ def driver_loop_write_ncdf(datdir, bins, dims, t0, t1, proc_var_list):
 
             pclass_tag = pclass_name[ipclass]
             if do_hires:
-                file_out = datdir+'binned_isentrop_'+pclass_tag+'_hires.nc'
+                file_out = datdir+'binned_isentrop_'+pclass_tag+'_HiRes.nc'
             else:
                 file_out = datdir+'binned_isentrop_'+pclass_tag+'.nc'
             var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nz,nbins)
@@ -365,7 +367,7 @@ bins=np.linspace(fmin,fmax,num=nbins)
 # #### Main loops and compositing
 
 for ktest in range(ntest):
-# for ktest in range(1,ntest):
+# for ktest in range(3,ntest):
 # for ktest in range(1):
 
     test_str=tests[ktest]
@@ -377,7 +379,11 @@ for ktest in range(ntest):
     # Loop over ensemble members
 
     for imemb in range(nmem):
-    # for imemb in range(1):
+    # for imemb in range(6,7):
+
+        # Skip some members
+        # if ktest == 3 & imemb < 2:
+        #     continue
 
         if comm.rank == 0:
             print()

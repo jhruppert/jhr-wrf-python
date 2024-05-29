@@ -15,7 +15,7 @@ import numpy as np
 from read_functions import *
 from thermo_functions import *
 from mpi4py import MPI
-import subprocess
+# import subprocess
 
 
 comm = MPI.COMM_WORLD
@@ -25,7 +25,7 @@ nproc = comm.Get_size()
 # #### Main settings
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -37,7 +37,8 @@ if storm == 'haiyan':
     tests = ['ctl','ncrf36h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
     # tests = ['STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
 elif storm == 'maria':
-    tests = ['ctl','ncrf48h','ncrf36h']
+    # tests = ['ctl','ncrf48h','ncrf36h']
+    tests = ['ctl','ncrf48h']
 
 # Members
 nmem = 10 # number of ensemble members
@@ -80,9 +81,9 @@ def write_var(datdir, invar, filename, shortname, longname, units):
 def get_theta_e_rho(datdir,pres,t0,t1):
     # Required variables
     varname = 'T'
-    tmpk = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # K
+    tmpk = var_read_3d_hires(datdir,varname,t0,t1,mask=False) # K
     varname = 'QVAPOR'
-    qv = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # K
+    qv = var_read_3d_hires(datdir,varname,t0,t1,mask=False) # K
     theta_e = theta_equiv(tmpk, qv, qv, pres[np.newaxis, :, np.newaxis, np.newaxis]*1e2)
     rho = density_moist(tmpk, qv, pres[np.newaxis, :, np.newaxis, np.newaxis]*1e2)
     return theta_e, rho
