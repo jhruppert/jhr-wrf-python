@@ -26,6 +26,45 @@
 from netCDF4 import Dataset
 import numpy as np
 
+def write_ncfile_addvar(file_out, var_list, var_names, descriptions, units, dims_set): #, dim_names
+
+    len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dims_set) #len4=len(dim_names)
+    if (len1 != len2) or (len1 != len3) or (len1 != len4):
+        raise ValueError("Variable info counts are off")
+
+    # dims_val = var_list[0].shape
+
+    ncfile = Dataset(file_out,mode='a')
+
+    # Add dimensions to file
+    # Will iterate over entire variable dimension list but will only attempt to add each once
+    # dim_added = [] # List to track dimensions that have been added already
+    # for idimset in range(len(dims_set)):
+    # #     dim = ncfile.createDimension(dim_names[0][idim], dims_val[idim]) # unlimited axis (can be appended to).
+    #     for idim in range(len(dims_set[idimset][0])):
+    #         if dims_set[idimset][0][idim] in dim_added:
+    #             continue
+    #         dim = ncfile.createDimension(dims_set[idimset][0][idim], dims_set[idimset][1][idim]) # unlimited axis (can be appended to).
+    #         dim_added.append(dims_set[idimset][0][idim])
+
+    nvars = len(var_list)
+    for ivar in range(2,nvars):
+        print("  Writing var: ",var_names[ivar])
+        writevar = ncfile.createVariable(var_names[ivar], np.single, dims_set[ivar][0]) #dim_names[ivar])
+        writevar.units = units[ivar]
+        writevar.description = descriptions[ivar]
+        writevar[...] = var_list[ivar]
+
+    ncfile.close()
+
+    print("Done writing!")
+    
+    return None
+
+
+#####################################################################################################
+
+
 def write_ncfile(file_out, var_list, var_names, descriptions, units, dims_set): #, dim_names
 
     len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dims_set) #len4=len(dim_names)

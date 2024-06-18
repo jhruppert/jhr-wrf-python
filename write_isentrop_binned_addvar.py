@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Script to write out TC output binned according to a 3D variable to ncdf files.
+# ### Script to add a new var(s) to existing isentropic binned data files.
 # 
 # Assumes output is in a single netcdf file on pressure levels.
 # 
 # James Ruppert  
 # jruppert@ou.edu  
-# 4/23/22
+# 5/31/22
 
 # from netCDF4 import Dataset
 import numpy as np
@@ -41,6 +41,7 @@ nproc = comm.Get_size()
 
 # proc_var_list = ['tmpk', 'qv', 'rho', 'H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
 proc_var_list = ['tmpk', 'qv', 'rho', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
+# proc_var_list = ['theta_v']
 nvars = len(proc_var_list)
 
 # Use high vertical resolution output?
@@ -48,13 +49,13 @@ do_hires=True
 # do_hires=False
 
 # Check for required number of processors
-if nproc != nvars:
-    print("Check NPROC (-n option)! Should be ",nvars)
-    print("Killing batch job")
-    sys.exit()
+# if nproc != nvars:
+#     print("Check NPROC (-n option)! Should be ",nvars)
+#     print("Killing batch job")
+#     sys.exit()
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 datdir2 = 'post/d02/'
@@ -119,18 +120,8 @@ def var_regrid_metadata(nt,nz,nbins):
     var_names = [
         'bins',
         'pres',
-        'theta_e_mn',
-        'pclass_frequency',
-        'frequency',
-        'tmpk',
-        'qv',
-        'rho',
-        # 'h_diabatic',
-        'lw',
-        'lwc',
-        'sw',
-        'swc',
-        'w',
+        # 'theta_v_prm',
+        # 'theta_v',
         'tmpk_mean',
         'qv_mean',
         'rho_mean',
@@ -143,18 +134,8 @@ def var_regrid_metadata(nt,nz,nbins):
     descriptions = [
         'equivalent potential temperature bins',
         'pressure',
-        'mean equivalent potential temperature',
-        'pclass frequency',
-        'frequency',
-        'temperature',
-        'water vapor mixing ratio',
-        'density',
-        # 'H_DIABATIC',
-        'LW heat tendency',
-        'LW clear-sky heat tendency',
-        'SW heat tendency',
-        'SW clear-sky heat tendency',
-        'vertical motion',
+        # 'virtual potential temperature xy-anomaly',
+        # 'virtual potential temperature',
         'mean temperature',
         'mean water vapor mixing ratio',
         'mean density',
@@ -167,18 +148,7 @@ def var_regrid_metadata(nt,nz,nbins):
     units = [
         'K',
         'hPa',
-        'K',
-        'n-cells',
-        'n-cells',
-        'K',
-        'kg/kg',
-        'kg/m^3',
-        # 'K/s',
-        'K/s',
-        'K/s',
-        'K/s',
-        'K/s',
-        'm/s',
+        # 'K',
         'K',
         'kg/kg',
         'kg/m^3',
@@ -193,26 +163,15 @@ def var_regrid_metadata(nt,nz,nbins):
     dims_set = [
         [('nbins',),(nbins,)],
         [('nz',),(nz,)],
-        [('nt','nz'),(nt,nz)],
-        [('nt',),(nt,)],
-        [dim_names,dims_all],
-        [dim_names,dims_all],
-        [dim_names,dims_all],
-        [dim_names,dims_all],
-        [dim_names,dims_all],
-        [dim_names,dims_all],
-        [dim_names,dims_all],
-        [dim_names,dims_all],
-        [dim_names,dims_all],
-        [('nt','nz'),(nt,nz)],
-        [('nt','nz'),(nt,nz)],
-        [('nt','nz'),(nt,nz)],
-        [('nt','nz'),(nt,nz)],
-        [('nt','nz'),(nt,nz)],
-        [('nt','nz'),(nt,nz)],
-        [('nt','nz'),(nt,nz)],
-        [('nt','nz'),(nt,nz)],
         # [dim_names,dims_all],
+        [('nt','nz'),(nt,nz)],
+        [('nt','nz'),(nt,nz)],
+        [('nt','nz'),(nt,nz)],
+        [('nt','nz'),(nt,nz)],
+        [('nt','nz'),(nt,nz)],
+        [('nt','nz'),(nt,nz)],
+        [('nt','nz'),(nt,nz)],
+        [('nt','nz'),(nt,nz)],
     ]
 
     len1=len(var_names); len2=len(descriptions); len3=len(units); len4=len(dims_set) #len4=len(dim_names)
@@ -232,7 +191,39 @@ def get_pclass(datdir, t0, t1):
 
 ################################
 
+def get_theta_v(datdir,t0,t1,pres):
+    varname = 'T'
+    if do_hires:
+        tmpk = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # K
+    else:
+        tmpk = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K
+    varname = 'QVAPOR'
+    if do_hires:
+        qv = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
+    else:
+        qv = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
+    theta_v = theta_virtual(tmpk, qv, pres[np.newaxis, :, np.newaxis, np.newaxis]*1e2)
+
+    return theta_v
+
+################################
+
+def get_theta_v_prm(datdir,t0,t1,pres):
+
+    theta_v = get_theta_v(datdir,t0,t1,pres)
+    theta_v_mn = np.mean(theta_v, axis=(2,3))
+    theta_v -= theta_v_mn[:, :, np.newaxis, np.newaxis]
+
+    return theta_v
+
+################################
+
 def read_all_vars(datdir, t0, t1, proc_var_list):
+
+    # Calculating theta-v is memory intensive since it requires
+    # tmpk and qv, so do this first
+    # invar = get_theta_v_prm(datdir,t0,t1,pres)
+    # invar = get_theta_v(datdir,t0,t1,pres)
 
     varname = 'theta_e'
     if do_hires:
@@ -308,6 +299,7 @@ def run_binning(ipclass, bins, theta_e, invar, pclass_z):
         pclass_count[it] = np.ma.count(theta_e_masked[it,2,:,:])
 
     theta_e_mean = np.ma.mean(theta_e_masked, axis=(2,3))
+    invar_mean = np.ma.mean(invar_masked, axis=(2,3))
 
     # Bin the variables from (x,y) --> (bin)
 
@@ -317,17 +309,17 @@ def run_binning(ipclass, bins, theta_e, invar, pclass_z):
 
     nmin = 3 # minimum points to average
 
-    for it in range(nt):
-        for iz in range(nz):
-            for ibin in range(nbins-1):
-                indices = ((theta_e_masked[it,iz,:,:] >= bins[ibin]) & (theta_e_masked[it,iz,:,:] < bins[ibin+1])).nonzero()
-                binfreq = indices[0].size
-                freq_binned[it,iz,ibin] = np.array(binfreq, dtype=np.float64)
-                # Take mean across ID'd cells
-                if binfreq > nmin:
-                    invar_binned[it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
+    # for it in range(nt):
+    #     for iz in range(nz):
+    #         for ibin in range(nbins-1):
+    #             indices = ((theta_e_masked[it,iz,:,:] >= bins[ibin]) & (theta_e_masked[it,iz,:,:] < bins[ibin+1])).nonzero()
+    #             binfreq = indices[0].size
+    #             freq_binned[it,iz,ibin] = np.array(binfreq, dtype=np.float64)
+    #             # Take mean across ID'd cells
+    #             if binfreq > nmin:
+    #                 invar_binned[it,iz,ibin] = np.ma.mean(invar_masked[it,iz,indices[0],indices[1]])
 
-    return freq_binned, invar_binned, theta_e_mean, pclass_count
+    return freq_binned, invar_binned, theta_e_mean, invar_mean, pclass_count
 
 ################################
 
@@ -342,36 +334,42 @@ def driver_loop_write_ncdf(datdir, bins, dims, t0, t1, proc_var_list):
     for ipclass in range(npclass):
     # for ipclass in range(0,2):
 
-        if comm.rank == 0:
-            print()
-            print("Running ipclass: ",pclass_name[ipclass])
+        # if comm.rank == 0:
+        print()
+        print("Running ipclass: ",pclass_name[ipclass])
 
-        freq_binned, invar_binned, theta_e_mean, pclass_count = run_binning(ipclass,bins,theta_e,invar,pclass_z)
+        freq_binned, invar_binned, theta_e_mean, invar_mean, pclass_count = run_binning(ipclass,bins,theta_e,invar,pclass_z)
 
         # Consolidate rebinned data onto Rank0 and write netCDF file
 
         if comm.rank > 0:
 
-            comm.Send(np.ascontiguousarray(invar_binned, dtype=np.float64), dest=0, tag=comm.rank)
+            # comm.Send(np.ascontiguousarray(invar_binned, dtype=np.float64), dest=0, tag=comm.rank)
+            comm.Send(np.ascontiguousarray(invar_mean, dtype=np.float64), dest=0, tag=comm.rank)
 
         else:
 
             var_list_write=[]
             var_list_write.append(bins)
             var_list_write.append(pres)
-            var_list_write.append(theta_e_mean)
-            var_list_write.append(pclass_count)
-            var_list_write.append(freq_binned)
-            var_list_write.append(invar_binned)
+        # var_list_write.append(theta_e_mean)
+        # var_list_write.append(pclass_count)
+        # var_list_write.append(freq_binned)
+            # var_list_write.append(invar_binned)
+            var_list_write.append(invar_mean)
 
             for irank in range(1,nvars):
-                dims = (nt,nz,nbins-1)
-                invar_binned = np.empty(dims)
-                comm.Recv(invar_binned, source=irank, tag=irank)
+                # dims = (nt,nz,nbins-1)
+                # invar_binned = np.empty(dims)
+                # comm.Recv(invar_binned, source=irank, tag=irank)
+                dims = (nt,nz)
+                invar_mean = np.empty(dims)
+                comm.Recv(invar_mean, source=irank, tag=irank)
                 # check that the unique arrays are appearing on process 0
                 # print()
                 # print(invar_binned[1,:,30])
-                var_list_write.append(invar_binned)
+                # var_list_write.append(invar_binned)
+                var_list_write.append(invar_mean)
 
             # Write out to netCDF file
 
@@ -381,7 +379,7 @@ def driver_loop_write_ncdf(datdir, bins, dims, t0, t1, proc_var_list):
             else:
                 file_out = datdir+'binned_isentrop_'+pclass_tag+'.nc'
             var_names, descriptions, units, dims_set = var_regrid_metadata(nt,nz,nbins)
-            write_ncfile(file_out, var_list_write, var_names, descriptions, units, dims_set)
+            write_ncfile_addvar(file_out, var_list_write, var_names, descriptions, units, dims_set)
 
     return
 
@@ -412,6 +410,7 @@ for ktest in range(ntest):
 
     for imemb in range(nmem):
     # for imemb in range(6,7):
+    # imemb = comm.rank
 
         # Skip some members
         # if ktest == 3 & imemb < 2:
