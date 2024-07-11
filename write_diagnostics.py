@@ -26,7 +26,7 @@ import sys
 #     print("Killing batch job")
 #     sys.exit()
 
-# storm = 'haiyan'
+storm = 'haiyan'
 storm = 'maria'
 
 filename_out='mse_diag.nc' # this is for ALL variables in the var_names list
@@ -112,6 +112,7 @@ def var_ncdf_metadata(dims3d):
         'theta_e',
         'pw',
         'pw_sat',
+        'vmf',
         'vmfu',
         'vmfd',
         'condh',
@@ -133,6 +134,7 @@ def var_ncdf_metadata(dims3d):
         'equivalent potential temperature',
         'water vapor integrated over full column from postproc data',
         'saturation water vapor integrated over full column from postproc data',
+        'vertical mass flux vertically integrated (up to 100 hPa)',
         'upward-masked mass flux vertically integrated (up to 100 hPa)',
         'downward-masked mass flux vertically integrated (up to 100 hPa)',
         'condensation heating from H_DIABATIC vertically int (up to 100 hPa), converted to rainfall units',
@@ -156,6 +158,7 @@ def var_ncdf_metadata(dims3d):
         'mm',
         'kg/m/s',
         'kg/m/s',
+        'kg/m/s',
         'mm/day',
         'J/kg',
         'J/kg',
@@ -177,6 +180,7 @@ def var_ncdf_metadata(dims3d):
         [('nz',),(nz,)],
         [dims3d_names,dims3d],
         [dims3d_names,dims3d],
+        [dims2d_names,dims2d],
         [dims2d_names,dims2d],
         [dims2d_names,dims2d],
         [dims2d_names,dims2d],
@@ -258,9 +262,10 @@ def get_vmf_updown(w, dp, g):
     # Mask for Up/Dn
     wu = np.ma.masked_where((w < 0), w, copy=True)
     wd = np.ma.masked_where((w > 0), w, copy=True)
+    vmf = vert_int(w[:,0:kmsetop,:,:], dp, g) # kg/m/s
     vmfu = vert_int(wu[:,0:kmsetop,:,:], dp, g) # kg/m/s
     vmfd = vert_int(wd[:,0:kmsetop,:,:], dp, g) # kg/m/s
-    return vmfu, vmfd
+    return vmf, vmfu, vmfd
 
 ##### MSE & DSE functions ################################
 
@@ -336,7 +341,7 @@ def main_routine(datdir):
     u = var_read(datdir,'U',nz)
     v = var_read(datdir,'V',nz)
 
-    vmfu, vmfd = get_vmf_updown(w, dp, g)
+    vmf, vmfu, vmfd = get_vmf_updown(w, dp, g)
 
     # Calculate advection/divergence terms and vertically integrate
 
@@ -372,6 +377,7 @@ def main_routine(datdir):
     var_list.append(theta_e) # 3D
     var_list.append(pw)
     var_list.append(pw_sat)
+    var_list.append(vmf)
     var_list.append(vmfu)
     var_list.append(vmfd)
     var_list.append(condh)
