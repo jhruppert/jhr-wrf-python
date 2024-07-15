@@ -40,7 +40,7 @@ nproc = comm.Get_size()
 # #### Main settings
 
 # proc_var_list = ['tmpk', 'qv', 'rho', 'H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
-proc_var_list = ['tmpk', 'qv', 'rho', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
+proc_var_list = ['tmpk', 'theta_v', 'qv', 'rho', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
 # proc_var_list = ['theta_v']
 nvars = len(proc_var_list)
 

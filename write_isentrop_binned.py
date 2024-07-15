@@ -40,7 +40,7 @@ nproc = comm.Get_size()
 # #### Main settings
 
 # proc_var_list = ['tmpk', 'qv', 'rho', 'H_DIABATIC', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
-proc_var_list = ['tmpk', 'qv', 'rho', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
+proc_var_list = ['tmpk', 'theta_v', 'qv', 'rho', 'RTHRATLW', 'RTHRATLWC', 'RTHRATSW', 'RTHRATSWC', 'W']
 nvars = len(proc_var_list)
 
 # Use high vertical resolution output?
@@ -123,6 +123,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'pclass_frequency',
         'frequency',
         'tmpk',
+        'theta_v_prm',
         'qv',
         'rho',
         # 'h_diabatic',
@@ -132,6 +133,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'swc',
         'w',
         'tmpk_mean',
+        'thv_mean',
         'qv_mean',
         'rho_mean',
         'lw_mean',
@@ -147,6 +149,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'pclass frequency',
         'frequency',
         'temperature',
+        'virtual potential temperature xy-anomaly',
         'water vapor mixing ratio',
         'density',
         # 'H_DIABATIC',
@@ -156,6 +159,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'SW clear-sky heat tendency',
         'vertical motion',
         'mean temperature',
+        'mean virtual potential temperature',
         'mean water vapor mixing ratio',
         'mean density',
         'mean LW heat tendency',
@@ -171,6 +175,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'n-cells',
         'n-cells',
         'K',
+        'K',
         'kg/kg',
         'kg/m^3',
         # 'K/s',
@@ -179,6 +184,7 @@ def var_regrid_metadata(nt,nz,nbins):
         'K/s',
         'K/s',
         'm/s',
+        'K',
         'K',
         'kg/kg',
         'kg/m^3',
@@ -204,6 +210,8 @@ def var_regrid_metadata(nt,nz,nbins):
         [dim_names,dims_all],
         [dim_names,dims_all],
         [dim_names,dims_all],
+        [dim_names,dims_all],
+        [('nt','nz'),(nt,nz)],
         [('nt','nz'),(nt,nz)],
         [('nt','nz'),(nt,nz)],
         [('nt','nz'),(nt,nz)],
@@ -232,6 +240,33 @@ def get_pclass(datdir, t0, t1):
 
 ################################
 
+def get_theta_v(datdir,t0,t1,pres):
+    varname = 'T'
+    if do_hires:
+        tmpk = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # K
+    else:
+        tmpk = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K
+    varname = 'QVAPOR'
+    if do_hires:
+        qv = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
+    else:
+        qv = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
+    theta_v = theta_virtual(tmpk, qv, pres[np.newaxis, :, np.newaxis, np.newaxis]*1e2)
+
+    return theta_v
+
+################################
+
+def get_theta_v_prm(datdir,t0,t1,pres):
+
+    theta_v = get_theta_v(datdir,t0,t1,pres)
+    theta_v_mn = np.mean(theta_v, axis=(2,3))
+    theta_v -= theta_v_mn[:, :, np.newaxis, np.newaxis]
+
+    return theta_v
+
+################################
+
 def read_all_vars(datdir, t0, t1, proc_var_list):
 
     varname = 'theta_e'
@@ -257,12 +292,17 @@ def read_all_vars(datdir, t0, t1, proc_var_list):
         else:
             invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # K
     elif comm.rank == 1:
+        # Calculating theta-v is memory intensive since it requires
+        # tmpk and qv, so do this first
+        # invar = get_theta_v(datdir,t0,t1,pres)
+        invar = get_theta_v_prm(datdir,t0,t1,pres)
+    elif comm.rank == 2:
         varname = 'QVAPOR'
         if do_hires:
             invar = var_read_3d_hires(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
         else:
             invar = var_read_3d(datdir,varname,t0,t1,mask=True,drop=True) # kg/kg
-    elif comm.rank == 2:
+    elif comm.rank == 3:
         varname = 'rho'
         if do_hires:
             # invar = density_moist(tmpk, qv, pres[np.newaxis, :, np.newaxis, np.newaxis]*1e2)
