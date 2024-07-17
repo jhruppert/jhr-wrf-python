@@ -17,30 +17,26 @@ import numpy as np
 # #### Main settings
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 
 # Tests to read and compare
 if storm == 'haiyan':
-    tests = ['ctl','ncrf36h']
-    # tests = ['STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
-    tests = ['ncrf36h']
-    tests = ['crfon60h']
+    tests = ['ctl','ncrf36h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
+    # tests = ['ncrf36h']
+    # tests = ['crfon60h']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
-    tests = ['ctl','ncrf48h']
-    tests = ['ncrf48h']
-    tests = ['ncrf36h']
+    tests = ['ctl','ncrf48h','ncrf36h']
     # tests = [tests[1],'crfon72h']
 
 # Members
-nmem = 10 # number of ensemble members (1-5 have NCRF)
+nmem = 10 # number of ensemble members
 # nmem = 2
 enstag = str(nmem)
-# Starting member to read
-memb0=1
+memb0=1 # Starting member to read
 
 nums=np.arange(memb0,nmem+memb0,1); nums=nums.astype(str)
 nustr = np.char.zfill(nums, 2)
@@ -50,10 +46,10 @@ datdir2 = 'post/d02/'
 
 # Get pressure
 datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
-fil = Dataset(datdir+'U.nc') # this opens the netcdf file
-pres = fil.variables['pres'][:] # hPa
-fil.close()
-delp=(pres[0]-pres[1])*1e2
+file = Dataset(datdir+'U.nc') # this opens the netcdf file
+pres = file.variables['pres'][:] # hPa
+file.close()
+delp=(pres[0]-pres[1])*1e2 # Pa
 
 
 # #### NetCDF variable read functions
@@ -62,6 +58,7 @@ def var_read_3d(datdir, varname, delp):
     varfil_main = Dataset(datdir+varname+'.nc')
     var = varfil_main.variables[varname][:,:,:,:]
     varfil_main.close()
+    # Vertical integral (in pressure)
     var = np.sum(var, axis=1)*(delp/9.81) # density is absorbed into the unit conversion; units: [mm]
     return var
 
@@ -76,10 +73,10 @@ def write_vars(datdir,q_int):
     nq = np.shape(q_int)[0]
     nq, nt, nx1, nx2 = q_int.shape
 
-    q_dim = ncfile.createDimension('nq', nq)
+    q_dim    = ncfile.createDimension('nq', nq)
     time_dim = ncfile.createDimension('nt', nt) # unlimited axis (can be appended to).
-    x1_dim = ncfile.createDimension('nx1', nx1)
-    x2_dim = ncfile.createDimension('nx2', nx2)
+    x1_dim   = ncfile.createDimension('nx1', nx1)
+    x2_dim   = ncfile.createDimension('nx2', nx2)
 
     q_int_nc = ncfile.createVariable('q_int', np.single, ('nq','nt','nx1','nx2',))
     q_int_nc.units = 'mm'
