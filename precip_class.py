@@ -15,7 +15,7 @@
 # Returns:
 # 
 #       C_TYPE: (n-2)-D array as f(X) with classification results:
-#               0: non-precipitating
+#               0: non-cloud
 #           Convective:
 #               1: deep convective
 #               2: congestus
