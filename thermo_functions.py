@@ -13,6 +13,8 @@
 
 
 import numpy as np
+from metpy.calc import cape_cin, dewpoint_from_specific_humidity, parcel_profile#, most_unstable_parcel
+from metpy.units import units
 
 
 ############################################################################
@@ -72,7 +74,7 @@ def theta_virtual(T, qv, pres):
 ## Density moist ######################################################
 
 # Calculate density for an array in pressure coordinates
-#   tmpk - temp [K]
+#   T    - temp [C or K]
 #   qv   - water vapor mixing ratio [kg/kg]
 #   pres - pressure [Pa]
 def density_moist(T, qv, pres):
@@ -97,7 +99,7 @@ def density_moist(T, qv, pres):
 ## Density dry ######################################################
 
 # Calculate density for an array in pressure coordinates
-#   tmpk - temp [K]
+#   T    - temp [C or K]
 #   pres - pressure [Pa]
 def density_dry(T, pres):
     
@@ -150,7 +152,7 @@ def theta_equiv(T, rv, rtot, pres):
         T0=273.16
     else:
         T0=0.
-    T+=T0
+    # T+=T0
     
   # ;CONSTANTS
     rd=287.    # J/K/kg
@@ -171,8 +173,8 @@ def theta_equiv(T, rv, rtot, pres):
   # ;CALCULATE THETA-E
     p0=1e5 # Pa
     # c_term = cp + cpl*rtot
-    th_e = T * (p0/ ((pres*p_fact) - ((pres*p_fact) / ((eps/rv) + 1.))) )**(rd/(cp + cpl*rtot)) \
-        * np.exp( (lv0 - (cpl-cpv)*(T-273.15))*rv / ((cp + cpl*rtot)*T) )
+    th_e = (T+T0) * (p0/ ((pres*p_fact) - ((pres*p_fact) / ((eps/rv) + 1.))) )**(rd/(cp + cpl*rtot)) \
+        * np.exp( (lv0 - (cpl-cpv)*((T+T0)-273.15))*rv / ((cp + cpl*rtot)*(T+T0)) )
 
     return th_e
 
@@ -333,6 +335,7 @@ def eice(T):
         T0=273.16
     else:
         T0=0.
+    # Put T into K
     T+=T0
     
     # ; Define constants
@@ -348,6 +351,11 @@ def eice(T):
     # https://library.wmo.int/doc_num.php?explnum_id=7450
     TK=273.16
     eice=611.2*np.exp(22.46*(T-TK)/(272.62+(T-TK)))
+
+    # Trying Buck's formula (1996)
+    # https://www.eas.ualberta.ca/jdwilson/EAS372_13/Vomel_CIRES_satvpformulae.html
+    # http://cires1.colorado.edu/~voemel/vp.html
+    # eice=611.15*np.exp((23.036 - (T-TK)/333.7)*(T-TK)/(279.82+(T-TK)))
     return eice
 
 
@@ -377,3 +385,138 @@ def rv_saturation(T, pres):
     rv_sat = Mw/Md * esat / (pres - esat) # kg/kg
 
     return rv_sat
+
+## Specific humidity from mixing ratio ######################################################
+
+# ; PURPOSE:
+# ;       Convert mixing ratio (kg H2O per kg of dry air) to
+# ;       specific humidity (same units).
+# ; INPUTS:
+# ;       MIXR: Float or FltArr(n) H2O mixing ratios in kg H2O per kg dry air
+# ; OUTPUTS:
+# ;       returns the specific humidity
+# 
+# James Ruppert (jruppert@ou.edu), September 2024, from the mid-Atlantic
+
+def mixr2sh(mixr):
+    q = mixr / (1 + mixr)
+    return q
+
+
+## CAPE / CIN ######################################################
+
+# Use MetPy package to calculate CAPE and CIN from the most unstable parcel.
+# https://unidata.github.io/MetPy/latest/api/generated/metpy.calc.cape_cin.html
+# 
+# Uses MetPy packages:
+#   dewpoint_from_specific_humidity
+#   parcel_profile
+#   cape_cin
+# 
+# Inputs:
+#   tmpk - temp in [ºC or K]
+#   qv   - water vapor mixing ratio [kg/kg]
+#   pres - pressure [hPa or Pa]
+# 
+# Options:
+#   type = 'mu' or 'sfc' for 1) most unstable or 2) surface parcel
+#       default: 'sfc'
+# 
+# Dimensions of input:
+#   Either (nz) or (nt, nz) where nt refers to time.
+# 
+# Returns:
+#   CAPE - J/kg
+#   CIN  - J/kg
+# 
+# James Ruppert
+# jruppert@ou.edu
+# September 2024 from the Meteor
+#  
+def get_cape_cin(T_in, qv_in, pres_in, type='sfc'):
+
+    # Convert hPa if necessary
+    p_fact=1
+    if np.nanmax(pres_in) > 1e5:
+        p_fact=1e-2 # Convert to hPa
+
+    # Convert T to ºC if necessary
+    if np.nanmin(T_in) < 105.: # degC or K?
+        T0=0
+    else:
+        T0=273.16
+
+    # Check for time dimension
+    nt = 1
+    if T_in.ndim > 1:
+        nt = T_in.shape[0]
+
+    cape = np.zeros(nt)
+    cin  = np.zeros(nt)
+
+    # Get specific humidity from mixing ratio
+    sh_in = mixr2sh(qv_in)
+    # Get theta_e for finding most unstable parcel
+    theta_e_in = theta_equiv(T_in, qv_in, qv_in, pres_in)
+
+    for it in range(nt):
+
+        if nt > 1:
+            pres = pres_in[it]
+            T = T_in[it]
+            sh = sh_in[it]
+            theta_e = theta_e_in[it]
+        else:
+            pres = pres_in
+            T = T_in
+            sh = sh_in
+            theta_e = theta_e_in
+
+        # Check for, remove NaNs
+        ind = np.isfinite(pres)
+        # Skip entire sounding if all NaN
+        if np.count_nonzero(ind) == 0:
+            cape[it] = np.nan
+            cin[it] = np.nan
+            continue
+        p = pres[ind] * p_fact
+        tmpc = T[ind] - T0
+        sh = sh[ind]
+        theta_e = theta_e[ind]
+
+        # Check if masked array
+        if isinstance(tmpc, np.ma.MaskedArray):
+            p    = np.ma.getdata(p)
+            tmpc = np.ma.getdata(tmpc)
+            sh   = np.ma.getdata(sh)
+            theta_e = np.ma.getdata(theta_e)
+
+        # Apply units for MetPy functions
+        p *= units.hPa
+        tmpc *= units.degC
+        sh *= units.dimensionless
+
+        # Run MetPy routines
+        dwpc = dewpoint_from_specific_humidity(p, tmpc, sh)
+        # mu_parcel = most_unstable_parcel(p, tmpc, dwpc, depth=50*units.hPa)
+
+        if type == 'mu':
+            # Use maximum* theta-e as most unstable parcel
+            #  * checked within 50 hPa of surface pressure
+            p_check = np.array(p)
+            iz_check = np.where(p_check >= np.max(p_check)-50)[0]
+            iz_parcel = np.where(theta_e[iz_check] == np.max(theta_e[iz_check]))[0][0]
+        else:
+            iz_parcel=0
+
+        # In case of no unstable parcel found
+        try:
+            mu_prof = parcel_profile(p, tmpc[iz_parcel], dwpc[iz_parcel]).to('degC')
+            icape, icin = cape_cin(p, tmpc, dwpc, mu_prof, which_lfc='bottom', which_el='top')
+            cape[it] = np.array(icape)
+            cin[it] = np.array(icin)
+        except:
+            cape[it] = np.nan
+            cin[it] = np.nan
+
+    return cape, cin
