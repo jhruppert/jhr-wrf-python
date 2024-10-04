@@ -8,6 +8,7 @@ import subprocess
 
 def get_file_dims(datdir):
     varfil_main = Dataset(datdir+'T.nc')
+    # varfil_main = Dataset(datdir+'U10.nc')
     nz = varfil_main.dimensions['level'].size
     nx1 = varfil_main.dimensions['lat'].size
     nx2 = varfil_main.dimensions['lon'].size
