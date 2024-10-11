@@ -96,7 +96,7 @@ def object_track(f, lon, lat, sens_test, basis):
         itmax = 0
 
     else:
-    
+
         # Assuming a cold start; will identify all-time-max object magnitude
         # and track forward and backward from there.
         print('Assuming cold start and using no basis')
