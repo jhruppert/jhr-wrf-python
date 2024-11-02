@@ -230,3 +230,5 @@ for ivar in range(nvar):
             pickle.dump([depend_var_perc,number,mean_size,
                             rain_perc,cwv_perc,lwacre_perc,sh_perc,lh_perc,vmf_perc,condh_perc],
                             file)
+
+print("Done!!")
