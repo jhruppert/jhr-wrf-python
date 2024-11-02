@@ -1,0 +1,37 @@
+#!/bin/bash
+#SBATCH -p radclouds_el9
+#SBATCH --container=el7
+#SBATCH -N 1
+#SBATCH -n 56 ##112 # max of N*56
+###SBATCH --nodelist=c854
+#SBATCH --exclusive
+#SBATCH --output=outbatch_out.%j.txt
+#SBATCH --error=outbatch_err.%j.txt
+#SBATCH -t 48:00:00
+
+module purge
+source ~/.bashrc
+# mamba activate plotting
+# Plotting env already loaded in .bashrc
+
+# python run_tracking.py > tracking.out
+# python time_series_mse.py
+# python write_qint.py
+# python write_diagnostics.py
+# python lwacre_feedbk_boxplot.py
+# python write_regrid_diag.py
+# python write_isentrop_binned.py
+# python binned_plots_2d.py
+# python binned_dual_write.py
+# python write_theta_e.py
+python binned_cross_2d_write.py
+
+# MPI jobs
+# mpirun python tests_various.py
+# mpirun python write_theta_e.py
+# mpirun python write_isentrop_binned_v2.py
+# mpirun python write_isentrop_binned_addvar.py
+# mpirun python mean_profiles_write.py
+# mpirun python binned_cross_2d_write_v2.py
+
+# echo 'Done!!'
