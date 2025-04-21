@@ -10,7 +10,7 @@
 
 from netCDF4 import Dataset
 import numpy as np
-from thermo_functions import density_moist, theta_equiv, theta_virtual, relh
+from thermo_functions import *
 
 # Variable settings
 

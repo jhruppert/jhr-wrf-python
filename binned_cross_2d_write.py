@@ -11,21 +11,16 @@
 # NOTE: Using copied tracking from CTL for NCRF tests
 
 import numpy as np
-import matplotlib
-from matplotlib import ticker, colors
-import matplotlib.pyplot as plt
-import sys
 from thermo_functions import *
-# from mask_tc_track import mask_tc_track
 from precip_class import precip_class
 from memory_usage import memory_usage
 from read_functions import *
 import pickle
-from mpi4py import MPI
+import sys
+# from mpi4py import MPI
 
-
-comm = MPI.COMM_WORLD
-nproc = comm.Get_size()
+# comm = MPI.COMM_WORLD
+# nproc = comm.Get_size()
 
 
 #  #### Main settings
@@ -39,18 +34,20 @@ do_hires=True # Vertical high resolution?
 # do_hires=False
 
 do_tests=True # Run sensitivity tests?
-# do_tests=False
+do_tests=False
 
 
 # Index variable (2D; independent var)
 # ivar_select = 'pw'
 ivar_select = 'sf'
+# ivar_select = 'lwacre'
 # ivar_select = 'rain'
 # options (requiring 2D info): pw, rain, lwacre
 # options (requiring 3D info): vmf
 
 # Fill variable (3D; dependent var)
-fillvar_select = 'lwcrf'
+# fillvar_select = 'lwcrf'
+# fillvar_select = 'h_diabatic'
 # options: avor, lwcrf, tprm, dbz, rh
 
 # Contour variable (3D; dependent var)
@@ -67,14 +64,15 @@ nt=200 # will be chopped down to max available
 time_neglect=12 # time steps from start to neglect (for CTL only)
 t1_test=12 # n time steps to sample for tests
 # t1_test=6
-# t1_test=24
+t1_test=24
+# t1_test=48 # didn't work -- too much memory
 
 
 #  #### Additional settings and directories
 
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -147,9 +145,10 @@ memb_all=np.char.add('memb_',nustr)
 datdir = main+storm+'/'+memb_all[0]+'/'+tests[0]+'/'+datdir2
 nt_data, nz, nx1, nx2, pres = get_file_dims(datdir)
 dp = (pres[1]-pres[0])*1e2 # Pa
+# if do_tests:
+nt=t1_test
 nt=np.min([nt,nt_data-time_neglect])
-if do_tests:
-    nt=t1_test
+
 # For dropped edges
 nx1-=80*2
 nx2-=80*2
@@ -178,7 +177,10 @@ for ktest in range(ntest):
     # Arrays to save variables
     dims = (nmem,nt,nz,nx1,nx2)
     dims2d = (nmem,nt,nx1,nx2)
-    var_all = np.ma.zeros(dims, dtype=np.float32)
+    crf_all = np.ma.zeros(dims, dtype=np.float32)
+    hdia_all = np.ma.zeros(dims, dtype=np.float32)
+    tmpk_all = np.ma.zeros(dims, dtype=np.float32)
+    qv_all = np.ma.zeros(dims, dtype=np.float32)
     cvar_all = np.ma.zeros(dims, dtype=np.float32)
     strat_all = np.ma.zeros(dims2d, dtype=np.float32)
     rain_all = np.ma.zeros(dims2d, dtype=np.float32)
@@ -186,6 +188,8 @@ for ktest in range(ntest):
     # mse_all = np.ma.zeros(dims2d)
     # mselw_all = np.ma.zeros(dims2d)
     lwacre_all = np.ma.zeros(dims2d, dtype=np.float32)
+    sh_all = np.ma.zeros(dims2d, dtype=np.float32)
+    lh_all = np.ma.zeros(dims2d, dtype=np.float32)
 
     ivar_all = np.ma.zeros(dims2d)
 
@@ -237,6 +241,12 @@ for ktest in range(ntest):
         # mse = read_mse(datdir,t0,t1) # J/m2
         lwacre_all[imemb,:,:,:] = read_lwacre(datdir,t0,t1,mask=True,drop=True) # W/m2
 
+        # Surface fluxes
+        varname = 'HFX'
+        sh_all[imemb,:,:,:] = var_read_2d(datdir,varname,t0,t1,mask=True, drop=True) # W/m2
+        varname = 'LH'
+        lh_all[imemb,:,:,:] = var_read_2d(datdir,varname,t0,t1,mask=True, drop=True) # W/m2
+
         # Line contour variable ("cvar")
         # Vertical motion
         if contvar_select == 'w':
@@ -257,41 +267,53 @@ for ktest in range(ntest):
 
         # Three-dimensional dependent variables ("var")
 
-        # Radar Reflectivity
-        if fillvar_select == 'dbz':
-            varname = fillvar_select
-            var = var_read_3d(datdir3d,varname,t0,t1)
-        # Radiation
-        elif fillvar_select == 'lwcrf':
-            varname = 'RTHRATLWCRF'
-            var_all[imemb,:,:,:,:] = var_read_3d_hires(datdir3d,varname,t0,t1,mask=True,drop=True) * 3600.*24 # K/s --> K/d
-            # varname = 'RTHRATLWC'
-            # var -= var_read_3d(datdir3d,varname,t0,t1) * 3600.*24 # K/s --> K/d
-        # Horizontal temperature anomaly
-        elif fillvar_select == 'tprm':
-            varname = 'T'
-            tmpk = var_read_3d(datdir3d,varname,t0,t1) # K
-            varname = 'QVAPOR'
-            qv = var_read_3d(datdir3d,varname,t0,t1) # kg/kg
-            var = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
-            # Subtract time-dependent domain average
-            radius_ls = 12 # deg
-            # var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
-            # var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
-            # var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
-        # Relative humidity
-        elif fillvar_select == 'rh':
-            varname = 'T'
-            tmpk = var_read_3d(datdir3d,varname,t0,t1) # K
-            # print(np.min(tmpk))
-            varname = 'QVAPOR'
-            qv = var_read_3d(datdir3d,varname,t0,t1) # kg/kg
-            # var = relh(qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2,tmpk,ice=1) # RH in %
-        # Absolute vorticity
-        elif fillvar_select == 'avor':
-            varname = 'AVOR'
-            var = var_read_3d(datdir3d,varname,t0,t1) # 10^-5 /s
-            var*=10 # --> 10^/6 /s
+        varname = 'RTHRATLWCRF'
+        crf_all[imemb,:,:,:,:] = var_read_3d_hires(datdir3d,varname,t0,t1,mask=True,drop=True) * 3600.*24 # K/s --> K/d
+        varname = 'H_DIABATIC'
+        hdia_all[imemb,:,:,:,:] = var_read_3d_hires(datdir3d,varname,t0,t1,mask=True,drop=True) * 3600.*24 # K/s --> K/d
+        varname = 'T'
+        tmpk_all[imemb,:,:,:,:] = var_read_3d_hires(datdir3d,varname,t0,t1,mask=True,drop=True) # K
+        varname = 'QVAPOR'
+        qv_all[imemb,:,:,:,:] = var_read_3d_hires(datdir3d,varname,t0,t1,mask=True,drop=True) # kg/kg
+        # # Radar Reflectivity
+        # if fillvar_select == 'dbz':
+        #     varname = fillvar_select
+        #     var = var_read_3d(datdir3d,varname,t0,t1)
+        # # Radiation
+        # elif fillvar_select == 'lwcrf':
+        #     varname = 'RTHRATLWCRF'
+        #     var_all[imemb,:,:,:,:] = var_read_3d_hires(datdir3d,varname,t0,t1,mask=True,drop=True) * 3600.*24 # K/s --> K/d
+        #     # varname = 'RTHRATLWC'
+        #     # var -= var_read_3d(datdir3d,varname,t0,t1) * 3600.*24 # K/s --> K/d
+        # # Horizontal temperature anomaly
+        # elif fillvar_select == 'tprm':
+        #     varname = 'T'
+        #     tmpk = var_read_3d(datdir3d,varname,t0,t1) # K
+        #     varname = 'QVAPOR'
+        #     qv = var_read_3d(datdir3d,varname,t0,t1) # kg/kg
+        #     var = theta_virtual(tmpk,qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2) # K
+        #     # Subtract time-dependent domain average
+        #     radius_ls = 12 # deg
+        #     # var_ls = mask_tc_track(track_file, radius_ls, var, lon, lat, t0, t1)
+        #     # var_ls_avg = np.ma.mean(var_ls,axis=(0,2,3))
+        #     # var -= var_ls_avg[np.newaxis,:,np.newaxis,np.newaxis]
+        # # Relative humidity
+        # elif fillvar_select == 'rh':
+        #     varname = 'T'
+        #     tmpk = var_read_3d(datdir3d,varname,t0,t1) # K
+        #     # print(np.min(tmpk))
+        #     varname = 'QVAPOR'
+        #     qv = var_read_3d(datdir3d,varname,t0,t1) # kg/kg
+        #     # var = relh(qv,(pres[np.newaxis,:,np.newaxis,np.newaxis])*1e2,tmpk,ice=1) # RH in %
+        # # Absolute vorticity
+        # elif fillvar_select == 'avor':
+        #     varname = 'AVOR'
+        #     var = var_read_3d(datdir3d,varname,t0,t1) # 10^-5 /s
+        #     var*=10 # --> 10^/6 /s
+        # # Diabatic heating
+        # elif fillvar_select == 'h_diabatic':
+        #     varname = 'H_DIABATIC'
+        #     var_all[imemb,:,:,:,:] = var_read_3d_hires(datdir3d,varname,t0,t1,mask=True,drop=True) * 3600.*24 # K/s --> K/d
 
 
         # Indexing variable
@@ -314,9 +336,7 @@ for ktest in range(ntest):
             ivar_all[imemb,:,:,:] = irain # kg/kg
         # LW-ACRE
         elif ivar_select == 'lwacre':
-            binfil = Dataset(datdir+'LWacre.nc') # this opens the netcdf file
-            ivar_all[imemb,:,:,:] = binfil.variables['LWUPB'][t0:t1,:,:,:] # W/m2
-            binfil.close()
+            ivar_all[imemb,:,:,:] = read_lwacre(datdir,t0,t1,mask=True,drop=True) # W/m2
         # Vertical mass flux
         elif ivar_select == 'vmf':
             g=9.81 # gravity, m/s2
@@ -411,7 +431,8 @@ for ktest in range(ntest):
         log_x='log'
     # LW-ACRE
     elif ivar_select == 'lwacre':
-        fmin=-50; fmax=200 # W/m2
+        # fmin=-50; fmax=200 # W/m2
+        fmin=50; fmax=200 # W/m2
         step=5
         bins=np.arange(fmin,fmax+step,step)
         xlabel='LW-ACRE [W/m**2]'
@@ -440,12 +461,19 @@ for ktest in range(ntest):
 
     # Loop and composite variables
 
-    var_binned=np.ma.zeros((nbins-1,nz))
+    frequency = np.zeros(nbins-1)
+    # var_binned=np.ma.zeros((nbins-1,nz))
+    crf_binned=np.ma.zeros((nbins-1,nz))
+    hdia_binned=np.ma.zeros((nbins-1,nz))
+    tmpk_binned=np.ma.zeros((nbins-1,nz))
+    qv_binned=np.ma.zeros((nbins-1,nz))
     cvar_binned=np.ma.zeros((nbins-1,nz))
     strat_binned=np.ma.zeros((nbins-1,6)) # Bin count: 0-non-raining, 1-conv, 2-strat, 3-other/anvil
     # ddtq_binned=np.ma.zeros((ntest,nbins-1))
     # mselw_binned=np.ma.zeros((ntest,nbins-1))
     lwacre_binned=np.ma.zeros((nbins-1))
+    sh_binned=np.ma.zeros((nbins-1))
+    lh_binned=np.ma.zeros((nbins-1))
     rain_binned=np.ma.zeros((nbins-1))
     # mselw_strat=np.ma.zeros((ntest,nbins-1,4)) # LSEPLWP in: 0-non-raining, 1-conv, 2-strat, 3-other/anvil
     lwacre_strat=np.ma.zeros((nbins-1,6)) # LWACRE in: 0-non-raining, 1-conv, 2-strat, 3-other/anvil
@@ -456,20 +484,33 @@ for ktest in range(ntest):
     for ibin in range(nbins-1):
 
         indices = ((ivar_all >= bins[ibin]) & (ivar_all < bins[ibin+1])).nonzero()
+        frequency[ibin] = indices[0].shape[0]
 
         if indices[0].shape[0] > 3:
-            var_binned[ibin,:]  = np.mean(var_all[indices[0],indices[1],:,indices[2],indices[3]], axis=0, dtype=np.float64)
+            # var_binned[ibin,:]  = np.mean(var_all[indices[0],indices[1],:,indices[2],indices[3]], axis=0, dtype=np.float64)
+            crf_binned[ibin,:]  = np.mean(crf_all[indices[0],indices[1],:,indices[2],indices[3]], axis=0, dtype=np.float64)
+            hdia_binned[ibin,:]  = np.mean(hdia_all[indices[0],indices[1],:,indices[2],indices[3]], axis=0, dtype=np.float64)
+            tmpk_binned[ibin,:]  = np.mean(tmpk_all[indices[0],indices[1],:,indices[2],indices[3]], axis=0, dtype=np.float64)
+            qv_binned[ibin,:]  = np.mean(qv_all[indices[0],indices[1],:,indices[2],indices[3]], axis=0, dtype=np.float64)
             cvar_binned[ibin,:] = np.mean(cvar_all[indices[0],indices[1],:,indices[2],indices[3]], axis=0, dtype=np.float64)
             # ddtq_binned[ktest,ibin] = np.mean(ddtq_all[ ktest,indices[0],indices[1],  indices[2],indices[3]], axis=0, dtype=np.float64)
             # mselw_binned[ktest,ibin]  = np.mean(mselw_all[ktest,indices[0],indices[1],  indices[2],indices[3]], axis=0, dtype=np.float64)
             lwacre_binned[ibin]  = np.mean(lwacre_all[indices[0],indices[1],  indices[2],indices[3]], axis=0, dtype=np.float64)
+            sh_binned[ibin]  = np.mean(sh_all[indices[0],indices[1],  indices[2],indices[3]], axis=0, dtype=np.float64)
+            lh_binned[ibin]  = np.mean(lh_all[indices[0],indices[1],  indices[2],indices[3]], axis=0, dtype=np.float64)
             rain_binned[ibin]  = np.mean(rain_all[indices[0],indices[1],  indices[2],indices[3]], axis=0, dtype=np.float64)
         else:
-            var_binned[ibin,:] = np.nan
+            # var_binned[ibin,:] = np.nan
+            crf_binned[ibin,:] = np.nan
+            hdia_binned[ibin,:] = np.nan
+            tmpk_binned[ibin,:] = np.nan
+            qv_binned[ibin,:] = np.nan
             cvar_binned[ibin,:] = np.nan
             # ddtq_binned[ktest,ibin] = np.nan
             # mselw_binned[ktest,ibin] = np.nan
             lwacre_binned[ibin]= np.nan
+            sh_binned[ibin]= np.nan
+            lh_binned[ibin]= np.nan
             rain_binned[ibin] = np.nan
             strat_binned[ibin,:] = np.nan
             # mselw_strat[ktest,ibin,:] = np.nan
@@ -507,7 +548,8 @@ for ktest in range(ntest):
     # for itest in range(ntest):
     pickle_file = main_pickle+'/binned_2d_'+test_str+'_'+ivar_select+'_'+str(nmem)+'memb_'+str(nt)+'hrs.pkl'
     with open(pickle_file, 'wb') as file:
-        pickle.dump([bins, var_binned, cvar_binned, lwacre_binned, rain_binned,
+        pickle.dump([bins, frequency, crf_binned, hdia_binned, tmpk_binned, qv_binned,
+                     cvar_binned, lwacre_binned, sh_binned, lh_binned, rain_binned,
                         strat_binned, lwacre_strat, rain_strat], file)
     print('Done writing '+test_str+'!')
 

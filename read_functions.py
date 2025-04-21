@@ -7,7 +7,7 @@ import subprocess
 ###### Functions for getting file specs #########################
 
 def get_file_dims(datdir):
-    varfil_main = Dataset(datdir+'T.nc')
+    varfil_main = Dataset(datdir+'T_HiRes.nc')
     # varfil_main = Dataset(datdir+'U10.nc')
     nz = varfil_main.dimensions['level'].size
     nx1 = varfil_main.dimensions['lat'].size
@@ -98,6 +98,12 @@ def read_qcloud(datdir, t0, t1, mask=True, drop=False):
 #     mse = varfil_main.variables['mse_int'][t0:t1,:,:] # J/m2
 #     varfil_main.close()
 #     return mask_edges(mse,drop)
+
+def var_read_zb_hires(datdir, mask=True, drop=False):
+    varfil_main = Dataset(datdir+'ZB_HiRes.nc')
+    var = varfil_main.variables['ZB'][:,:,:,:]
+    varfil_main.close()
+    return mask_edges(var,mask,drop)
 
 def read_mse_diag(datdir, varname, t0, t1, mask=True, drop=False):
     varfil_main = Dataset(datdir+'mse_diag.nc')

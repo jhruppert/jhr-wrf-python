@@ -27,7 +27,7 @@ import sys
 #     sys.exit()
 
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 filename_out='mse_diag.nc' # this is for ALL variables in the var_names list
 

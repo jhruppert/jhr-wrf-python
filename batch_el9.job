@@ -2,7 +2,7 @@
 #SBATCH -p radclouds_el9
 #SBATCH --container=el7
 #SBATCH -N 1
-#SBATCH -n 56 ##112 # max of N*56
+#SBATCH -n 1 # max of N*56
 ###SBATCH --nodelist=c854
 #SBATCH --exclusive
 #SBATCH --output=outbatch_out.%j.txt
@@ -24,14 +24,14 @@ source ~/.bashrc
 # python binned_plots_2d.py
 # python binned_dual_write.py
 # python write_theta_e.py
-python binned_cross_2d_write.py
+# python binned_cross_2d_write.py
 
 # MPI jobs
 # mpirun python tests_various.py
 # mpirun python write_theta_e.py
 # mpirun python write_isentrop_binned_v2.py
 # mpirun python write_isentrop_binned_addvar.py
-# mpirun python mean_profiles_write.py
+mpirun python mean_profiles_write.py
 # mpirun python binned_cross_2d_write_v2.py
 
 # echo 'Done!!'

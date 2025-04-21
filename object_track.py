@@ -72,8 +72,10 @@ def object_track(f, lon, lat, sens_test, basis):
     # BULK MASKING
 
     # Mask out values < 3 sigma
-    f_sigma = f_smooth / np.std(f_smooth)
-    f_masked = np.ma.array(f_sigma)
+    # f_sigma = f_smooth / np.std(f_smooth)
+    # f_masked = np.ma.array(f_sigma)
+    f_std = (f_smooth - np.nanmean(f_smooth)) / np.nanstd(f_smooth)
+    f_masked = np.ma.array(f_std)
     f_masked = np.ma.masked_where(np.abs(f_masked) < 3, f_masked, copy=False)
 
     # Mask out data within 0.5*r_max from boundaries
@@ -125,7 +127,7 @@ def object_track(f, lon, lat, sens_test, basis):
         mloc = np.where(f_masked[it,:,:] == fmax)
         xmax = mloc[1][0]
         ymax = mloc[0][0]
-        
+
         radius = np.sqrt( (lon-lon[ymax,xmax])**2 + (lat-lat[ymax,xmax])**2 )
         f_masked[it-1,:,:] = np.ma.masked_where(radius > r_max, f_masked[it-1,:,:], copy=False)
 

@@ -102,19 +102,18 @@ def density_moist(T, qv, pres):
 #   T    - temp [C or K]
 #   pres - pressure [Pa]
 def density_dry(T, pres):
-    
+
     p_fact=1
     if np.max(pres) < 1e4:
         p_fact=1e2 # Convert to Pa
-    
+
     if np.min(T) < 105.: # degC or K?
         T0=273.16
     else:
         T0=0.
-    T+=T0
-    
+
     rd=287.04
-    return pres*p_fact / ( rd * T )
+    return pres*p_fact / ( rd * (T+T0) )
 
 
 ############################################################################
@@ -370,14 +369,11 @@ def eice(T):
 def rv_saturation(T, pres):
 
     if np.min(T) < 105.: # degC or K?
-        T0=273.16
+        T0=0
     else:
-        T0=0.
-    T+=T0
+        T0=-273.16
 
-    TK=273.16
-
-    esat=611.2*np.exp(17.62*(T-TK)/(243.12+(T-TK))) # Pa
+    esat=611.2*np.exp(17.62*(T+T0)/(243.12+(T+T0))) # Pa
 
     Mw=18.0160 # molecular weight of water
     Md=28.9660 # molecular weight of dry air

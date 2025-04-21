@@ -1,21 +1,31 @@
 #!/bin/bash
 #SBATCH -p radclouds
-#SBATCH -N 10
-#SBATCH -n 10 ##112 # max of N*56
-#SBATCH --nodelist=c795,c797,c798,c799,c855,c874,c875,c965,c968,c969
-###SBATCH -N 1
-###SBATCH -n 56 ##112 # max of N*56
-###SBATCH -n 1 ##112 # max of N*56
-###SBATCH --nodelist=c799
 #SBATCH --exclusive
 #SBATCH --output=outbatch_out.%j.txt
 #SBATCH --error=outbatch_err.%j.txt
 #SBATCH -t 48:00:00
+
 ### Not using:
-###SBATCH --nodelist=c854,c855,c874,c875
-###SBATCH --nodelist=c965,c966,c968,c969
 ###SBATCH --ntasks-per-node 3
 ###SBATCH --reservation radclouds
+
+###SBATCH -N 1
+###SBATCH -n 56 ##112 # max of N*56
+###SBATCH -n 1 ##112 # max of N*56
+###SBATCH --nodelist=c799
+
+###SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c874,c875,c965,c966,c968,c969
+
+#SBATCH -N 10
+#SBATCH -n 10 ##112 # max of N*56
+##SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c875,c875
+#SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c874,c875,c965,c966
+
+##SBATCH -N 3
+##SBATCH -n 3
+####SBATCH --nodelist=c965,c969
+##SBATCH --nodelist=c793,c795,c797
+
 
 module purge
 source ~/.bashrc
@@ -32,15 +42,15 @@ source ~/.bashrc
 # python binned_plots_2d.py
 # python binned_dual_write.py
 # python write_theta_e.py
-# python binned_cross_2d_write.py
+#python binned_cross_2d_write.py
 
 # MPI jobs
 # mpirun python tests_various.py
 # mpirun python write_theta_e.py
 # mpirun python write_isentrop_binned_v2.py
 # mpirun python write_isentrop_binned_addvar.py
-# mpirun python mean_profiles_write.py
+mpirun python mean_profiles_write.py
 # mpirun python binned_cross_2d_write_v2.py
-mpirun python write_percentile_cluster.py
+# mpirun python write_percentile_cluster.py
 
 # echo 'Done!!'

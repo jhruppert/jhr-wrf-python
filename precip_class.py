@@ -53,10 +53,10 @@ def precip_class(q_int):
 
     # Initialize output array
     if np.ma.is_masked(q_int):
-        c_type = np.ma.zeros(shape_out)
+        c_type = np.ma.zeros(shape_out, dtype=np.int8)
         domask=True
     else:
-        c_type = np.zeros(shape_out)
+        c_type = np.zeros(shape_out, dtype=np.int8)
         domask=False
 
     cr = IWP/LWP

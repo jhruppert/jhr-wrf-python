@@ -5,55 +5,33 @@
 # 7/11/24
 
 import numpy as np
-import matplotlib
-from matplotlib import ticker
-import matplotlib.pyplot as plt
-import sys
 from thermo_functions import *
 from precip_class import *
 from memory_usage import *
 from read_functions import *
 import pickle
-import os.path
+import sys
 from mpi4py import MPI
 
 comm = MPI.COMM_WORLD
 nproc = comm.Get_size()
 
+print(comm.rank, 'WORKING!!')
 
 # #### Main settings
 
+# Testing mode: only runs a couple time steps and doesn't write out
+testing=True
+# testing=False
+
 storm = 'haiyan'
-storm = 'maria'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
 datdir2 = 'post/d02/'
 main_pickle = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/jruppert/tc_postproc/"+storm+'/'
 figdir = "/home/jamesrup/figures/tc/ens/boxplot/"
-
-# Set to true to do sensitivty test comparisons
-# Else: analysis of CTL only
-do_tests=True
-# do_tests=False
-t1_test=24 # n time steps to sample for tests
-# t1_test=2 # n time steps to sample for tests
-
-# Read and write variables, or load in saved pickle?
-# do_write=True
-# do_write=False
-
-# pickle_file = main_pickle+'mean_profiles_'+str(t1_test)+'hrs.pkl'
-# if not do_write:
-#     if not os.path.isfile(pickle_file):
-#         raise Exception('Pickle file not found!')
-
-time_neglect=12 # time steps from start to neglect
-
-# Number of sample time steps (if only running CTL)
-# nt=200 # will be chopped down to max available
-nt=24
-# nt=12
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
@@ -68,99 +46,282 @@ nustr = np.char.zfill(memb_nums_str, 2)
 memb_all=np.char.add('memb_',nustr)
 
 # Get dimensions
-test_str='ctl'
-datdir = main+storm+'/'+memb_all[0]+'/'+test_str+'/'+datdir2
-nt_data, nz, nx1, nx2, pres = get_file_dims(datdir)
-dp = (pres[1]-pres[0])*1e2 # Pa
-nt=np.min([nt,nt_data-time_neglect])
-if do_tests:
-    nt=t1_test
-nx1-=80*2
-nx2-=80*2
-# Setting for (vertical) HiRes output
-nz=39
-print(comm.rank, 'WORKED')
+def get_nt(test_str):
+    datdir = main+storm+'/'+memb_all[0]+'/'+test_str+'/'+datdir2
+    nt_data, nz, nx1, nx2, pres = get_file_dims(datdir)
+    # dp = (pres[1]-pres[0])*1e2 # Pa
+    # nt=np.min([nt,nt_data-time_neglect])
+    return nt_data, nz, pres
+nt_ctl, nz, pres = get_nt('ctl')
 
 # Tests to read and compare
 if storm == 'haiyan':
     tests = ['ctl','ncrf36h','STRATANVIL_ON','STRATANVIL_OFF','STRAT_OFF']
-    tests_str = ['CTL','NCRF','STRATANVON','STRATANVOFF','STRATOFF']
     # tests = ['ctl','ncrf36h']
-    # tests_str = ['CTL','NCRF']
     # tests = ['crfon','ncrf']
 elif storm == 'maria':
     # tests = ['ctl','ncrf36h']
     tests = ['ctl','ncrf48h']
-    tests_str = ['CTL','NCRF']
 
 ntest = len(tests)
 
-# ### Function to compute means
+### FUNCTIONS ###############################################
+
+# Function to get MSE and DSE
+def calc_diagnostics(mean_str, allvars, pres):
+
+    nmean = len(mean_str)
+
+    dp = pres[0]-pres[1] # Pa
+    vint_top = 100e2 # top for MSE integrals
+    k_vint_top = np.where(pres == vint_top)[0][0]
+    k_850 = np.where(pres == 850e2)[0][0]
+
+    # Constants
+    cp=1004.  # J/K/kg
+    cpl=4186. # J/k/kg
+    cpv=1885. # J/K/kg
+    lv0=2.5e6 # J/kg
+    g=9.81 # m/s2
+
+    def vert_int(invar):
+        # Vertically integrate: 1/g * SUM(var*dp)
+        # Negative is absorbed by dp>0
+        # var_sum = np.sum(invar, axis=1)*dp/g
+        # return np.ma.sum(invar[:,:k_vint_top+1,...], axis=1)*dp/g
+        return np.sum(invar[:,:k_vint_top+1], axis=1)*dp/g
+
+    def vadv_vint(w, rho, invar):
+        # omeg = w * (-1)*g*rho # omega from hydrostatic approximation
+        # Using Lagrangian perspective, i.e., d/dt + ADV + ...
+        # VADV = omega * d(invar)/dp
+        vadv = w * g*rho * np.gradient(invar, (-dp), axis=1)
+        return vert_int(vadv)
+
+    mse_vint = {}
+    vadv_mse_vint = {}
+    vadv_dse_vint = {}
+    vmf = {}
+    vmfu = {}
+    vmfd = {}
+    # vmfu_850 = {}
+    # vmfd_850 = {}
+
+    for imean in range(nmean):
+
+        tmpk = allvars['T'][mean_str[imean]]
+        z    = allvars['Z'][mean_str[imean]]
+        qv   = allvars['QVAPOR'][mean_str[imean]]
+        w    = allvars['W'][mean_str[imean]]
+        wu   = allvars['W_up'][mean_str[imean]]
+        wd   = allvars['W_dn'][mean_str[imean]]
+        rho  = allvars['rho'][mean_str[imean]]
+
+        # Dry static energy (DSE)
+        dse = cp*tmpk + g*z # J/kg
+        print('IMEAN: ',mean_str[imean])
+        print('dse: ',dse)
+        print()
+        # Latent heat of vaporization
+        lv = lv0 - (cpl-cpv)*(tmpk-273.15)
+        # Moist static energy (MSE)
+        mse = dse + lv*qv # J/kg
+
+        # Vertically integrated MSE
+        mse_vint[mean_str[imean]] = vert_int(mse) # J/m2
+
+        vadv_mse_vint[mean_str[imean]] = vadv_vint(w, rho, mse)
+        vadv_dse_vint[mean_str[imean]] = vadv_vint(w, rho, dse)
+
+        vmf[mean_str[imean]] = vert_int(w) # kg/m/s
+        vmfu[mean_str[imean]] = vert_int(wu) # kg/m/s
+        vmfd[mean_str[imean]] = vert_int(wd) # kg/m/s
+        # vmfu_850[mean_str[imean]] = rho[:,k_850] * wu[:,k_850] # m/s * kg/m3 --> kg/m2/s
+        # vmfd_850[mean_str[imean]] = rho[:,k_850] * wd[:,k_850] # kg/m2/s
+
+    diag_vars = {
+        'mse_vint': mse_vint,
+        'vadv_mse_vint': vadv_mse_vint,
+        'vadv_dse_vint': vadv_dse_vint,
+        'vmf': vmf,
+        'vmfu': vmfu,
+        'vmfd': vmfd,
+        # 'vmfu_850': vmfu_850,
+        # 'vmfd_850': vmfd_850,
+    }
+
+    return diag_vars
+
+# ### Functions to compute means
 # 
 # These means are averaged over all ensemble members plus some selection of convective type or moisture threshold.
 
-def compute_mean_profiles(nmean, pclass, cwv, w, rho, qv, tmpk, lw, lwc, sw, swc):
-
+# def get_mean_indices(pclass, cwv):
+def get_mean_indices(datdir, t0, t1):
+    # Get indices for each mean
     # 0-5: pclass 0-5
     # 6: pclass=1,4,5 (deep conv + strat + anvil)
     # 7 = where PW ≥ 48 (Mapes et al. 2018)
     # 8 = where PW < 48 (Mapes et al. 2018)
     # 9 = whole domain
+    mean_str = ["Non-cloud", "Deep", "Cong", "Shallow", "Strat", "Anvil",
+                'MCS', 'Moist', 'Dry', 'All']
+    nmean = len(mean_str)
 
-    moist_margin = 48 # kg/m2 or mm
+    # Precip classification
+    q_int = read_qcloud(datdir,t0,t1,mask=True,drop=True) # mm
+    pclass = precip_class(q_int)
+    # CWV
+    varname='PW'
+    cwv = var_read_2d(datdir,varname,t0,t1,mask=True,drop=True) # mm
 
     pclass_z = np.repeat(pclass[:,np.newaxis,...], nz, axis=1)
     cwv_z    = np.repeat(cwv[:,np.newaxis,...], nz, axis=1)
 
-    dims_mean = (nmean, nt, nz)
-    w_mean    = np.zeros(dims_mean)
-    rho_mean  = np.zeros(dims_mean)
-    qv_mean   = np.zeros(dims_mean)
-    tmpk_mean = np.zeros(dims_mean)
-    lw_mean   = np.zeros(dims_mean)
-    lwc_mean  = np.zeros(dims_mean)
-    sw_mean   = np.zeros(dims_mean)
-    swc_mean  = np.zeros(dims_mean)
+    moist_margin = 48 # kg/m2 or mm
 
+    # indices_mean_2d = {}
+    indices_mean_3d = {}
     for imean in range(nmean):
-
         if imean <= 5:
-            indices_mean = (pclass_z == imean)
+            # indices_mean_2d[mean_str[imean]] = (pclass == imean)
+            indices_mean_3d[mean_str[imean]] = (pclass_z == imean)
         elif imean == 6:
-            indices_mean = ((pclass_z == 1) | (pclass_z == 4) | (pclass_z == 5))
+            # indices_mean_2d[mean_str[imean]] = ((pclass == 1) | (pclass == 4) | (pclass == 5))
+            indices_mean_3d[mean_str[imean]] = ((pclass_z == 1) | (pclass_z == 4) | (pclass_z == 5))
         elif imean == 7:
-            indices_mean = (cwv_z >= moist_margin)
+            # indices_mean_2d[mean_str[imean]] = (cwv >= moist_margin)
+            indices_mean_3d[mean_str[imean]] = (cwv_z >= moist_margin)
         elif imean == 8:
-            indices_mean = (cwv_z < moist_margin)
+            # indices_mean_2d[mean_str[imean]] = (cwv < moist_margin)
+            indices_mean_3d[mean_str[imean]] = (cwv_z < moist_margin)
         elif imean == 9:
-            indices_mean = (cwv_z < 1e9)
+            # indices_mean_2d[mean_str[imean]] = (cwv < 1e9)
+            indices_mean_3d[mean_str[imean]] = (cwv_z < 1e9)
 
-        w_mean[imean,:,:]    = np.mean(w.data, axis=(2,3), where=indices_mean)
-        rho_mean[imean,:,:]  = np.mean(rho.data, axis=(2,3), where=indices_mean)
-        qv_mean[imean,:,:]   = np.mean(qv.data, axis=(2,3), where=indices_mean)
-        tmpk_mean[imean,:,:] = np.mean(tmpk.data, axis=(2,3), where=indices_mean)
-        lw_mean[imean,:,:]   = np.mean(lw.data, axis=(2,3), where=indices_mean)
-        lwc_mean[imean,:,:]  = np.mean(lwc.data, axis=(2,3), where=indices_mean)
-        sw_mean[imean,:,:]   = np.mean(sw.data, axis=(2,3), where=indices_mean)
-        swc_mean[imean,:,:]  = np.mean(swc.data, axis=(2,3), where=indices_mean)
+    return mean_str, indices_mean_3d
 
-    return w_mean, rho_mean, qv_mean, tmpk_mean, lw_mean, lwc_mean, sw_mean, swc_mean
+# ### Function to process a single test for a given ensemble member
+def process_member(datdir, main_pickle, memb_str, test_str):
+
+    # Time settings
+    # Run all available time steps
+    t0=0
+    nt_test, nz, pres = get_nt(test_str)
+    t1=nt_test
+
+    # Run only TEST time steps
+    # t1_test=49
+    # if test_str == 'ctl':
+    #     # t0=time_neglect
+    #     t0=36
+    #     # Control test time sample
+    #     t1=t0+t1_test
+    # else:
+    #     t0=0
+    #     # t1=49 # max
+    #     # Control test time sample
+    #     t1=t1_test
+    # For testing
+    if testing:
+        t0=30
+        t1=33
+
+    # Get indices to average over for each mean
+    # mean_str, indices_mean_2d, indices_mean_3d = get_mean_indices(pclass, cwv)
+    mean_str, indices_mean_3d = get_mean_indices(datdir, t0, t1)
+    nmean = len(mean_str)
+
+    # Compute all means across all variables for this ens member
+
+    def compute_mean_profiles(mean_str, indices_mean_3d, invar_3d):
+        nmean = len(mean_str)
+        var_mean = {}
+        for imean in range(nmean):
+            var_mean[mean_str[imean]] = np.mean(invar_3d.data, axis=(2,3), where=indices_mean_3d[mean_str[imean]])
+        return var_mean
+
+    def read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d):
+        var_tmp = var_read_3d_hires(datdir, varname, t0, t1, mask=True, drop=True)
+        var_mean = compute_mean_profiles(mean_str, indices_mean_3d, var_tmp)
+        return var_mean
+
+    def read_mean_vmf_vars(datdir, t0, t1, mean_str, indices_mean_3d):
+        rho = var_read_3d_hires(datdir, 'rho', t0, t1, mask=True, drop=True)
+        w_tmp = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True)
+        # w_tmp *= rho # kg/m2/s
+        wu = np.where((w_tmp > 0), w_tmp, 0)
+        wd = np.where((w_tmp < 0), w_tmp, 0)
+ #       w_mean = compute_mean_profiles(mean_str, indices_mean_3d, w_tmp)
+ #       wu_mean = compute_mean_profiles(mean_str, indices_mean_3d, wu)
+ #       wd_mean = compute_mean_profiles(mean_str, indices_mean_3d, wd)
+        # rho_mean = compute_mean_profiles(mean_str, indices_mean_3d, rho)
+        w_mean = {}
+        wu_mean = {}
+        wd_mean = {}
+        for imean in range(nmean):
+            w_mean[mean_str[imean]]  = np.sum(w_tmp.data, axis=(2,3), where=indices_mean_3d[mean_str[imean]])
+            wu_mean[mean_str[imean]] = np.sum(wu.data,   axis=(2,3), where=indices_mean_3d[mean_str[imean]])
+            wd_mean[mean_str[imean]] = np.sum(wd.data,   axis=(2,3), where=indices_mean_3d[mean_str[imean]])
+        return w_mean, wu_mean, wd_mean#, rho_mean
+
+    varnames=[
+        'rho',
+        'QVAPOR',
+        'T',
+        'RTHRATLW',
+        'RTHRATLWC',
+        'RTHRATSW',
+        'RTHRATSWC',
+        'Z',
+    ]
+
+    # Read 3D variables and take means at same time
+    allvars_3d_mean = {}
+
+    # Special case for W/VMF
+    w_mean, wu_mean, wd_mean = read_mean_vmf_vars(datdir, t0, t1, mean_str, indices_mean_3d)
+    allvars_3d_mean['W'] = w_mean
+    allvars_3d_mean['W_up'] = wu_mean
+    allvars_3d_mean['W_dn'] = wd_mean
+
+    for varname in varnames:
+        allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
+
+    # Read ZB once, add to Z
+    zb = var_read_zb_hires(datdir, mask=True, drop=True)
+    zb = np.repeat(zb, t1-t0, axis=0)
+    zb_mean = compute_mean_profiles(mean_str, indices_mean_3d, zb)
+    for imean in range(nmean):
+        allvars_3d_mean['Z'][mean_str[imean]] += zb_mean[mean_str[imean]]
+
+    # Get diagnostic variables
+    diag_vars = calc_diagnostics(mean_str, allvars_3d_mean, pres*1e2)
+
+    # Remove height - since don't need this
+    # allvars_3d_mean.pop('Z')
+
+    # Now add diagnostic variables to mean variable dictionary
+    for key in diag_vars.keys():
+        allvars_3d_mean[key] = diag_vars[key]
+
+    if testing:
+        print("Test worked! Ending job before write-out...")
+        sys.exit()
+
+    ### Save processed data as pickle
+
+    # pickle_file = main_pickle+memb_all[imemb]+'/mean_profiles_'+str(t1_test)+'hrs.pkl'
+#    pickle_file = main_pickle+memb_str+'/mean_profiles_'+test_str+'_alltime.pkl'
+    pickle_file = main_pickle+memb_str+'/mean_profiles_'+test_str+'_alltime_vmfsum.pkl'
+    with open(pickle_file, 'wb') as file:
+        pickle.dump(allvars_3d_mean, file)
+
+    return None
 
 # ### Read loop
 
 # Main read loops for 3D (dependent) variables
-
-# Arrays to save variables
-nmean = 10
-dims = (ntest, nmean, nt, nz)
-w_mean    = np.zeros(dims)
-rho_mean  = np.zeros(dims)
-qv_mean   = np.zeros(dims)
-tmpk_mean = np.zeros(dims)
-lw_mean   = np.zeros(dims)
-lwc_mean  = np.zeros(dims)
-sw_mean   = np.zeros(dims)
-swc_mean  = np.zeros(dims)
 
 for itest in range(ntest):
 # for itest in range(1):
@@ -168,89 +329,22 @@ for itest in range(ntest):
     test_str = tests[itest]
     print()
     print('Running test: ',test_str)
-
-    # t0=time_neglect # neglect the first 12 time steps
-    # t1=t0+nt
-    if test_str == 'ctl':
-        t0=time_neglect
-        t1=nt+t0
-        if do_tests:
-            t0=36
-            # t1=t0+49
-            # Control test time sample
-            t1=t0+t1_test
-    else:
-        t0=0
-        # t1=49 # max
-        # Control test time sample
-        t1=t1_test
+    print()
 
     # Loop over ensemble members
     # for imemb in range(nmem):
     # for imemb in range(1):
     imemb = comm.rank
+    # imemb = comm.rank+7
 
     print('Running imemb: ',memb_all[imemb])
+    print()
 
     datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
-    print(datdir)
+    print('Datdir: ',datdir)
+    print()
 
-    # Stratiform ID
-    q_int = read_qcloud(datdir,t0,t1,mask=True,drop=True) # mm
-    pclass = precip_class(q_int)
-
-    # CWV
-    varname='PW'
-    cwv = var_read_2d(datdir,varname,t0,t1,mask=True,drop=True) # mm
-
-    # 3D variables
-    w = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True) # m/s
-    rho = var_read_3d_hires(datdir, 'rho', t0, t1, mask=True, drop=True) # kg/m3
-    qv = var_read_3d_hires(datdir, 'QVAPOR', t0, t1, mask=True, drop=True) # kg/kg
-    tmpk = var_read_3d_hires(datdir, 'T', t0, t1, mask=True, drop=True) # K
-    lw = var_read_3d_hires(datdir, 'RTHRATLW', t0, t1, mask=True, drop=True) # K/s
-    lwc = var_read_3d_hires(datdir, 'RTHRATLWC', t0, t1, mask=True, drop=True) # K/s
-    sw = var_read_3d_hires(datdir, 'RTHRATSW', t0, t1, mask=True, drop=True) # K/s
-    swc = var_read_3d_hires(datdir, 'RTHRATSWC', t0, t1, mask=True, drop=True) # K/s
-
-    print("Computing means")
-    w_imean, rho_imean, qv_imean, tmpk_imean, \
-    lw_imean, lwc_imean, sw_imean, swc_imean = compute_mean_profiles(nmean, pclass, cwv, w, rho, qv, tmpk, lw, lwc, sw, swc)
-
-    # Save variables for each ens member
-    # w_mean[itest,imemb,...]    = w_imean
-    # qv_mean[itest,imemb,...]   = qv_imean
-    # tmpk_mean[itest,imemb,...] = tmpk_imean
-    w_mean[itest,...]    = w_imean
-    rho_mean[itest,...]  = rho_imean
-    qv_mean[itest,...]   = qv_imean
-    tmpk_mean[itest,...] = tmpk_imean
-    lw_mean[itest,...]   = lw_imean
-    lwc_mean[itest,...]  = lwc_imean
-    sw_mean[itest,...]   = sw_imean
-    swc_mean[itest,...]  = swc_imean
-
-# ### Save processed data as pickle
-
-# if do_write:
-# if comm.rank > 0:
-
-    # comm.Send(np.ascontiguousarray(w_mean, dtype=np.float64), dest=0, tag=comm.rank+20)
-    # comm.Send(np.ascontiguousarray(qv_mean, dtype=np.float64), dest=0, tag=comm.rank+30)
-    # comm.Send(np.ascontiguousarray(tmpk_mean, dtype=np.float64), dest=0, tag=comm.rank+40)
-
-# if comm.rank == 0:
-
-    # comm.Send(np.ascontiguousarray(w_mean, dtype=np.float64), dest=0, tag=comm.rank+20)
-    # comm.Send(np.ascontiguousarray(qv_mean, dtype=np.float64), dest=0, tag=comm.rank+30)
-    # comm.Send(np.ascontiguousarray(tmpk_mean, dtype=np.float64), dest=0, tag=comm.rank+40)
-
-pickle_file = main_pickle+memb_all[imemb]+'/mean_profiles_'+str(t1_test)+'hrs.pkl'
-with open(pickle_file, 'wb') as file:
-    pickle.dump([w_mean, rho_mean, qv_mean, tmpk_mean,
-                 lw_mean, lwc_mean, sw_mean, swc_mean], file)
-# else:
-#     with open(pickle_file, 'rb') as file:
-#         w_mean,qv_mean,tmpk_mean = pickle.load(file)
+    # Process ensemble member
+    process_member(datdir, main_pickle, memb_all[imemb], test_str)
 
 print(comm.rank, 'DONE!!')
