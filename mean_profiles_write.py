@@ -22,10 +22,10 @@ print(comm.rank, 'WORKING!!')
 
 # Testing mode: only runs a couple time steps and doesn't write out
 testing=True
-# testing=False
+testing=False
 
-storm = 'haiyan'
-# storm = 'maria'
+#storm = 'haiyan'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -67,93 +67,7 @@ ntest = len(tests)
 
 ### FUNCTIONS ###############################################
 
-# Function to get MSE and DSE
-def calc_diagnostics(mean_str, allvars, pres):
-
-    nmean = len(mean_str)
-
-    dp = pres[0]-pres[1] # Pa
-    vint_top = 100e2 # top for MSE integrals
-    k_vint_top = np.where(pres == vint_top)[0][0]
-    k_850 = np.where(pres == 850e2)[0][0]
-
-    # Constants
-    cp=1004.  # J/K/kg
-    cpl=4186. # J/k/kg
-    cpv=1885. # J/K/kg
-    lv0=2.5e6 # J/kg
-    g=9.81 # m/s2
-
-    def vert_int(invar):
-        # Vertically integrate: 1/g * SUM(var*dp)
-        # Negative is absorbed by dp>0
-        # var_sum = np.sum(invar, axis=1)*dp/g
-        # return np.ma.sum(invar[:,:k_vint_top+1,...], axis=1)*dp/g
-        return np.sum(invar[:,:k_vint_top+1], axis=1)*dp/g
-
-    def vadv_vint(w, rho, invar):
-        # omeg = w * (-1)*g*rho # omega from hydrostatic approximation
-        # Using Lagrangian perspective, i.e., d/dt + ADV + ...
-        # VADV = omega * d(invar)/dp
-        vadv = w * g*rho * np.gradient(invar, (-dp), axis=1)
-        return vert_int(vadv)
-
-    mse_vint = {}
-    vadv_mse_vint = {}
-    vadv_dse_vint = {}
-    vmf = {}
-    vmfu = {}
-    vmfd = {}
-    # vmfu_850 = {}
-    # vmfd_850 = {}
-
-    for imean in range(nmean):
-
-        tmpk = allvars['T'][mean_str[imean]]
-        z    = allvars['Z'][mean_str[imean]]
-        qv   = allvars['QVAPOR'][mean_str[imean]]
-        w    = allvars['W'][mean_str[imean]]
-        wu   = allvars['W_up'][mean_str[imean]]
-        wd   = allvars['W_dn'][mean_str[imean]]
-        rho  = allvars['rho'][mean_str[imean]]
-
-        # Dry static energy (DSE)
-        dse = cp*tmpk + g*z # J/kg
-        print('IMEAN: ',mean_str[imean])
-        print('dse: ',dse)
-        print()
-        # Latent heat of vaporization
-        lv = lv0 - (cpl-cpv)*(tmpk-273.15)
-        # Moist static energy (MSE)
-        mse = dse + lv*qv # J/kg
-
-        # Vertically integrated MSE
-        mse_vint[mean_str[imean]] = vert_int(mse) # J/m2
-
-        vadv_mse_vint[mean_str[imean]] = vadv_vint(w, rho, mse)
-        vadv_dse_vint[mean_str[imean]] = vadv_vint(w, rho, dse)
-
-        vmf[mean_str[imean]] = vert_int(w) # kg/m/s
-        vmfu[mean_str[imean]] = vert_int(wu) # kg/m/s
-        vmfd[mean_str[imean]] = vert_int(wd) # kg/m/s
-        # vmfu_850[mean_str[imean]] = rho[:,k_850] * wu[:,k_850] # m/s * kg/m3 --> kg/m2/s
-        # vmfd_850[mean_str[imean]] = rho[:,k_850] * wd[:,k_850] # kg/m2/s
-
-    diag_vars = {
-        'mse_vint': mse_vint,
-        'vadv_mse_vint': vadv_mse_vint,
-        'vadv_dse_vint': vadv_dse_vint,
-        'vmf': vmf,
-        'vmfu': vmfu,
-        'vmfd': vmfd,
-        # 'vmfu_850': vmfu_850,
-        # 'vmfd_850': vmfd_850,
-    }
-
-    return diag_vars
-
 # ### Functions to compute means
-# 
 # These means are averaged over all ensemble members plus some selection of convective type or moisture threshold.
 
 # def get_mean_indices(pclass, cwv):
@@ -210,6 +124,9 @@ def process_member(datdir, main_pickle, memb_str, test_str):
     nt_test, nz, pres = get_nt(test_str)
     t1=nt_test
 
+    # Read ZB once to add to Z
+    zb = var_read_zb_hires(datdir, mask=True, drop=True)
+
     # Run only TEST time steps
     # t1_test=49
     # if test_str == 'ctl':
@@ -246,27 +163,76 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         var_mean = compute_mean_profiles(mean_str, indices_mean_3d, var_tmp)
         return var_mean
 
-    def read_mean_vmf_vars(datdir, t0, t1, mean_str, indices_mean_3d):
-        rho = var_read_3d_hires(datdir, 'rho', t0, t1, mask=True, drop=True)
-        w_tmp = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True)
-        # w_tmp *= rho # kg/m2/s
-        wu = np.where((w_tmp > 0), w_tmp, 0)
-        wd = np.where((w_tmp < 0), w_tmp, 0)
- #       w_mean = compute_mean_profiles(mean_str, indices_mean_3d, w_tmp)
- #       wu_mean = compute_mean_profiles(mean_str, indices_mean_3d, wu)
- #       wd_mean = compute_mean_profiles(mean_str, indices_mean_3d, wd)
-        # rho_mean = compute_mean_profiles(mean_str, indices_mean_3d, rho)
-        w_mean = {}
-        wu_mean = {}
-        wd_mean = {}
+    def vert_int(invar, pres):
+        # Vertically integrate: 1/g * SUM(var*dp)
+        # Negative is absorbed by dp>0
+        dp = pres[0]-pres[1] # Pa
+        g = 9.81 # m/s2
+        vint_top = 100e2 # top for MSE integrals
+        k_vint_top = np.where(pres == vint_top)[0][0]
+        return np.sum(invar[:,:k_vint_top+1], axis=1)*dp/g
+
+    def compute_vint(mean_str, invar_3d, pres):
+        nmean = len(mean_str)
+        var_vint = {}
         for imean in range(nmean):
-            w_mean[mean_str[imean]]  = np.sum(w_tmp.data, axis=(2,3), where=indices_mean_3d[mean_str[imean]])
-            wu_mean[mean_str[imean]] = np.sum(wu.data,   axis=(2,3), where=indices_mean_3d[mean_str[imean]])
-            wd_mean[mean_str[imean]] = np.sum(wd.data,   axis=(2,3), where=indices_mean_3d[mean_str[imean]])
-        return w_mean, wu_mean, wd_mean#, rho_mean
+            var_vint[mean_str[imean]] = vert_int(invar_3d[mean_str[imean]], pres)
+        return var_vint
+
+    def read_mean_vmf_vars(datdir, t0, t1, pres, mean_str, indices_mean_3d):
+        rho = var_read_3d_hires(datdir, 'rho', t0, t1, mask=True, drop=True)
+        w = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True)
+
+        g = 9.81 # m/s2
+        mse = var_read_3d_hires(datdir, 'mse', t0, t1, mask=True, drop=True)
+        dse = var_read_3d_hires(datdir, 'dse', t0, t1, mask=True, drop=True)
+        mse_vadv = -w * g*rho * np.gradient(mse, pres, axis=1)
+        dse_vadv = -w * g*rho * np.gradient(dse, pres, axis=1)
+
+        wu = np.where((w > 0), w, 0)
+        wd = np.where((w < 0), w, 0)
+
+        # Get mean profiles
+        rho_mean = compute_mean_profiles(mean_str, indices_mean_3d, rho)
+        w_mean = compute_mean_profiles(mean_str, indices_mean_3d, w)
+        wu_mean = compute_mean_profiles(mean_str, indices_mean_3d, wu)
+        wd_mean = compute_mean_profiles(mean_str, indices_mean_3d, wd)
+        mse_mean = compute_mean_profiles(mean_str, indices_mean_3d, mse)
+        mse_vadv_mean = compute_mean_profiles(mean_str, indices_mean_3d, mse_vadv)
+        dse_vadv_mean = compute_mean_profiles(mean_str, indices_mean_3d, dse_vadv)
+        # For doing sum over area
+        # rho_mean = compute_mean_profiles(mean_str, indices_mean_3d, rho)
+        # w_mean = {}
+        # wu_mean = {}
+        # wd_mean = {}
+        # for imean in range(nmean):
+        #     w_mean[mean_str[imean]]  = np.sum(w_tmp.data, axis=(2,3), where=indices_mean_3d[mean_str[imean]])
+        #     wu_mean[mean_str[imean]] = np.sum(wu.data,   axis=(2,3), where=indices_mean_3d[mean_str[imean]])
+        #     wd_mean[mean_str[imean]] = np.sum(wd.data,   axis=(2,3), where=indices_mean_3d[mean_str[imean]])
+
+        # Vertical integration
+        vmf = compute_vint(mean_str, w_mean, pres)
+        vmfu = compute_vint(mean_str, wu_mean, pres)
+        vmfd = compute_vint(mean_str, wd_mean, pres)
+        mse_vint = compute_vint(mean_str, mse_mean, pres)
+        vadv_mse_vint = compute_vint(mean_str, mse_vadv_mean, pres)
+        vadv_dse_vint = compute_vint(mean_str, dse_vadv_mean, pres)
+
+        diag_vars = {
+            'rho': rho_mean,
+            'W': w_mean,
+            'vmf': vmf,
+            'vmfu': vmfu,
+            'vmfd': vmfd,
+            'mse_vint': mse_vint,
+            'vadv_mse_vint': vadv_mse_vint,
+            'vadv_dse_vint': vadv_dse_vint,
+        }
+
+        return diag_vars
 
     varnames=[
-        'rho',
+        # 'rho',
         'QVAPOR',
         'T',
         'RTHRATLW',
@@ -280,30 +246,15 @@ def process_member(datdir, main_pickle, memb_str, test_str):
     allvars_3d_mean = {}
 
     # Special case for W/VMF
-    w_mean, wu_mean, wd_mean = read_mean_vmf_vars(datdir, t0, t1, mean_str, indices_mean_3d)
-    allvars_3d_mean['W'] = w_mean
-    allvars_3d_mean['W_up'] = wu_mean
-    allvars_3d_mean['W_dn'] = wd_mean
+    diag_vars = read_mean_vmf_vars(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
+    for key in diag_vars.keys():
+        allvars_3d_mean[key] = diag_vars[key]
 
     for varname in varnames:
         allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
 
-    # Read ZB once, add to Z
-    zb = var_read_zb_hires(datdir, mask=True, drop=True)
-    zb = np.repeat(zb, t1-t0, axis=0)
-    zb_mean = compute_mean_profiles(mean_str, indices_mean_3d, zb)
-    for imean in range(nmean):
-        allvars_3d_mean['Z'][mean_str[imean]] += zb_mean[mean_str[imean]]
-
-    # Get diagnostic variables
-    diag_vars = calc_diagnostics(mean_str, allvars_3d_mean, pres*1e2)
-
     # Remove height - since don't need this
     # allvars_3d_mean.pop('Z')
-
-    # Now add diagnostic variables to mean variable dictionary
-    for key in diag_vars.keys():
-        allvars_3d_mean[key] = diag_vars[key]
 
     if testing:
         print("Test worked! Ending job before write-out...")
@@ -313,7 +264,7 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
     # pickle_file = main_pickle+memb_all[imemb]+'/mean_profiles_'+str(t1_test)+'hrs.pkl'
 #    pickle_file = main_pickle+memb_str+'/mean_profiles_'+test_str+'_alltime.pkl'
-    pickle_file = main_pickle+memb_str+'/mean_profiles_'+test_str+'_alltime_vmfsum.pkl'
+    pickle_file = main_pickle+memb_str+'/mean_profiles_'+test_str+'_alltime_v2.pkl'
     with open(pickle_file, 'wb') as file:
         pickle.dump(allvars_3d_mean, file)
 
@@ -333,18 +284,18 @@ for itest in range(ntest):
 
     # Loop over ensemble members
     # for imemb in range(nmem):
-    # for imemb in range(1):
-    imemb = comm.rank
-    # imemb = comm.rank+7
+    for ii in range(2):
+        imemb = comm.rank + ii*5
+        # imemb = comm.rank+7
 
-    print('Running imemb: ',memb_all[imemb])
-    print()
+        print('Running imemb: ',memb_all[imemb])
+        print()
 
-    datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
-    print('Datdir: ',datdir)
-    print()
+        datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
+        print('Datdir: ',datdir)
+        print()
 
-    # Process ensemble member
-    process_member(datdir, main_pickle, memb_all[imemb], test_str)
+        # Process ensemble member
+        process_member(datdir, main_pickle, memb_all[imemb], test_str)
 
 print(comm.rank, 'DONE!!')

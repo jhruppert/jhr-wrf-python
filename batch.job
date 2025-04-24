@@ -14,12 +14,14 @@
 ###SBATCH -n 1 ##112 # max of N*56
 ###SBATCH --nodelist=c799
 
-###SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c874,c875,c965,c966,c968,c969
+##SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c874,c875,c965,c966,c968,c969
 
-#SBATCH -N 10
-#SBATCH -n 10 ##112 # max of N*56
+##SBATCH -N 10
+##SBATCH -n 10 ##112 # max of N*56
+#SBATCH -N 5
+#SBATCH -n 5 ##112 # max of N*56
 ##SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c875,c875
-#SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c874,c875,c965,c966
+##SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c874,c875,c965,c966
 
 ##SBATCH -N 3
 ##SBATCH -n 3
@@ -45,11 +47,12 @@ source ~/.bashrc
 #python binned_cross_2d_write.py
 
 # MPI jobs
+# mpirun python write_mse.py
+mpirun python mean_profiles_write.py
 # mpirun python tests_various.py
 # mpirun python write_theta_e.py
 # mpirun python write_isentrop_binned_v2.py
 # mpirun python write_isentrop_binned_addvar.py
-mpirun python mean_profiles_write.py
 # mpirun python binned_cross_2d_write_v2.py
 # mpirun python write_percentile_cluster.py
 
