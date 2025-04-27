@@ -233,6 +233,8 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
     def read_process_condh(datdir, t0, t1, pres, mean_str, indices_mean_3d):
         condh = var_read_3d_hires(datdir, 'H_DIABATIC', t0, t1, mask=True, drop=True) # K/s
+        cp = 1004 # J/(kg*K)
+        condh *= cp # Convert to J/(kg*s), yields W/m2 once integrated
         # Get mean profiles
         condh_mean = compute_mean_profiles(mean_str, indices_mean_3d, condh)
         # Vertical integration
