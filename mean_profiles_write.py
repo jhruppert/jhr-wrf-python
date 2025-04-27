@@ -94,26 +94,26 @@ def get_mean_indices(datdir, t0, t1):
 
     moist_margin = 48 # kg/m2 or mm
 
-    # indices_mean_2d = {}
+    indices_mean_2d = {}
     indices_mean_3d = {}
     for imean in range(nmean):
         if imean <= 5:
-            # indices_mean_2d[mean_str[imean]] = (pclass == imean)
+            indices_mean_2d[mean_str[imean]] = (pclass == imean)
             indices_mean_3d[mean_str[imean]] = (pclass_z == imean)
         elif imean == 6:
-            # indices_mean_2d[mean_str[imean]] = ((pclass == 1) | (pclass == 4) | (pclass == 5))
+            indices_mean_2d[mean_str[imean]] = ((pclass == 1) | (pclass == 4) | (pclass == 5))
             indices_mean_3d[mean_str[imean]] = ((pclass_z == 1) | (pclass_z == 4) | (pclass_z == 5))
         elif imean == 7:
-            # indices_mean_2d[mean_str[imean]] = (cwv >= moist_margin)
+            indices_mean_2d[mean_str[imean]] = (cwv >= moist_margin)
             indices_mean_3d[mean_str[imean]] = (cwv_z >= moist_margin)
         elif imean == 8:
-            # indices_mean_2d[mean_str[imean]] = (cwv < moist_margin)
+            indices_mean_2d[mean_str[imean]] = (cwv < moist_margin)
             indices_mean_3d[mean_str[imean]] = (cwv_z < moist_margin)
         elif imean == 9:
-            # indices_mean_2d[mean_str[imean]] = (cwv < 1e9)
+            indices_mean_2d[mean_str[imean]] = (cwv < 1e9)
             indices_mean_3d[mean_str[imean]] = (cwv_z < 1e9)
 
-    return mean_str, indices_mean_3d
+    return mean_str, indices_mean_2d, indices_mean_3d
 
 # ### Function to process a single test for a given ensemble member
 def process_member(datdir, main_pickle, memb_str, test_str):
@@ -146,7 +146,7 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
     # Get indices to average over for each mean
     # mean_str, indices_mean_2d, indices_mean_3d = get_mean_indices(pclass, cwv)
-    mean_str, indices_mean_3d = get_mean_indices(datdir, t0, t1)
+    mean_str, indices_mean_2d, indices_mean_3d = get_mean_indices(datdir, t0, t1)
     nmean = len(mean_str)
 
     # Compute all means across all variables for this ens member
@@ -156,6 +156,12 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         var_mean = {}
         for imean in range(nmean):
             var_mean[mean_str[imean]] = np.mean(invar_3d.data, axis=(2,3), where=indices_mean_3d[mean_str[imean]])
+        return var_mean
+    def compute_mean_2d(mean_str, indices_mean_2d, invar_2d):
+        nmean = len(mean_str)
+        var_mean = {}
+        for imean in range(nmean):
+            var_mean[mean_str[imean]] = np.mean(invar_2d.data, axis=(1,2), where=indices_mean_3d[mean_str[imean]])
         return var_mean
 
     def read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d):
@@ -241,6 +247,15 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         condh_vint = compute_vint(mean_str, condh_mean, pres)
         return condh_vint
 
+    def read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d):
+        rain = var_read_2d(datdir, 'rainrate', t0, t1, mask=True, drop=True) # mm/d
+        rain = np.squeeze(rain) # Remove vertical dimension if exists
+        lv0=2.5e6 # J/kg
+        rain_wm2 = rain*lv0/(24*3600) # mm/d to W/m2
+        # Get mean profiles
+        rain_mean = compute_mean_2d(mean_str, indices_mean_2d, rain_wm2)
+        return rain_mean
+
     varnames=[
         'QVAPOR',
         'T',
@@ -261,6 +276,9 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
     # Special case for CONDH (H_DIABATIC)
     allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
+
+    # Special case for rainfall
+    allvars_3d_mean['rain'] = read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d)
 
     # The rest of the variables
     for varname in varnames:
