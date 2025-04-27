@@ -22,7 +22,7 @@ print(comm.rank, 'WORKING!!')
 
 # Testing mode: only runs a couple time steps and doesn't write out
 testing=True
-testing=False
+# testing=False
 
 storm = 'haiyan'
 # storm = 'maria'
@@ -249,7 +249,8 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
     def read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d):
         rain = var_read_2d(datdir, 'rainrate', t0, t1, mask=True, drop=True) # mm/d
-        rain = np.squeeze(rain) # Remove vertical dimension if exists
+        print(rain.shape)
+        # rain = np.squeeze(rain) # Remove vertical dimension if exists
         lv0=2.5e6 # J/kg
         rain_wm2 = rain*lv0/(24*3600) # mm/d to W/m2
         # Get mean profiles
