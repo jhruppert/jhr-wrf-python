@@ -24,8 +24,8 @@ print(comm.rank, 'WORKING!!')
 testing=True
 testing=False
 
-#storm = 'haiyan'
-storm = 'maria'
+storm = 'haiyan'
+# storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -231,8 +231,15 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
         return diag_vars
 
+    def read_process_condh(datdir, t0, t1, pres, mean_str, indices_mean_3d):
+        condh = var_read_3d_hires(datdir, 'H_DIABATIC', t0, t1, mask=True, drop=True) # K/s
+        # Get mean profiles
+        condh_mean = compute_mean_profiles(mean_str, indices_mean_3d, condh)
+        # Vertical integration
+        condh_vint = compute_vint(mean_str, condh_mean, pres)
+        return condh_vint
+
     varnames=[
-        # 'rho',
         'QVAPOR',
         'T',
         'RTHRATLW',
@@ -250,6 +257,10 @@ def process_member(datdir, main_pickle, memb_str, test_str):
     for key in diag_vars.keys():
         allvars_3d_mean[key] = diag_vars[key]
 
+    # Special case for CONDH (H_DIABATIC)
+    allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
+
+    # The rest of the variables
     for varname in varnames:
         allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
 
