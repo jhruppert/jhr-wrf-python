@@ -22,7 +22,7 @@ print(comm.rank, 'WORKING!!')
 
 # Testing mode: only runs a couple time steps and doesn't write out
 testing=True
-# testing=False
+testing=False
 
 storm = 'haiyan'
 # storm = 'maria'
@@ -85,12 +85,15 @@ def get_mean_indices(datdir, t0, t1):
     # Precip classification
     q_int = read_qcloud(datdir,t0,t1,mask=True,drop=True) # mm
     pclass = precip_class(q_int)
+    pclass = pclass[:,np.newaxis,...] # Add vertical dimension
+
     # CWV
     varname='PW'
     cwv = var_read_2d(datdir,varname,t0,t1,mask=True,drop=True) # mm
+    cwv = cwv[:,np.newaxis,...] # Add vertical dimension
 
-    pclass_z = np.repeat(pclass[:,np.newaxis,...], nz, axis=1)
-    cwv_z    = np.repeat(cwv[:,np.newaxis,...], nz, axis=1)
+    pclass_z = np.repeat(pclass, nz, axis=1)
+    cwv_z    = np.repeat(cwv, nz, axis=1)
 
     moist_margin = 48 # kg/m2 or mm
 
@@ -151,22 +154,17 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
     # Compute all means across all variables for this ens member
 
-    def compute_mean_profiles(mean_str, indices_mean_3d, invar_3d):
+    def compute_means(mean_str, indices_mean, invar):
         nmean = len(mean_str)
         var_mean = {}
         for imean in range(nmean):
-            var_mean[mean_str[imean]] = np.mean(invar_3d.data, axis=(2,3), where=indices_mean_3d[mean_str[imean]])
-        return var_mean
-    def compute_mean_2d(mean_str, indices_mean_2d, invar_2d):
-        nmean = len(mean_str)
-        var_mean = {}
-        for imean in range(nmean):
-            var_mean[mean_str[imean]] = np.mean(invar_2d.data, axis=(1,2), where=indices_mean_3d[mean_str[imean]])
+            meanvar = np.mean(invar.data, axis=(2,3), where=indices_mean[mean_str[imean]])
+            var_mean[mean_str[imean]] = np.squeeze(meanvar)
         return var_mean
 
     def read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d):
         var_tmp = var_read_3d_hires(datdir, varname, t0, t1, mask=True, drop=True)
-        var_mean = compute_mean_profiles(mean_str, indices_mean_3d, var_tmp)
+        var_mean = compute_means(mean_str, indices_mean_3d, var_tmp)
         return var_mean
 
     def vert_int(invar, pres):
@@ -199,13 +197,13 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         wd = np.where((w < 0), w, 0)
 
         # Get mean profiles
-        rho_mean = compute_mean_profiles(mean_str, indices_mean_3d, rho)
-        w_mean = compute_mean_profiles(mean_str, indices_mean_3d, w)
-        wu_mean = compute_mean_profiles(mean_str, indices_mean_3d, wu)
-        wd_mean = compute_mean_profiles(mean_str, indices_mean_3d, wd)
-        mse_mean = compute_mean_profiles(mean_str, indices_mean_3d, mse)
-        mse_vadv_mean = compute_mean_profiles(mean_str, indices_mean_3d, mse_vadv)
-        dse_vadv_mean = compute_mean_profiles(mean_str, indices_mean_3d, dse_vadv)
+        rho_mean = compute_means(mean_str, indices_mean_3d, rho)
+        w_mean = compute_means(mean_str, indices_mean_3d, w)
+        wu_mean = compute_means(mean_str, indices_mean_3d, wu)
+        wd_mean = compute_means(mean_str, indices_mean_3d, wd)
+        mse_mean = compute_means(mean_str, indices_mean_3d, mse)
+        mse_vadv_mean = compute_means(mean_str, indices_mean_3d, mse_vadv)
+        dse_vadv_mean = compute_means(mean_str, indices_mean_3d, dse_vadv)
         # For doing sum over area
         # rho_mean = compute_mean_profiles(mean_str, indices_mean_3d, rho)
         # w_mean = {}
@@ -242,19 +240,17 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         cp = 1004 # J/(kg*K)
         condh *= cp # Convert to J/(kg*s), yields W/m2 once integrated
         # Get mean profiles
-        condh_mean = compute_mean_profiles(mean_str, indices_mean_3d, condh)
+        condh_mean = compute_means(mean_str, indices_mean_3d, condh)
         # Vertical integration
         condh_vint = compute_vint(mean_str, condh_mean, pres)
         return condh_vint
 
     def read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d):
         rain = var_read_2d(datdir, 'rainrate', t0, t1, mask=True, drop=True) # mm/d
-        print(rain.shape)
-        # rain = np.squeeze(rain) # Remove vertical dimension if exists
         lv0=2.5e6 # J/kg
         rain_wm2 = rain*lv0/(24*3600) # mm/d to W/m2
         # Get mean profiles
-        rain_mean = compute_mean_2d(mean_str, indices_mean_2d, rain_wm2)
+        rain_mean = compute_means(mean_str, indices_mean_2d, rain_wm2[:,np.newaxis,...])
         return rain_mean
 
     varnames=[
