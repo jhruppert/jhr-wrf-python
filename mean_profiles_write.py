@@ -167,20 +167,20 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         var_mean = compute_means(mean_str, indices_mean_3d, var_tmp)
         return var_mean
 
-    def vert_int(invar, pres):
+    def vert_int(invar, pres, vint_top=100e2):
         # Vertically integrate: 1/g * SUM(var*dp)
         # Negative is absorbed by dp>0
         dp = pres[0]-pres[1] # Pa
         g = 9.81 # m/s2
-        vint_top = 100e2 # top for MSE integrals
+        # vint_top = 100e2 # top for MSE integrals
         k_vint_top = np.where(pres == vint_top)[0][0]
         return np.sum(invar[:,:k_vint_top+1], axis=1)*dp/g
 
-    def compute_vint(mean_str, invar_3d, pres):
+    def compute_vint(mean_str, invar_3d, pres, vint_top=None):
         nmean = len(mean_str)
         var_vint = {}
         for imean in range(nmean):
-            var_vint[mean_str[imean]] = vert_int(invar_3d[mean_str[imean]], pres)
+            var_vint[mean_str[imean]] = vert_int(invar_3d[mean_str[imean]], pres, vint_top=vint_top)
         return var_vint
 
     def read_mean_vmf_vars(datdir, t0, t1, pres, mean_str, indices_mean_3d):
@@ -218,6 +218,8 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         vmf = compute_vint(mean_str, w_mean, pres)
         vmfu = compute_vint(mean_str, wu_mean, pres)
         vmfd = compute_vint(mean_str, wd_mean, pres)
+        vmfu_500 = compute_vint(mean_str, wu_mean, pres, vint_top=500e2)
+        vmfd_500 = compute_vint(mean_str, wd_mean, pres, vint_top=500e2)
         mse_vint = compute_vint(mean_str, mse_mean, pres)
         vadv_mse_vint = compute_vint(mean_str, mse_vadv_mean, pres)
         vadv_dse_vint = compute_vint(mean_str, dse_vadv_mean, pres)
@@ -228,6 +230,8 @@ def process_member(datdir, main_pickle, memb_str, test_str):
             'vmf': vmf,
             'vmfu': vmfu,
             'vmfd': vmfd,
+            'vmfu_500': vmfu_500,
+            'vmfd_500': vmfd_500,
             'mse_vint': mse_vint,
             'vadv_mse_vint': vadv_mse_vint,
             'vadv_dse_vint': vadv_dse_vint,
