@@ -164,10 +164,12 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
     def read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d):
         var_tmp = var_read_3d_hires(datdir, varname, t0, t1, mask=True, drop=True)
+        if varname == 'Z':
+            var_tmp += zb
         var_mean = compute_means(mean_str, indices_mean_3d, var_tmp)
         return var_mean
 
-    def vert_int(invar, pres, vint_top=100e2):
+    def vert_int(invar, pres, vint_top):
         # Vertically integrate: 1/g * SUM(var*dp)
         # Negative is absorbed by dp>0
         dp = pres[0]-pres[1] # Pa
@@ -176,11 +178,11 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         k_vint_top = np.where(pres == vint_top)[0][0]
         return np.sum(invar[:,:k_vint_top+1], axis=1)*dp/g
 
-    def compute_vint(mean_str, invar_3d, pres, vint_top=None):
+    def compute_vint(mean_str, invar_3d, pres, vint_top=100e2):
         nmean = len(mean_str)
         var_vint = {}
         for imean in range(nmean):
-            var_vint[mean_str[imean]] = vert_int(invar_3d[mean_str[imean]], pres, vint_top=vint_top)
+            var_vint[mean_str[imean]] = vert_int(invar_3d[mean_str[imean]], pres, vint_top)
         return var_vint
 
     def read_mean_vmf_vars(datdir, t0, t1, pres, mean_str, indices_mean_3d):
@@ -218,8 +220,8 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         vmf = compute_vint(mean_str, w_mean, pres)
         vmfu = compute_vint(mean_str, wu_mean, pres)
         vmfd = compute_vint(mean_str, wd_mean, pres)
-        vmfu_500 = compute_vint(mean_str, wu_mean, pres, vint_top=500e2)
-        vmfd_500 = compute_vint(mean_str, wd_mean, pres, vint_top=500e2)
+        vmfu_600 = compute_vint(mean_str, wu_mean, pres, vint_top=600e2)
+        vmfd_600 = compute_vint(mean_str, wd_mean, pres, vint_top=600e2)
         mse_vint = compute_vint(mean_str, mse_mean, pres)
         vadv_mse_vint = compute_vint(mean_str, mse_vadv_mean, pres)
         vadv_dse_vint = compute_vint(mean_str, dse_vadv_mean, pres)
@@ -230,8 +232,8 @@ def process_member(datdir, main_pickle, memb_str, test_str):
             'vmf': vmf,
             'vmfu': vmfu,
             'vmfd': vmfd,
-            'vmfu_500': vmfu_500,
-            'vmfd_500': vmfd_500,
+            'vmfu_500': vmfu_600,
+            'vmfd_500': vmfd_600,
             'mse_vint': mse_vint,
             'vadv_mse_vint': vadv_mse_vint,
             'vadv_dse_vint': vadv_dse_vint,
@@ -315,10 +317,10 @@ for itest in range(ntest):
     print()
 
     # Loop over ensemble members
-    # for imemb in range(nmem):
-    for ii in range(2):
-        imemb = comm.rank + ii*5
-        # imemb = comm.rank+7
+    for imemb in range(nmem):
+#    for ii in range(2):
+#        imemb = comm.rank + ii*5
+        imemb = comm.rank #+7
 
         print('Running imemb: ',memb_all[imemb])
         print()
