@@ -31,7 +31,7 @@ import numpy as np
 from scipy import ndimage
 import sys
 
-def object_track(f, lon, lat, sens_test, basis):
+def object_track(f, lon, lat, sens_test=False, basis=None):
 
     shape=np.shape(f)
     nt,ny,nx = shape
