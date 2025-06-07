@@ -16,13 +16,17 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 nproc = comm.Get_size()
 
-print(comm.rank, 'WORKING!!')
+print('Node ',comm.rank, 'WORKING!!')
 
 # #### Main settings
 
 # Testing mode: only runs a couple time steps and doesn't write out
 testing=True
 testing=False
+
+# Update files instead of writing from scratch?
+update_files = True
+# update_files = False
 
 storm = 'haiyan'
 # storm = 'maria'
@@ -269,38 +273,63 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         'Z',
     ]
 
-    # Read 3D variables and take means at same time
-    allvars_3d_mean = {}
-
-    # Special case for W/VMF
-    diag_vars = read_mean_vmf_vars(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
-    for key in diag_vars.keys():
-        allvars_3d_mean[key] = diag_vars[key]
-
-    # Special case for CONDH (H_DIABATIC)
-    allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
-
-    # Special case for rainfall
-    allvars_3d_mean['rain'] = read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d)
-
-    # The rest of the variables
-    for varname in varnames:
-        allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
-
-    # Remove height - since don't need this
-    # allvars_3d_mean.pop('Z')
-
-    if testing:
-        print("Test worked! Ending job before write-out...")
-        sys.exit()
-
-    ### Save processed data as pickle
-
+    # Pickle file to save means
     # pickle_file = main_pickle+memb_all[imemb]+'/mean_profiles_'+str(t1_test)+'hrs.pkl'
-#    pickle_file = main_pickle+memb_str+'/mean_profiles_'+test_str+'_alltime.pkl'
     pickle_file = main_pickle+memb_str+'/mean_profiles_'+test_str+'_alltime_v2.pkl'
-    with open(pickle_file, 'wb') as file:
-        pickle.dump(allvars_3d_mean, file)
+
+    if update_files:
+        # Read existing pickle file
+        try:
+            with open(pickle_file, 'rb') as file:
+                allvars_3d_mean = pickle.load(file)
+                print('Read existing pickle file: ',pickle_file)
+        except FileNotFoundError:
+            print('No existing pickle file found, creating new one...')
+            allvars_3d_mean = {}
+
+        # Place code to process new/updated variables here
+
+        for varname in ['U','V']:
+            allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
+
+        if testing:
+            print("Test worked! Ending job before write-out...")
+            sys.exit()
+
+        ### Save updated pickle file
+        with open(pickle_file, 'wb') as file:
+            pickle.dump(allvars_3d_mean, file)
+
+    else:
+
+        # Read 3D variables and take means at same time
+        allvars_3d_mean = {}
+
+        # Special case for W/VMF
+        diag_vars = read_mean_vmf_vars(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
+        for key in diag_vars.keys():
+            allvars_3d_mean[key] = diag_vars[key]
+
+        # Special case for CONDH (H_DIABATIC)
+        allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
+
+        # Special case for rainfall
+        allvars_3d_mean['rain'] = read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d)
+
+        # The rest of the variables
+        for varname in varnames:
+            allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
+
+        # Remove height - since don't need this
+        # allvars_3d_mean.pop('Z')
+
+        if testing:
+            print("Test worked! Ending job before write-out...")
+            sys.exit()
+
+        ### Save new pickle file
+        with open(pickle_file, 'wb') as file:
+            pickle.dump(allvars_3d_mean, file)
 
     return None
 
@@ -317,10 +346,10 @@ for itest in range(ntest):
     print()
 
     # Loop over ensemble members
-    for imemb in range(nmem):
-#    for ii in range(2):
-#        imemb = comm.rank + ii*5
-        imemb = comm.rank #+7
+    # for imemb in range(nmem):
+    for ii in range(2):
+        imemb = comm.rank + ii*5
+    # imemb = comm.rank #+7
 
         print('Running imemb: ',memb_all[imemb])
         print()
