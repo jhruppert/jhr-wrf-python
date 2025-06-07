@@ -252,8 +252,9 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         # Get mean profiles
         condh_mean = compute_means(mean_str, indices_mean_3d, condh)
         # Vertical integration
-        condh_vint = compute_vint(mean_str, condh_mean, pres)
-        return condh_vint
+        # condh_vint = compute_vint(mean_str, condh_mean, pres)
+        # return condh_vint
+        return condh_mean
 
     def read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d):
         rain = var_read_2d(datdir, 'rainrate', t0, t1, mask=True, drop=True) # mm/d
@@ -283,10 +284,14 @@ def process_member(datdir, main_pickle, memb_str, test_str):
             allvars_3d_mean = pickle.load(file)
             print('Read existing pickle file: ',pickle_file)
 
-        # Place code to process new/updated variables here
+        ##########################################################
+        # Place code to process new/updated variables below here
+        ##########################################################
 
-        for varname in ['U','V']:
-            allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
+        # for varname in ['U','V']:
+        #     allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
+        # Special case for CONDH (H_DIABATIC)
+        allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
 
         if testing:
             print("Test worked! Ending job before write-out...")

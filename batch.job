@@ -16,11 +16,11 @@
 
 ##SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c874,c875,c965,c966,c968,c969
 
-#SBATCH -N 10
-#SBATCH -n 10 ##112 # max of N*56
-##SBATCH -N 4
-##SBATCH -n 4 ##112 # max of N*56
-##SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c875,c875
+##SBATCH -N 10
+##SBATCH -n 10 ##112 # max of N*56
+#SBATCH -N 5
+#SBATCH -n 5 ##112 # max of N*56
+#SBATCH --nodelist=c855,c874,c965,c966,c968
 ##SBATCH --nodelist=c793,c795,c797,c798,c799,c855,c874,c875,c965,c966
 
 ##SBATCH -N 3
