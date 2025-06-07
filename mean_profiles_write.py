@@ -279,13 +279,9 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
     if update_files:
         # Read existing pickle file
-        try:
-            with open(pickle_file, 'rb') as file:
-                allvars_3d_mean = pickle.load(file)
-                print('Read existing pickle file: ',pickle_file)
-        except FileNotFoundError:
-            print('No existing pickle file found, creating new one...')
-            allvars_3d_mean = {}
+        with open(pickle_file, 'rb') as file:
+            allvars_3d_mean = pickle.load(file)
+            print('Read existing pickle file: ',pickle_file)
 
         # Place code to process new/updated variables here
 
