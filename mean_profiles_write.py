@@ -356,7 +356,7 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 # Main read loops for 3D (dependent) variables
 
 for itest in range(ntest):
-# for itest in range(1):
+# for itest in range(1,ntest):
 
     test_str = tests[itest]
     print()
@@ -365,18 +365,18 @@ for itest in range(ntest):
 
     # Loop over ensemble members
     # for imemb in range(nmem):
-    for ii in range(2):
-        imemb = comm.rank + ii*5
-    # imemb = comm.rank #+7
+    # for ii in range(2):
+        # imemb = comm.rank + ii*5
+    imemb = comm.rank #+7
 
-        print('Running imemb: ',memb_all[imemb])
-        print()
+    print('Running imemb: ',memb_all[imemb])
+    print()
 
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
-        print('Datdir: ',datdir)
-        print()
+    datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
+    print('Datdir: ',datdir)
+    print()
 
-        # Process ensemble member
-        process_member(datdir, main_pickle, memb_all[imemb], test_str)
+    # Process ensemble member
+    process_member(datdir, main_pickle, memb_all[imemb], test_str)
 
 print(comm.rank, 'DONE!!')
