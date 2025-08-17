@@ -256,7 +256,7 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         # return condh_vint
         return condh_mean
 
-    def read_process_advec(datdir, t0, t1, mean_str, indices_mean_3d):
+    def read_process_uvadvec(datdir, t0, t1, mean_str, indices_mean_3d):
         dse = var_read_3d_hires(datdir, 'dse', t0, t1, mask=True, drop=True) # J/kg
         u = var_read_3d_hires(datdir, 'U', t0, t1, mask=True, drop=True) # m/s
         v = var_read_3d_hires(datdir, 'V', t0, t1, mask=True, drop=True) # m/s
@@ -305,7 +305,7 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         #     allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
         # Special case for CONDH (H_DIABATIC)
         # allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
-        dse_uadv_mean, dse_vadv_mean = read_process_advec(datdir, t0, t1, mean_str, indices_mean_3d)
+        dse_uadv_mean, dse_vadv_mean = read_process_uvadvec(datdir, t0, t1, mean_str, indices_mean_3d)
         # Add advection to existing means
         allvars_3d_mean['dse_u_adv'] = dse_uadv_mean
         allvars_3d_mean['dse_v_adv'] = dse_vadv_mean
