@@ -89,12 +89,12 @@ def get_mean_indices(datdir, t0, t1):
     # Precip classification
     q_int = read_qcloud(datdir,t0,t1,mask=True,drop=True) # mm
     pclass = precip_class(q_int)
-    pclass = pclass[:,np.newaxis,...] # Add vertical dimension
+    pclass = pclass[:,np.newaxis,...] # Add single-element vertical dimension
 
     # CWV
     varname='PW'
     cwv = var_read_2d(datdir,varname,t0,t1,mask=True,drop=True) # mm
-    cwv = cwv[:,np.newaxis,...] # Add vertical dimension
+    cwv = cwv[:,np.newaxis,...] # Add single-element vertical dimension
 
     pclass_z = np.repeat(pclass, nz, axis=1)
     cwv_z    = np.repeat(cwv, nz, axis=1)
@@ -189,7 +189,7 @@ def process_member(datdir, main_pickle, memb_str, test_str):
             var_vint[mean_str[imean]] = vert_int(invar_3d[mean_str[imean]], pres, vint_top)
         return var_vint
 
-    def read_mean_vmf_vars(datdir, t0, t1, pres, mean_str, indices_mean_3d):
+    def read_mean_vmf_vars(datdir, t0, t1, pres, mean_str, indices_mean_2d, indices_mean_3d):
         rho = var_read_3d_hires(datdir, 'rho', t0, t1, mask=True, drop=True)
         w = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True)
 
@@ -201,6 +201,18 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
         wu = np.where((w > 0), w, 0)
         wd = np.where((w < 0), w, 0)
+        wu_vint = vert_int(wu, pres, 100e2)
+        wd_vint = vert_int(wd, pres, 100e2)
+        wu_tmp = np.where(wu_vint, (wu_vint != 0), np.nan)
+        # wu_tmp = np.ma.masked_where(wu_vint, (wu_vint == 0))
+        pe = 1 - (-wd_vint/wu_tmp)
+        # pe_mean = compute_means(mean_str, indices_mean_2d, pe[:,np.newaxis,...])
+        pe_mean = {}
+        nmean = len(mean_str)
+        for imean in range(nmean):
+            mean_tmp = np.nanmean(pe[:,np.newaxis,...], axis=(2,3), where=indices_mean_2d[mean_str[imean]])
+            pe_mean[mean_str[imean]] = np.squeeze(mean_tmp)
+            # pe_mean[mean_str[imean]] = np.squeeze(np.ma.filled(mean_tmp, np.nan))
 
         # Get mean profiles
         rho_mean = compute_means(mean_str, indices_mean_3d, rho)
@@ -224,6 +236,9 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         vmf = compute_vint(mean_str, w_mean, pres)
         vmfu = compute_vint(mean_str, wu_mean, pres)
         vmfd = compute_vint(mean_str, wd_mean, pres)
+        # pev2 = {}
+        # for imean in range(nmean):
+        #     pev2[mean_str[imean]] = 1 - (vmfd[mean_str[imean]]/vmfu[mean_str[imean]])
         vmfu_600 = compute_vint(mean_str, wu_mean, pres, vint_top=600e2)
         vmfd_600 = compute_vint(mean_str, wd_mean, pres, vint_top=600e2)
         mse_vint = compute_vint(mean_str, mse_mean, pres)
@@ -236,6 +251,8 @@ def process_member(datdir, main_pickle, memb_str, test_str):
             'vmf': vmf,
             'vmfu': vmfu,
             'vmfd': vmfd,
+            'pe': pe_mean,
+            # 'pev2': pev2,
             'vmfu_500': vmfu_600,
             'vmfd_500': vmfd_600,
             'mse_vint': mse_vint,
@@ -305,10 +322,30 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         #     allvars_3d_mean[varname] = read_mean_3d_var(datdir, t0, t1, varname, mean_str, indices_mean_3d)
         # Special case for CONDH (H_DIABATIC)
         # allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
-        dse_uadv_mean, dse_vadv_mean = read_process_advec(datdir, t0, t1, mean_str, indices_mean_3d)
-        # Add advection to existing means
-        allvars_3d_mean['dse_u_adv'] = dse_uadv_mean
-        allvars_3d_mean['dse_v_adv'] = dse_vadv_mean
+        # dse_uadv_mean, dse_vadv_mean = read_process_advec(datdir, t0, t1, mean_str, indices_mean_3d)
+        # # Add advection to existing means
+        # allvars_3d_mean['dse_u_adv'] = dse_uadv_mean
+        # allvars_3d_mean['dse_v_adv'] = dse_vadv_mean
+
+        def read_mean_pe(datdir, t0, t1, pres, mean_str, indices_mean_2d):
+            w = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True)
+            wu = np.where((w > 0), w, 0)
+            wd = np.where((w < 0), w, 0)
+            wu_vint = vert_int(wu, pres, 100e2)
+            wd_vint = vert_int(wd, pres, 100e2)
+            wu_tmp = np.where(wu_vint, (wu_vint != 0), np.nan)
+            # wu_tmp = np.ma.masked_where(wu_vint, (wu_vint == 0))
+            pe = 1 - (-wd_vint/wu_tmp)
+            # pe_mean = compute_means(mean_str, indices_mean_2d, pe[:,np.newaxis,...])
+            pe_mean = {}
+            nmean = len(mean_str)
+            for imean in range(nmean):
+                mean_tmp = np.nanmean(pe[:,np.newaxis,...], axis=(2,3), where=indices_mean_2d[mean_str[imean]])
+                pe_mean[mean_str[imean]] = np.squeeze(mean_tmp)
+                # pe_mean[mean_str[imean]] = np.squeeze(np.ma.filled(mean_tmp, np.nan))
+            return pe_mean
+
+        allvars_3d_mean['pe'] = read_mean_pe(datdir, t0, t1, pres*1e2, mean_str, indices_mean_2d)
 
         if testing:
             print("Test worked! Ending job before write-out...")
@@ -324,9 +361,12 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         allvars_3d_mean = {}
 
         # Special case for W/VMF
-        diag_vars = read_mean_vmf_vars(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
+        diag_vars = read_mean_vmf_vars(datdir, t0, t1, pres*1e2, mean_str, indices_mean_2d, indices_mean_3d)
         for key in diag_vars.keys():
             allvars_3d_mean[key] = diag_vars[key]
+        # for mean_name in mean_str:
+        #     print('PE (',mean_name,'): ', allvars_3d_mean['pe'][mean_name])
+        #     print('PEv2 (',mean_name,'): ', allvars_3d_mean['pev2'][mean_name])
 
         # Special case for CONDH (H_DIABATIC)
         allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
