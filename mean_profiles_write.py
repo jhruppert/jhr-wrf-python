@@ -201,18 +201,18 @@ def process_member(datdir, main_pickle, memb_str, test_str):
 
         wu = np.where((w > 0), w, 0)
         wd = np.where((w < 0), w, 0)
-        wu_vint = vert_int(wu, pres, 100e2)
-        wd_vint = vert_int(wd, pres, 100e2)
-        wu_tmp = np.where(wu_vint, (wu_vint != 0), np.nan)
+        # wu_vint = vert_int(wu, pres, 100e2)
+        # wd_vint = vert_int(wd, pres, 100e2)
+        # wu_tmp = np.where(wu_vint, (wu_vint != 0), np.nan)
         # wu_tmp = np.ma.masked_where(wu_vint, (wu_vint == 0))
-        pe = 1 - (-wd_vint/wu_tmp)
-        # pe_mean = compute_means(mean_str, indices_mean_2d, pe[:,np.newaxis,...])
-        pe_mean = {}
-        nmean = len(mean_str)
-        for imean in range(nmean):
-            mean_tmp = np.nanmean(pe[:,np.newaxis,...], axis=(2,3), where=indices_mean_2d[mean_str[imean]])
-            pe_mean[mean_str[imean]] = np.squeeze(mean_tmp)
-            # pe_mean[mean_str[imean]] = np.squeeze(np.ma.filled(mean_tmp, np.nan))
+        # pe = 1 - (-wd_vint/wu_tmp)
+        # # pe_mean = compute_means(mean_str, indices_mean_2d, pe[:,np.newaxis,...])
+        # pe_mean = {}
+        # nmean = len(mean_str)
+        # for imean in range(nmean):
+        #     mean_tmp = np.nanmean(pe[:,np.newaxis,...], axis=(2,3), where=indices_mean_2d[mean_str[imean]])
+        #     pe_mean[mean_str[imean]] = np.squeeze(mean_tmp)
+        #     # pe_mean[mean_str[imean]] = np.squeeze(np.ma.filled(mean_tmp, np.nan))
 
         # Get mean profiles
         rho_mean = compute_means(mean_str, indices_mean_3d, rho)
@@ -251,7 +251,7 @@ def process_member(datdir, main_pickle, memb_str, test_str):
             'vmf': vmf,
             'vmfu': vmfu,
             'vmfd': vmfd,
-            'pe': pe_mean,
+            # 'pe': pe_mean,
             # 'pev2': pev2,
             'vmfu_500': vmfu_600,
             'vmfd_500': vmfd_600,
@@ -327,25 +327,25 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         # allvars_3d_mean['dse_u_adv'] = dse_uadv_mean
         # allvars_3d_mean['dse_v_adv'] = dse_vadv_mean
 
-        def read_mean_pe(datdir, t0, t1, pres, mean_str, indices_mean_2d):
-            w = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True)
-            wu = np.where((w > 0), w, 0)
-            wd = np.where((w < 0), w, 0)
-            wu_vint = vert_int(wu, pres, 100e2)
-            wd_vint = vert_int(wd, pres, 100e2)
-            wu_tmp = np.where(wu_vint, (wu_vint != 0), np.nan)
-            # wu_tmp = np.ma.masked_where(wu_vint, (wu_vint == 0))
-            pe = 1 - (-wd_vint/wu_tmp)
-            # pe_mean = compute_means(mean_str, indices_mean_2d, pe[:,np.newaxis,...])
-            pe_mean = {}
-            nmean = len(mean_str)
-            for imean in range(nmean):
-                mean_tmp = np.nanmean(pe[:,np.newaxis,...], axis=(2,3), where=indices_mean_2d[mean_str[imean]])
-                pe_mean[mean_str[imean]] = np.squeeze(mean_tmp)
-                # pe_mean[mean_str[imean]] = np.squeeze(np.ma.filled(mean_tmp, np.nan))
-            return pe_mean
+        # def read_mean_pe(datdir, t0, t1, pres, mean_str, indices_mean_2d):
+        #     w = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True)
+        #     wu = np.where((w > 0), w, 0)
+        #     wd = np.where((w < 0), w, 0)
+        #     wu_vint = vert_int(wu, pres, 100e2)
+        #     wd_vint = vert_int(wd, pres, 100e2)
+        #     wu_tmp = np.where(wu_vint, (wu_vint != 0), np.nan)
+        #     # wu_tmp = np.ma.masked_where(wu_vint, (wu_vint == 0))
+        #     pe = 1 - (-wd_vint/wu_tmp)
+        #     # pe_mean = compute_means(mean_str, indices_mean_2d, pe[:,np.newaxis,...])
+        #     pe_mean = {}
+        #     nmean = len(mean_str)
+        #     for imean in range(nmean):
+        #         mean_tmp = np.nanmean(pe[:,np.newaxis,...], axis=(2,3), where=indices_mean_2d[mean_str[imean]])
+        #         pe_mean[mean_str[imean]] = np.squeeze(mean_tmp)
+        #         # pe_mean[mean_str[imean]] = np.squeeze(np.ma.filled(mean_tmp, np.nan))
+        #     return pe_mean
 
-        allvars_3d_mean['pe'] = read_mean_pe(datdir, t0, t1, pres*1e2, mean_str, indices_mean_2d)
+        # allvars_3d_mean['pe'] = read_mean_pe(datdir, t0, t1, pres*1e2, mean_str, indices_mean_2d)
 
         if testing:
             print("Test worked! Ending job before write-out...")
