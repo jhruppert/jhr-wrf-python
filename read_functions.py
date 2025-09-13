@@ -7,7 +7,8 @@ import subprocess
 ###### Functions for getting file specs #########################
 
 def get_file_dims(datdir):
-    varfil_main = Dataset(datdir+'T_HiRes.nc')
+    # varfil_main = Dataset(datdir+'T_HiRes.nc')
+    varfil_main = Dataset(datdir+'AVOR_HiRes.nc')
     # varfil_main = Dataset(datdir+'U10.nc')
     nz = varfil_main.dimensions['level'].size
     nx1 = varfil_main.dimensions['lat'].size

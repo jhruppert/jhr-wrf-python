@@ -15,10 +15,9 @@
 #   f   = input variable assumed to be in form f = f(t,y,x)
 #   lon = longitude points (deg) as lon = lon(y,x)
 #   lat = longitude points (deg) as lat = lat(y,x)
-#   sens_test = True or False, for if this case is a sensitivity test and
-#       should have its tracking initiated on the basis of another simulation
-#   basis = [lon, lat] the x,y location from which to begin tracking forward in
-#       time, which is only used in the case of sens_test = True
+#   basis = [optional] [lon, lat] the x,y location from which to begin tracking
+#       forward and backward in time
+#   itmax = [optional] time step from which to begin tracking forward and backward
 # 
 # Returns: numpy array[itrack,2] where itrack corresponds to (potentially)
 #   multiple identified tracks and the second dimension is (lon,lat).
@@ -31,7 +30,7 @@ import numpy as np
 from scipy import ndimage
 import sys
 
-def object_track(f, lon, lat, sens_test=False, basis=None):
+def object_track(f, lon, lat, basis=None, itmax=None):
 
     shape=np.shape(f)
     nt,ny,nx = shape
@@ -86,7 +85,8 @@ def object_track(f, lon, lat, sens_test=False, basis=None):
 
     #############################################
 
-    if sens_test:
+    # if sens_test:
+    if basis is not None:
 
         # Assuming a sensitivity test restarted from another simulation
         print('Assuming sensitivity test; using basis to initialize track')
@@ -95,7 +95,7 @@ def object_track(f, lon, lat, sens_test=False, basis=None):
         # to track forward in time.
 
         radius = np.sqrt( (lon-basis[0])**2 + (lat-basis[1])**2 )
-        itmax = 0
+        # itmax = 0
 
     else:
 
