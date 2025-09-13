@@ -88,6 +88,12 @@ def var_read_2d(datdir, varname, t0, t1, mask=True, drop=False):
 
 ###### Special variable reads ###################################
 
+def read_rain(datdir, t0, t1, mask=True, drop=False):
+    varfil_main = Dataset(datdir+'RAINC_HiRes.nc')
+    rain = varfil_main.variables['RAINC'][t0:t1,:,:,:]
+    varfil_main.close()
+    return mask_edges(np.squeeze(rain),mask,drop)
+
 def read_qcloud(datdir, t0, t1, mask=True, drop=False):
     varfil_main = Dataset(datdir+'q_int.nc')
     q_int = varfil_main.variables['q_int'][:,t0:t1,:,:]

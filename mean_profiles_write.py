@@ -287,9 +287,11 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         return dse_uadv_mean, dse_vadv_mean
 
     def read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d):
-        rain = var_read_2d(datdir, 'rainrate', t0, t1, mask=True, drop=True) # mm/d
+        # rain = var_read_2d(datdir, 'rainrate', t0, t1, mask=True, drop=True) # mm/d
+        rain = read_rain(datdir, t0, t1, mask=True, drop=True) # mm/(time step)
         lv0=2.5e6 # J/kg
-        rain_wm2 = rain*lv0/(24*3600) # mm/d to W/m2
+        # rain_wm2 = rain*lv0/(24*3600) # mm/d to W/m2
+        rain_wm2 = rain*lv0/(3600) # mm/(time step) to W/m2
         # Get mean profiles
         rain_mean = compute_means(mean_str, indices_mean_2d, rain_wm2[:,np.newaxis,...])
         return rain_mean
@@ -327,7 +329,7 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         # Place code to process new/updated variables below here
         ##########################################################
 
-        allvars_3d_mean['condh_kukulies'] = read_process_condh_kik(datdir, t0, t1, mean_str, indices_mean_2d)
+        allvars_3d_mean['rain'] = read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d)
 
         if testing:
             print("Test worked! Ending job before write-out...")
