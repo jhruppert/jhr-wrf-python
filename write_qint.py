@@ -12,6 +12,10 @@
 
 from netCDF4 import Dataset
 import numpy as np
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+nproc = comm.Get_size()
 
 
 # #### Main settings
@@ -98,23 +102,24 @@ for ktest in range(ntest):
 
     # Loop over ensemble members
 
-    for imemb in range(nmem):
+    # for imemb in range(nmem):
+    imemb = comm.rank
 
-        print('Running imemb: ',memb_all[imemb])
-    
-        datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
-        print(datdir)
+    print('Running imemb: ',memb_all[imemb])
 
-        # Required variables
+    datdir = main+storm+'/'+memb_all[imemb]+'/'+test_str+'/'+datdir2
+    print(datdir)
 
-        # read in mixing ratios
-        q_list = ['QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP']
-        nvar = len(q_list)
-        q_int = []
-        for ivar in range(nvar):
-            q_int.append(var_read_3d(datdir, q_list[ivar], delp))
-        q_int = np.stack(q_int, axis=0)
+    # Required variables
 
-        ### Write out variables ##############################################
+    # read in mixing ratios
+    q_list = ['QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP']
+    nvar = len(q_list)
+    q_int = []
+    for ivar in range(nvar):
+        q_int.append(var_read_3d(datdir, q_list[ivar], delp))
+    q_int = np.stack(q_int, axis=0)
 
-        write_vars(datdir, q_int)
+    ### Write out variables ##############################################
+
+    write_vars(datdir, q_int)
