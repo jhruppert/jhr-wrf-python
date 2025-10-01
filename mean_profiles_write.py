@@ -26,10 +26,11 @@ testing=False
 
 # Update files instead of writing from scratch?
 update_files = True
-# update_files = False
+update_files = False
 
-storm = 'haiyan'
-# storm = 'maria'
+# storm = 'haiyan'
+storm = 'maria'
+# for storm in ['haiyan','maria']:
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
@@ -193,11 +194,11 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         rho = var_read_3d_hires(datdir, 'rho', t0, t1, mask=True, drop=True)
         w = var_read_3d_hires(datdir, 'W', t0, t1, mask=True, drop=True)
 
-        g = 9.81 # m/s2
-        mse = var_read_3d_hires(datdir, 'mse', t0, t1, mask=True, drop=True)
-        dse = var_read_3d_hires(datdir, 'dse', t0, t1, mask=True, drop=True)
-        mse_vadv = -w * g*rho * np.gradient(mse, pres, axis=1)
-        dse_vadv = -w * g*rho * np.gradient(dse, pres, axis=1)
+        # g = 9.81 # m/s2
+        # mse = var_read_3d_hires(datdir, 'mse', t0, t1, mask=True, drop=True)
+        # dse = var_read_3d_hires(datdir, 'dse', t0, t1, mask=True, drop=True)
+        # mse_vadv = -w * g*rho * np.gradient(mse, pres, axis=1)
+        # dse_vadv = -w * g*rho * np.gradient(dse, pres, axis=1)
 
         wu = np.where((w > 0), w, 0)
         wd = np.where((w < 0), w, 0)
@@ -219,9 +220,9 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         w_mean = compute_means(mean_str, indices_mean_3d, w)
         wu_mean = compute_means(mean_str, indices_mean_3d, wu)
         wd_mean = compute_means(mean_str, indices_mean_3d, wd)
-        mse_mean = compute_means(mean_str, indices_mean_3d, mse)
-        mse_vadv_mean = compute_means(mean_str, indices_mean_3d, mse_vadv)
-        dse_vadv_mean = compute_means(mean_str, indices_mean_3d, dse_vadv)
+        # mse_mean = compute_means(mean_str, indices_mean_3d, mse)
+        # mse_vadv_mean = compute_means(mean_str, indices_mean_3d, mse_vadv)
+        # dse_vadv_mean = compute_means(mean_str, indices_mean_3d, dse_vadv)
         # For doing sum over area
         # rho_mean = compute_mean_profiles(mean_str, indices_mean_3d, rho)
         # w_mean = {}
@@ -239,11 +240,11 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         # pev2 = {}
         # for imean in range(nmean):
         #     pev2[mean_str[imean]] = 1 - (vmfd[mean_str[imean]]/vmfu[mean_str[imean]])
-        vmfu_600 = compute_vint(mean_str, wu_mean, pres, vint_top=600e2)
-        vmfd_600 = compute_vint(mean_str, wd_mean, pres, vint_top=600e2)
-        mse_vint = compute_vint(mean_str, mse_mean, pres)
-        vadv_mse_vint = compute_vint(mean_str, mse_vadv_mean, pres)
-        vadv_dse_vint = compute_vint(mean_str, dse_vadv_mean, pres)
+        # vmfu_600 = compute_vint(mean_str, wu_mean, pres, vint_top=600e2)
+        # vmfd_600 = compute_vint(mean_str, wd_mean, pres, vint_top=600e2)
+        # mse_vint = compute_vint(mean_str, mse_mean, pres)
+        # vadv_mse_vint = compute_vint(mean_str, mse_vadv_mean, pres)
+        # vadv_dse_vint = compute_vint(mean_str, dse_vadv_mean, pres)
 
         diag_vars = {
             'rho': rho_mean,
@@ -253,11 +254,11 @@ def process_member(datdir, main_pickle, memb_str, test_str):
             'vmfd': vmfd,
             # 'pe': pe_mean,
             # 'pev2': pev2,
-            'vmfu_500': vmfu_600,
-            'vmfd_500': vmfd_600,
-            'mse_vint': mse_vint,
-            'vadv_mse_vint': vadv_mse_vint,
-            'vadv_dse_vint': vadv_dse_vint,
+            # 'vmfu_600': vmfu_600,
+            # 'vmfd_600': vmfd_600,
+            # 'mse_vint': mse_vint,
+            # 'vadv_mse_vint': vadv_mse_vint,
+            # 'vadv_dse_vint': vadv_dse_vint,
         }
 
         return diag_vars
@@ -354,6 +355,9 @@ def process_member(datdir, main_pickle, memb_str, test_str):
         # Special case for CONDH (H_DIABATIC)
         allvars_3d_mean['condh'] = read_process_condh(datdir, t0, t1, pres*1e2, mean_str, indices_mean_3d)
 
+        # Get KUKULIES COND
+        allvars_3d_mean['condh_kukulies'] = read_process_condh_kik(datdir, t0, t1, mean_str, indices_mean_2d)
+
         # Special case for rainfall
         allvars_3d_mean['rain'] = read_process_rain(datdir, t0, t1, mean_str, indices_mean_2d)
 
@@ -388,9 +392,9 @@ for itest in range(ntest):
 
     # Loop over ensemble members
     # for imemb in range(nmem):
-    # for ii in range(2):
-        # imemb = comm.rank + ii*5
-    imemb = comm.rank #+7
+    for ii in range(2):
+        imemb = comm.rank + ii*5
+    # imemb = comm.rank #+7
 
     print('Running imemb: ',memb_all[imemb])
     print()
