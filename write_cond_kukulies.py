@@ -44,7 +44,6 @@ elif storm == 'maria':
 
 # Members
 nmem = 10 # number of ensemble members
-# nmem = 1
 enstag = str(nmem)
 # Starting member to read
 memb0=1
@@ -79,7 +78,7 @@ def write_var(datdir, invar, filename, shortname, longname, units):
 
 # Read vars and get theta-e
 
-# Function to get MSE
+# Function to get CONDH (calling functions from module PE_Kukulies_mpfunctions)
 def get_condh(wrf_file):
 
     ds = xr.open_dataset(wrf_file)
@@ -161,9 +160,9 @@ for ktest in range(ntest):
     # for imemb in imemb_select:
 
     # Use a single node per ensemble member
-    # imemb = comm.rank
-    for ii in range(2):
-        imemb = comm.rank + ii*5
+    imemb = comm.rank+5
+    # for ii in range(2):
+    #     imemb = comm.rank + ii*5
 
     print()
     print('Rank: ',comm.rank)

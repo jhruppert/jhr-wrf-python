@@ -33,7 +33,7 @@ import sys
 do_hires=True # Vertical high resolution?
 # do_hires=False
 
-do_tests=True # Run sensitivity tests?
+# do_tests=True # Run sensitivity tests?
 do_tests=False
 
 
@@ -71,7 +71,7 @@ t1_test=24
 #  #### Additional settings and directories
 
 
-storm = 'haiyan'
+# storm = 'haiyan'
 storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
@@ -397,7 +397,7 @@ for ktest in range(ntest):
 
 
 
-    memory_usage()
+    # memory_usage()
 
 
 

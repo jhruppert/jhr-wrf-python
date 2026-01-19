@@ -40,7 +40,6 @@ figdir = "/home/jamesrup/figures/tc/ens/boxplot/"
 
 # Members
 nmem = 10 # number of ensemble members (1-5 have NCRF)
-# nmem = 3
 enstag = str(nmem)
 
 # Ensemble member info
@@ -392,9 +391,9 @@ for itest in range(ntest):
 
     # Loop over ensemble members
     # for imemb in range(nmem):
-    for ii in range(2):
-        imemb = comm.rank + ii*5
-    # imemb = comm.rank #+7
+    # for ii in range(2):
+    #     imemb = comm.rank + ii*5
+    imemb = comm.rank+5
 
     print('Running imemb: ',memb_all[imemb])
     print()

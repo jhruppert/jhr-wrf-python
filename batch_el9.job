@@ -27,11 +27,12 @@ source ~/.bashrc
 # python binned_cross_2d_write.py
 
 # MPI jobs
+mpirun python write_cond_kukulies_el9.py
 # mpirun python tests_various.py
 # mpirun python write_theta_e.py
 # mpirun python write_isentrop_binned_v2.py
 # mpirun python write_isentrop_binned_addvar.py
-mpirun python mean_profiles_write.py
+# mpirun python mean_profiles_write.py
 # mpirun python binned_cross_2d_write_v2.py
 
 # echo 'Done!!'
