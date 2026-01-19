@@ -161,7 +161,9 @@ for ktest in range(ntest):
     # for imemb in imemb_select:
 
     # Use a single node per ensemble member
-    imemb = comm.rank
+    # imemb = comm.rank
+    for ii in range(2):
+        imemb = comm.rank + ii*5
 
     print()
     print('Rank: ',comm.rank)
