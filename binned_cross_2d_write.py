@@ -72,11 +72,10 @@ t1_test=24
 
 
 storm = 'haiyan'
-# storm = 'maria'
+storm = 'maria'
 
 # main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/wrfenkf/"
 main = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/tc_ens/"
-figdir = "/home/jamesrup/figures/tc/ens/"+storm+'/'
 main_pickle = "/ourdisk/hpc/radclouds/auto_archive_notyet/tape_2copies/jruppert/tc_postproc/"+storm+'/'
 datdir2 = 'post/d02/'
 
